@@ -12,6 +12,7 @@ import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
+import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
 
 /**
  * Module 1 — Base &amp; Utility (BOTSPECS §Module 1).
@@ -48,6 +49,7 @@ public final class BaseModule implements BotModule {
 
         // Configuration hub (BOTSPECS Module 1).
         registry.command(new SetupCommand());
+        registry.component(new SetupComponentHandler());
 
         // General logging: command executions, message deletes/edits, joins/leaves,
         // voice traffic, bans, kicks (BOTSPECS §General Logging).
