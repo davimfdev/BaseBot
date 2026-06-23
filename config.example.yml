@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# BaseBot configuration template.
+# Copy to `config.yml` and fill in real values, OR provide everything via
+# environment variables (env vars win over file values). See ConfigLoader.
+# config.yml is git-ignored — never commit real secrets.
+# ---------------------------------------------------------------------------
+
+discord:
+  # Bot token from the Discord Developer Portal. Env: BOT_TOKEN
+  token: "YOUR_BOT_TOKEN"
+  # Optional: register slash commands instantly to this guild during dev.
+  # Leave blank/null for global command registration. Env: DEV_GUILD_ID
+  devGuildId: null
+
+# PostgreSQL — source of truth for Guild Configurations (Setup, Roles, Toggles).
+# Today the dashboard uses Supabase; this will migrate to a dedicated Neon schema.
+# The bot talks plain JDBC so it works against either. Env: POSTGRES_URL etc.
+postgres:
+  # JDBC URL, e.g. jdbc:postgresql://HOST/DB?sslmode=require
+  url: "jdbc:postgresql://localhost:5432/basebot?sslmode=disable"
+  username: "basebot"
+  password: "CHANGE_ME"
+  maxPoolSize: 5
+  # Schema that holds guild config tables. Lets the Supabase->Neon move be a config change.
+  schema: "public"
+
+# SQLite — fast local transactions: active tickets, action logs, ephemeral state.
+sqlite:
+  # File path relative to the working directory. Env: SQLITE_PATH
+  path: "data/basebot.db"
+
+# Ticket transcript pipeline -> davimf.dev web dashboard.
+# Must match netlify/functions/ticket-store.ts. See crypto/TicketCrypto.
+tickets:
+  # POST endpoint that ingests encrypted transcripts. Env: TICKET_INGEST_URL
+  ingestUrl: "https://davimf.dev/api/ticket-store"
+  # Shared secret -> sent as `x-ticket-secret`. Env: TICKET_INGEST_SECRET
+  ingestSecret: "CHANGE_ME"
+  # Public base for the "view transcript" button: {base}/ticket/{id}. Env: TICKET_VIEW_BASE
+  viewBaseUrl: "https://davimf.dev/ticket"
+  # PBKDF2 iteration count for transcript encryption (must be honored on decrypt side).
+  pbkdf2Iterations: 210000
+  # "source" tag stored with each transcript row.
+  source: "basebot"
+
+# Rate-limit guards (see ratelimit/).
+ratelimit:
+  # Debounce window (ms) before refreshing public embeds (Hierarchy panel, etc.).
+  embedDebounceMillis: 5000
+  # Ghost-ping throttle: how many mentions per batch and the gap between batches.
+  ghostPingBatchSize: 5
+  ghostPingBatchIntervalSeconds: 30

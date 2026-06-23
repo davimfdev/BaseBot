@@ -1,0 +1,91 @@
+plugins {
+    id 'java'
+    id 'application'
+    // Maintained ShadowJar fork (the original johnrengelman plugin is abandoned and
+    // does not support JDK 22+). Produces the runnable fat jar.
+    id 'com.gradleup.shadow' version '8.3.6'
+}
+
+group = 'dev.davimf'
+version = '0.1.0'
+description = 'Multi-module Discord bot ecosystem (Base, Tickets, Sales, Facs)'
+
+java {
+    // Pinned per BOTSPECS.MD. Gradle provisions a JDK 22 toolchain regardless of the
+    // JDK used to launch Gradle itself (foojay resolver in settings.gradle).
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(22)
+    }
+}
+
+repositories {
+    mavenCentral()
+    // Fallback mirror for JDA snapshots/releases.
+    maven { url = 'https://m2.dv8tion.net/releases' }
+}
+
+ext {
+    jdaVersion       = '6.4.2'   // per BOTSPECS.MD
+    hikariVersion    = '6.2.1'
+    postgresVersion  = '42.7.4'
+    sqliteVersion    = '3.47.1.0'
+    jacksonVersion   = '2.18.2'
+    zxingVersion     = '3.5.3'
+    logbackVersion   = '1.5.12'
+    junitVersion     = '5.11.3'
+}
+
+dependencies {
+    // --- Discord ---------------------------------------------------------------
+    implementation "net.dv8tion:JDA:${jdaVersion}"
+
+    // --- Databases -------------------------------------------------------------
+    implementation "com.zaxxer:HikariCP:${hikariVersion}"      // pooled Postgres (Neon)
+    implementation "org.postgresql:postgresql:${postgresVersion}"
+    implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"   // local fast transactions
+
+    // --- Config (YAML) & dashboard JSON ---------------------------------------
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jacksonVersion}"
+
+    // --- Pix BR Code / QR generation (Module 3) -------------------------------
+    implementation "com.google.zxing:core:${zxingVersion}"
+    implementation "com.google.zxing:javase:${zxingVersion}"
+
+    // --- Logging ---------------------------------------------------------------
+    implementation "ch.qos.logback:logback-classic:${logbackVersion}"
+
+    // --- Tests -----------------------------------------------------------------
+    testImplementation platform("org.junit:junit-bom:${junitVersion}")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+    mainClass = 'dev.davimf.basebot.BaseBot'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('shadowJar') {
+    archiveBaseName = 'basebot'
+    archiveClassifier = ''
+    archiveVersion = ''
+    mergeServiceFiles()            // needed for JDBC drivers / SLF4J service loading
+    manifest {
+        attributes 'Main-Class': 'dev.davimf.basebot.BaseBot'
+    }
+}
+
+// `./gradlew build` should yield the runnable fat jar.
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
+}
+
+// Convenience: `./gradlew run` launches the bot from sources.
+tasks.named('run') {
+    // Allow stdin so a console-based shutdown hook could read input if added later.
+    standardInput = System.in
+}
