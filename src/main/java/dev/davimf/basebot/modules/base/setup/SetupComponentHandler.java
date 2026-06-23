@@ -6,18 +6,20 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.database.model.GuildConfig;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
+import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 
 import java.util.List;
 
 /**
- * Drives the {@code /setup} hub interactions (BOTSPECS Module 1). The Logs section is
- * fully wired: pick a channel via an EntitySelectMenu, then persist it through
- * {@link GuildConfigEdits} + the Postgres-backed {@code GuildConfigRepository}. The
- * Cargos/Tickets/Bot sections are scaffolded with informative placeholders.
+ * Drives the {@code /setup} hub interactions (BOTSPECS Module 1). Each section reads the
+ * current {@link GuildConfig}, applies a pure {@link GuildConfigEdits} transform, and
+ * persists via the Postgres-backed {@code GuildConfigRepository}.
  */
 public final class SetupComponentHandler implements ComponentHandler {
 
@@ -33,8 +35,7 @@ public final class SetupComponentHandler implements ComponentHandler {
         }
         switch (String.valueOf(id.arg(0))) {
             case "logs" -> showLogsPanel(event);
-            case "roles" -> placeholder(event, "Cargos",
-                    "Em breve: mapear cargos lógicos (staff, moderador) a cargos do servidor.");
+            case "roles" -> showRolesPanel(event);
             case "tickets" -> placeholder(event, "Tickets",
                     "Em breve: categoria, descrição, emoji e cargos de staff dos tickets.");
             case "bot" -> placeholder(event, "Bot",
@@ -44,10 +45,28 @@ public final class SetupComponentHandler implements ComponentHandler {
     }
 
     @Override
+    public void onStringSelect(StringSelectInteractionEvent event, ComponentId id, BotContext ctx) {
+        if (!"rolekey".equals(id.action())) {
+            return;
+        }
+        String key = event.getValues().get(0);
+        EntitySelectMenu roleMenu = EntitySelectMenu
+                .create(ComponentId.of(SetupView.NS, "setrole", key), EntitySelectMenu.SelectTarget.ROLE)
+                .setPlaceholder("Cargo para: " + SetupRoleKeys.labelFor(key))
+                .setRequiredRange(1, 1)
+                .build();
+        event.reply("Selecione o cargo do servidor para **" + SetupRoleKeys.labelFor(key) + "**:")
+                .addComponents(ActionRow.of(roleMenu))
+                .setEphemeral(true)
+                .queue();
+    }
+
+    @Override
     public void onEntitySelect(EntitySelectInteractionEvent event, ComponentId id, BotContext ctx) {
         switch (id.action()) {
             case "setlog" -> persistLogChannel(event, ctx, false);
             case "setticketlog" -> persistLogChannel(event, ctx, true);
+            case "setrole" -> persistRole(event, ctx, id.arg(0));
             default -> { /* not ours */ }
         }
     }
@@ -67,6 +86,19 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .build();
         event.reply("Selecione os canais de log:")
                 .addComponents(ActionRow.of(logMenu), ActionRow.of(ticketMenu))
+                .setEphemeral(true)
+                .queue();
+    }
+
+    private void showRolesPanel(ButtonInteractionEvent event) {
+        StringSelectMenu.Builder menu = StringSelectMenu
+                .create(ComponentId.of(SetupView.NS, "rolekey"))
+                .setPlaceholder("Qual cargo lógico configurar?");
+        for (var e : SetupRoleKeys.OPTIONS) {
+            menu.addOption(e.getValue(), e.getKey());
+        }
+        event.reply("Escolha qual função deseja mapear a um cargo:")
+                .addComponents(ActionRow.of(menu.build()))
                 .setEphemeral(true)
                 .queue();
     }
@@ -94,6 +126,26 @@ public final class SetupComponentHandler implements ComponentHandler {
 
         event.reply((ticketLog ? "Canal de logs de tickets" : "Canal de logs gerais")
                 + " definido: <#" + channelId + ">").setEphemeral(true).queue();
+    }
+
+    private void persistRole(EntitySelectInteractionEvent event, BotContext ctx, String key) {
+        if (event.getGuild() == null || key == null) {
+            event.reply("Requisição inválida.").setEphemeral(true).queue();
+            return;
+        }
+        List<Role> roles = event.getMentions().getRoles();
+        if (roles.isEmpty()) {
+            event.reply("Nenhum cargo selecionado.").setEphemeral(true).queue();
+            return;
+        }
+        String roleId = roles.get(0).getId();
+        String guildId = event.getGuild().getId();
+        GuildConfig updated = GuildConfigEdits.withRole(
+                ctx.database().guildConfig().findOrEmpty(guildId), key, roleId);
+        ctx.database().guildConfig().save(updated);
+        ctx.database().actionLogs().log(guildId, event.getUser().getId(), roleId, "SETUP_ROLE", key);
+        event.reply("Cargo de **" + SetupRoleKeys.labelFor(key) + "** definido: <@&" + roleId + ">")
+                .setEphemeral(true).queue();
     }
 
     private void placeholder(ButtonInteractionEvent event, String section, String detail) {
