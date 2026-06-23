@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.modals.Modal;
 
 import java.util.List;
@@ -36,28 +37,33 @@ public final class SetupComponentHandler implements ComponentHandler {
 
     @Override
     public void onButton(ButtonInteractionEvent event, ComponentId id, BotContext ctx) {
+        // The hub section chooser is a StringSelectMenu (see onStringSelect); the only
+        // button left in setup opens the ticket description/emoji modal.
         if ("ticketinfo".equals(id.action())) {
             openTicketInfoModal(event);
-            return;
-        }
-        if (!"section".equals(id.action())) {
-            return;
-        }
-        switch (String.valueOf(id.arg(0))) {
-            case "logs" -> showLogsPanel(event);
-            case "roles" -> showRolesPanel(event);
-            case "tickets" -> showTicketsPanel(event);
-            case "bot" -> showBotPanel(event);
-            default -> placeholder(event, "Desconhecido", "Seção inválida.");
         }
     }
 
     @Override
     public void onStringSelect(StringSelectInteractionEvent event, ComponentId id, BotContext ctx) {
-        if (!"rolekey".equals(id.action())) {
-            return;
+        switch (id.action()) {
+            case "section" -> openSection(event, event.getValues().get(0));
+            case "rolekey" -> openRolePicker(event, event.getValues().get(0));
+            default -> { /* not ours */ }
         }
-        String key = event.getValues().get(0);
+    }
+
+    private void openSection(StringSelectInteractionEvent event, String section) {
+        switch (section) {
+            case "logs" -> showLogsPanel(event);
+            case "roles" -> showRolesPanel(event);
+            case "tickets" -> showTicketsPanel(event);
+            case "bot" -> showBotPanel(event);
+            default -> event.reply("Seção inválida.").setEphemeral(true).queue();
+        }
+    }
+
+    private void openRolePicker(StringSelectInteractionEvent event, String key) {
         EntitySelectMenu roleMenu = EntitySelectMenu
                 .create(ComponentId.of(SetupView.NS, "setrole", key), EntitySelectMenu.SelectTarget.ROLE)
                 .setPlaceholder("Cargo para: " + SetupRoleKeys.labelFor(key))
@@ -96,7 +102,7 @@ public final class SetupComponentHandler implements ComponentHandler {
         event.reply("Descrição e emoji dos tickets atualizados.").setEphemeral(true).queue();
     }
 
-    private void showLogsPanel(ButtonInteractionEvent event) {
+    private void showLogsPanel(IReplyCallback event) {
         EntitySelectMenu logMenu = EntitySelectMenu
                 .create(ComponentId.of(SetupView.NS, "setlog"), EntitySelectMenu.SelectTarget.CHANNEL)
                 .setChannelTypes(ChannelType.TEXT)
@@ -115,7 +121,7 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .queue();
     }
 
-    private void showRolesPanel(ButtonInteractionEvent event) {
+    private void showRolesPanel(IReplyCallback event) {
         StringSelectMenu.Builder menu = StringSelectMenu
                 .create(ComponentId.of(SetupView.NS, "rolekey"))
                 .setPlaceholder("Qual cargo lógico configurar?");
@@ -128,7 +134,7 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .queue();
     }
 
-    private void showTicketsPanel(ButtonInteractionEvent event) {
+    private void showTicketsPanel(IReplyCallback event) {
         EntitySelectMenu category = EntitySelectMenu
                 .create(ComponentId.of(SetupView.NS, "setcategory"), EntitySelectMenu.SelectTarget.CHANNEL)
                 .setChannelTypes(ChannelType.CATEGORY)
@@ -150,7 +156,7 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .queue();
     }
 
-    private void showBotPanel(ButtonInteractionEvent event) {
+    private void showBotPanel(IReplyCallback event) {
         net.dv8tion.jda.api.entities.SelfUser self = event.getJDA().getSelfUser();
         net.dv8tion.jda.api.EmbedBuilder embed = new net.dv8tion.jda.api.EmbedBuilder()
                 .setTitle("🤖 Perfil do Bot")
@@ -264,9 +270,5 @@ public final class SetupComponentHandler implements ComponentHandler {
         ctx.database().actionLogs().log(guildId, event.getUser().getId(), null,
                 "SETUP_STAFF_ROLES", String.valueOf(roleIds.size()));
         event.reply("Cargos de staff definidos: " + roleIds.size()).setEphemeral(true).queue();
-    }
-
-    private void placeholder(ButtonInteractionEvent event, String section, String detail) {
-        event.reply("**" + section + "** — " + detail).setEphemeral(true).queue();
     }
 }

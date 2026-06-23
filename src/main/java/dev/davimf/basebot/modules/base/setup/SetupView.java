@@ -4,7 +4,7 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.database.model.GuildConfig;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 
 /** Builds the {@code /setup} hub: a summary embed + the section buttons (BOTSPECS Module 1). */
@@ -32,12 +32,14 @@ public final class SetupView {
     }
 
     public static ActionRow hubRow() {
-        return ActionRow.of(
-                Button.primary(ComponentId.of(NS, "section", "logs"), "Logs"),
-                Button.primary(ComponentId.of(NS, "section", "roles"), "Cargos"),
-                Button.primary(ComponentId.of(NS, "section", "tickets"), "Tickets"),
-                Button.secondary(ComponentId.of(NS, "section", "bot"), "Bot")
-        );
+        StringSelectMenu menu = StringSelectMenu.create(ComponentId.of(NS, "section"))
+                .setPlaceholder("Escolha a seção")
+                .addOption("Logs", "logs", "Canais de logs gerais e de tickets")
+                .addOption("Cargos", "roles", "Mapear cargos lógicos a cargos do servidor")
+                .addOption("Tickets", "tickets", "Categoria, staff, descrição e emoji")
+                .addOption("Bot", "bot", "Perfil global do bot")
+                .build();
+        return ActionRow.of(menu);
     }
 
     private static String channelOrUnset(String channelId) {
