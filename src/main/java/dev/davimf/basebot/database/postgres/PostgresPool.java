@@ -22,10 +22,18 @@ public final class PostgresPool implements AutoCloseable {
     private final String schema;
 
     public PostgresPool(BotConfig.Postgres cfg) {
+        // Accept either a jdbc: URL (with separate user/password) or a Neon/libpq
+        // connection string with credentials embedded; explicit user/password win.
+        PostgresUrl.Parsed url = PostgresUrl.normalize(cfg.url(), cfg.username(), cfg.password());
+
         HikariConfig hc = new HikariConfig();
-        hc.setJdbcUrl(cfg.url());
-        hc.setUsername(cfg.username());
-        hc.setPassword(cfg.password());
+        hc.setJdbcUrl(url.jdbcUrl());
+        if (url.user() != null) {
+            hc.setUsername(url.user());
+        }
+        if (url.password() != null) {
+            hc.setPassword(url.password());
+        }
         hc.setMaximumPoolSize(cfg.maxPoolSize());
         hc.setPoolName("basebot-postgres");
         // Neon's serverless proxy benefits from validation + a bounded connection lifetime.

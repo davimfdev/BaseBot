@@ -16,10 +16,12 @@ discord:
 # Today the dashboard uses Supabase; this will migrate to a dedicated Neon schema.
 # The bot talks plain JDBC so it works against either. Env: POSTGRES_URL etc.
 postgres:
-  # JDBC URL, e.g. jdbc:postgresql://HOST/DB?sslmode=require
-  url: "jdbc:postgresql://localhost:5432/basebot?sslmode=disable"
-  username: "basebot"
-  password: "CHANGE_ME"
+  # Full connection string. Accepts a Neon/libpq URI with embedded credentials
+  # (postgresql://user:pass@HOST/DB?sslmode=require) or a jdbc:postgresql://... URL.
+  url: "postgresql://user:password@HOST/basebot?sslmode=require"
+  # Optional — only needed if the url above has no embedded credentials.
+  username: ""
+  password: ""
   maxPoolSize: 5
   # Schema that holds guild config tables. Lets the Supabase->Neon move be a config change.
   schema: "public"
