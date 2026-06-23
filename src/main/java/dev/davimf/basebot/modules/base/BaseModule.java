@@ -9,6 +9,7 @@ import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
 import dev.davimf.basebot.modules.base.commands.RemoveCargoCommand;
 import dev.davimf.basebot.modules.base.commands.PingCommand;
+import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 
@@ -44,6 +45,9 @@ public final class BaseModule implements BotModule {
         // Role management (BOTSPECS Module 1) — hierarchy-validated.
         registry.command(new AddCargoCommand());
         registry.command(new RemoveCargoCommand());
+
+        // Configuration hub (BOTSPECS Module 1).
+        registry.command(new SetupCommand());
 
         // General logging: command executions, message deletes/edits, joins/leaves,
         // voice traffic, bans, kicks (BOTSPECS §General Logging).
