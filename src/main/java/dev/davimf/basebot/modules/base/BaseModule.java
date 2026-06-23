@@ -3,7 +3,10 @@ package dev.davimf.basebot.modules.base;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
+import dev.davimf.basebot.modules.base.commands.BanCommand;
+import dev.davimf.basebot.modules.base.commands.KickCommand;
 import dev.davimf.basebot.modules.base.commands.PingCommand;
+import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 
 /**
@@ -25,6 +28,11 @@ public final class BaseModule implements BotModule {
     public void register(ModuleRegistry registry, BotContext ctx) {
         // Reference implementation proving the command pipeline compiles & routes.
         registry.command(new PingCommand());
+
+        // Moderation (BOTSPECS Module 1) — hierarchy-validated.
+        registry.command(new KickCommand());
+        registry.command(new BanCommand());
+        registry.command(new UnbanCommand());
 
         // General logging: command executions, message deletes/edits, joins/leaves,
         // voice traffic, bans, kicks (BOTSPECS §General Logging).
