@@ -12,7 +12,8 @@ public final class SetupRoleKeys {
     public static final List<Map.Entry<String, String>> OPTIONS = List.of(
             Map.entry("moderador", "Moderador"),
             Map.entry("staff", "Staff"),
-            Map.entry("mutado", "Cargo de Mutado")
+            Map.entry("mutado", "Cargo de Mutado"),
+            Map.entry("vendedor", "Vendedor (Pix)")
     );
 
     public static String labelFor(String key) {
