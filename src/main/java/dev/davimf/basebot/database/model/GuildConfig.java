@@ -22,11 +22,12 @@ public record GuildConfig(
         Map<String, String> channels,   // logical name -> channel id
         Map<String, String> roles,      // logical name -> role id
         Map<String, Boolean> toggles,   // feature flag -> on/off
-        List<String> staffRoleIds       // ticket-allowed staff roles
+        List<String> staffRoleIds,      // ticket-allowed staff roles
+        Map<String, String> settings    // free-form text config (ticket desc/emoji, percentages)
 ) {
 
     public static GuildConfig empty(String guildId) {
-        return new GuildConfig(guildId, null, null, Map.of(), Map.of(), Map.of(), List.of());
+        return new GuildConfig(guildId, null, null, Map.of(), Map.of(), Map.of(), List.of(), Map.of());
     }
 
     public boolean toggle(String key, boolean def) {
@@ -39,5 +40,9 @@ public record GuildConfig(
 
     public String role(String key) {
         return roles.get(key);
+    }
+
+    public String setting(String key) {
+        return settings.get(key);
     }
 }
