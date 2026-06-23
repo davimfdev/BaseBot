@@ -8,6 +8,7 @@ import dev.davimf.basebot.database.sqlite.ActionLogRepository;
 import dev.davimf.basebot.database.sqlite.SqliteManager;
 import dev.davimf.basebot.database.sqlite.SqliteMigrator;
 import dev.davimf.basebot.database.sqlite.TicketRepository;
+import dev.davimf.basebot.modules.base.voice.VoiceMuteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +31,7 @@ public final class DatabaseManager implements AutoCloseable {
     private final GuildConfigRepository guildConfig;
     private final TicketRepository tickets;
     private final ActionLogRepository actionLogs;
+    private final VoiceMuteRepository voiceMutes;
 
     public DatabaseManager(BotConfig config) {
         log.info("Initializing databases...");
@@ -43,6 +45,7 @@ public final class DatabaseManager implements AutoCloseable {
         this.guildConfig = new JdbcGuildConfigRepository(postgres);
         this.tickets = new TicketRepository(sqlite);
         this.actionLogs = new ActionLogRepository(sqlite);
+        this.voiceMutes = new VoiceMuteRepository(sqlite);
         log.info("Databases ready.");
     }
 
@@ -56,6 +59,10 @@ public final class DatabaseManager implements AutoCloseable {
 
     public ActionLogRepository actionLogs() {
         return actionLogs;
+    }
+
+    public VoiceMuteRepository voiceMutes() {
+        return voiceMutes;
     }
 
     public PostgresPool postgres() {
