@@ -33,7 +33,8 @@ public final class SqliteMigrator {
     private static final List<String> MIGRATIONS = List.of(
             "/db/sqlite/001_init.sql",
             "/db/sqlite/002_pix_keys.sql",
-            "/db/sqlite/003_voice_mutes.sql"
+            "/db/sqlite/003_voice_mutes.sql",
+            "/db/sqlite/004_pix_keys_per_user.sql"
     );
 
     private final SqliteManager sqlite;

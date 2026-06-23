@@ -1,9 +1,9 @@
 package dev.davimf.basebot.database.model;
 
-/** A seller's Pix key, scoped to a guild + role (BOTSPECS Module 3). */
+/** A seller's Pix key, scoped to a guild + the seller's user id (BOTSPECS Module 3). */
 public record PixKey(
         String guildId,
-        String roleId,
+        String userId,
         String keyType,
         String keyValue,
         String merchantName,
