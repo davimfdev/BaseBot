@@ -24,4 +24,11 @@ public final class Moderation {
         return RoleHierarchy.canModerate(
                 topPosition(actor), topPosition(target), actor.isOwner(), topPosition(self));
     }
+
+    /** True if both the actor and the bot may assign/remove {@code role} (by position). */
+    public static boolean canManageRole(Member actor, Role role, Member self) {
+        int rolePos = role.getPosition();
+        return RoleHierarchy.actorOutranks(topPosition(actor), rolePos, actor.isOwner())
+                && self.canInteract(role);
+    }
 }
