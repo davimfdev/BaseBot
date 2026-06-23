@@ -39,7 +39,7 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
     public Optional<GuildConfig> find(String guildId) {
         String sql = """
                 SELECT guild_id, log_channel_id, ticket_log_channel_id,
-                       channels, roles, toggles, staff_role_ids
+                       channels, roles, toggles, staff_role_ids, settings
                   FROM guild_config
                  WHERE guild_id = ?
                 """;
@@ -60,8 +60,8 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
         String sql = """
                 INSERT INTO guild_config
                     (guild_id, log_channel_id, ticket_log_channel_id,
-                     channels, roles, toggles, staff_role_ids, updated_at)
-                VALUES (?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, now())
+                     channels, roles, toggles, staff_role_ids, settings, updated_at)
+                VALUES (?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, now())
                 ON CONFLICT (guild_id) DO UPDATE SET
                     log_channel_id        = EXCLUDED.log_channel_id,
                     ticket_log_channel_id = EXCLUDED.ticket_log_channel_id,
@@ -69,6 +69,7 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
                     roles                 = EXCLUDED.roles,
                     toggles               = EXCLUDED.toggles,
                     staff_role_ids        = EXCLUDED.staff_role_ids,
+                    settings              = EXCLUDED.settings,
                     updated_at            = now()
                 """;
         try (Connection c = pool.getConnection();
@@ -80,6 +81,7 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
             ps.setString(5, write(cfg.roles()));
             ps.setString(6, write(cfg.toggles()));
             ps.setString(7, write(cfg.staffRoleIds()));
+            ps.setString(8, write(cfg.settings()));
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RepositoryException("save guild_config " + cfg.guildId(), e);
@@ -117,7 +119,8 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
                 read(rs.getString("channels"), STR_MAP, Map.of()),
                 read(rs.getString("roles"), STR_MAP, Map.of()),
                 read(rs.getString("toggles"), BOOL_MAP, Map.of()),
-                read(rs.getString("staff_role_ids"), STR_LIST, List.of())
+                read(rs.getString("staff_role_ids"), STR_LIST, List.of()),
+                read(rs.getString("settings"), STR_MAP, Map.of())
         );
     }
 

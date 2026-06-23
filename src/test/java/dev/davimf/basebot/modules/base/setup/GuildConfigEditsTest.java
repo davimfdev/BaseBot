@@ -47,4 +47,17 @@ class GuildConfigEditsTest {
         GuildConfig c = GuildConfigEdits.withChannel(base, "tickets-category", "999");
         assertEquals("999", c.channel("tickets-category"));
     }
+
+    @Test
+    void withSettingStoresAndReadsBack() {
+        GuildConfig c = GuildConfigEdits.withSetting(base, "ticket-description", "Abra um ticket");
+        assertEquals("Abra um ticket", c.setting("ticket-description"));
+    }
+
+    @Test
+    void editsPreserveSettings() {
+        GuildConfig withSetting = GuildConfigEdits.withSetting(base, "ticket-emoji", "🎫");
+        GuildConfig then = GuildConfigEdits.withLogChannel(withSetting, "100");
+        assertEquals("🎫", then.setting("ticket-emoji"));
+    }
 }
