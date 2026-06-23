@@ -31,8 +31,8 @@ public final class SetupCommand implements SlashCommand {
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
-        event.replyEmbeds(SetupView.hubEmbed(cfg))
-                .addComponents(SetupView.hubRow())
+        event.replyComponents(SetupView.hubContainer(cfg))
+                .useComponentsV2()
                 .setEphemeral(true)
                 .queue();
     }

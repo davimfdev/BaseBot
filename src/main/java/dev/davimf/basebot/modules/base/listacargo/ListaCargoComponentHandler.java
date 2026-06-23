@@ -32,9 +32,7 @@ public final class ListaCargoComponentHandler implements ComponentHandler {
         List<Member> members = event.getGuild().getMembersWithRoles(role);
         int pages = Paginator.pageCount(members.size(), ListaCargoView.PAGE_SIZE);
         int page = Math.max(0, Math.min(requested, pages - 1));
-        event.editMessageEmbeds(ListaCargoView.embed(role, members, page))
-                .setComponents(ListaCargoView.navRow(role.getId(), page, pages))
-                .queue();
+        event.editComponents(ListaCargoView.container(role, members, page)).queue();
     }
 
     private int parsePage(String raw) {
