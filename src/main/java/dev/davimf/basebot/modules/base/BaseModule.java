@@ -4,6 +4,7 @@ import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
 import dev.davimf.basebot.modules.base.commands.BanCommand;
+import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
 import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
@@ -33,6 +34,10 @@ public final class BaseModule implements BotModule {
         registry.command(new KickCommand());
         registry.command(new BanCommand());
         registry.command(new UnbanCommand());
+
+        // Message purging (BOTSPECS Module 1) — /cl is an alias of /clear.
+        registry.command(new ClearCommand("clear"));
+        registry.command(new ClearCommand("cl"));
 
         // General logging: command executions, message deletes/edits, joins/leaves,
         // voice traffic, bans, kicks (BOTSPECS §General Logging).
