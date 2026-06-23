@@ -32,7 +32,8 @@ public final class SqliteMigrator {
     /** Ordered list of migration resources. Append new files here; never reorder. */
     private static final List<String> MIGRATIONS = List.of(
             "/db/sqlite/001_init.sql",
-            "/db/sqlite/002_pix_keys.sql"
+            "/db/sqlite/002_pix_keys.sql",
+            "/db/sqlite/003_voice_mutes.sql"
     );
 
     private final SqliteManager sqlite;
