@@ -21,11 +21,12 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 /**
- * Module 3 Pix command. The seller is identified by the guild's configured "vendedor"
- * role (set in {@code /setup → Cargos}, stored in {@code guild_config.roles}); the
- * command never takes a role option. {@code /pix registrar} stores the seller's key;
- * {@code /pix gerar} generates a BR Code (copy-paste + QR) with an owner-restricted
- * confirmation button.
+ * Module 3 Pix command. The guild's configured "vendedor" role (set in
+ * {@code /setup → Cargos}, stored in {@code guild_config.roles}) gates who may use the
+ * command — but each seller's Pix key is stored <b>per person</b> (by user id), not per
+ * role. {@code /pix registrar} stores the invoking seller's own key; {@code /pix gerar}
+ * generates a BR Code (copy-paste + QR) from it with an owner-restricted confirmation
+ * button.
  */
 public final class PixCommand implements SlashCommand {
 
@@ -47,7 +48,7 @@ public final class PixCommand implements SlashCommand {
     public SlashCommandData data() {
         return Commands.slash("pix", "Gerenciar e gerar cobranças Pix.")
                 .addSubcommands(
-                        new SubcommandData("registrar", "Registra a chave Pix do vendedor configurado.")
+                        new SubcommandData("registrar", "Registra a sua chave Pix (vendedor).")
                                 .addOptions(new OptionData(OptionType.STRING, "tipo", "Tipo da chave", true)
                                         .addChoice("CPF", "CPF").addChoice("CNPJ", "CNPJ")
                                         .addChoice("E-mail", "EMAIL").addChoice("Telefone", "PHONE")
@@ -55,14 +56,14 @@ public final class PixCommand implements SlashCommand {
                                 .addOption(OptionType.STRING, "chave", "Valor da chave Pix", true)
                                 .addOption(OptionType.STRING, "nome", "Nome do recebedor (máx 25)", true)
                                 .addOption(OptionType.STRING, "cidade", "Cidade do recebedor (máx 15)", true),
-                        new SubcommandData("gerar", "Gera uma cobrança Pix do vendedor configurado.")
+                        new SubcommandData("gerar", "Gera uma cobrança com a sua chave Pix.")
                                 .addOption(OptionType.NUMBER, "valor", "Valor (opcional)", false)
                 );
     }
 
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
-        if (event.getGuild() == null) {
+        if (event.getGuild() == null || event.getMember() == null) {
             event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
             return;
         }
@@ -72,11 +73,19 @@ public final class PixCommand implements SlashCommand {
                     .setEphemeral(true).queue();
             return;
         }
+        // The seller role only gates access; each seller's Pix key is stored per person.
+        boolean isSeller = event.getMember().getRoles().stream()
+                .anyMatch(r -> r.getId().equals(sellerRoleId));
+        if (!isSeller) {
+            event.reply("Apenas membros com o cargo de vendedor (<@&" + sellerRoleId + ">) podem usar o /pix.")
+                    .setEphemeral(true).queue();
+            return;
+        }
         String sub = event.getSubcommandName();
         if ("registrar".equals(sub)) {
-            registrar(event, sellerRoleId);
+            registrar(event);
         } else if ("gerar".equals(sub)) {
-            gerar(event, sellerRoleId);
+            gerar(event);
         } else {
             event.reply("Subcomando inválido.").setEphemeral(true).queue();
         }
@@ -89,21 +98,20 @@ public final class PixCommand implements SlashCommand {
         return (roleId == null || roleId.isBlank()) ? null : roleId;
     }
 
-    private void registrar(SlashCommandInteractionEvent event, String sellerRoleId) {
+    private void registrar(SlashCommandInteractionEvent event) {
         String tipo = event.getOption("tipo", OptionMapping::getAsString);
         String chave = event.getOption("chave", OptionMapping::getAsString);
         String nome = event.getOption("nome", OptionMapping::getAsString);
         String cidade = event.getOption("cidade", OptionMapping::getAsString);
 
-        keys.upsert(new PixKey(event.getGuild().getId(), sellerRoleId, tipo, chave, nome, cidade));
-        event.reply("Chave Pix registrada para o cargo de vendedor <@&" + sellerRoleId + ">.")
-                .setEphemeral(true).queue();
+        keys.upsert(new PixKey(event.getGuild().getId(), event.getUser().getId(), tipo, chave, nome, cidade));
+        event.reply("Sua chave Pix foi registrada.").setEphemeral(true).queue();
     }
 
-    private void gerar(SlashCommandInteractionEvent event, String sellerRoleId) {
-        Optional<PixKey> maybe = keys.findByRole(event.getGuild().getId(), sellerRoleId);
+    private void gerar(SlashCommandInteractionEvent event) {
+        Optional<PixKey> maybe = keys.findByUser(event.getGuild().getId(), event.getUser().getId());
         if (maybe.isEmpty()) {
-            event.reply("Nenhuma chave Pix registrada para o vendedor. Use /pix registrar primeiro.")
+            event.reply("Você ainda não registrou sua chave Pix. Use /pix registrar primeiro.")
                     .setEphemeral(true).queue();
             return;
         }

@@ -32,10 +32,10 @@ class PixKeyRepositoryTest {
     }
 
     @Test
-    void upsertThenFindByRoleReturnsKey() {
-        repo.upsert(new PixKey("g1", "r1", "EMAIL", "a@b.com", "Loja X", "SAO PAULO"));
+    void upsertThenFindByUserReturnsKey() {
+        repo.upsert(new PixKey("g1", "u1", "EMAIL", "a@b.com", "Loja X", "SAO PAULO"));
 
-        Optional<PixKey> found = repo.findByRole("g1", "r1");
+        Optional<PixKey> found = repo.findByUser("g1", "u1");
         assertTrue(found.isPresent());
         assertEquals("a@b.com", found.get().keyValue());
         assertEquals("Loja X", found.get().merchantName());
@@ -43,18 +43,26 @@ class PixKeyRepositoryTest {
 
     @Test
     void upsertReplacesExistingRow() {
-        repo.upsert(new PixKey("g1", "r1", "EMAIL", "old@b.com", "Loja X", "SAO PAULO"));
-        repo.upsert(new PixKey("g1", "r1", "RANDOM", "new-key", "Loja Y", "RIO"));
+        repo.upsert(new PixKey("g1", "u1", "EMAIL", "old@b.com", "Loja X", "SAO PAULO"));
+        repo.upsert(new PixKey("g1", "u1", "RANDOM", "new-key", "Loja Y", "RIO"));
 
-        PixKey k = repo.findByRole("g1", "r1").orElseThrow();
+        PixKey k = repo.findByUser("g1", "u1").orElseThrow();
         assertEquals("RANDOM", k.keyType());
         assertEquals("new-key", k.keyValue());
         assertEquals("Loja Y", k.merchantName());
     }
 
     @Test
-    void findByRoleIsGuildScoped() {
-        repo.upsert(new PixKey("g1", "r1", "EMAIL", "a@b.com", "Loja X", "SAO PAULO"));
-        assertTrue(repo.findByRole("g2", "r1").isEmpty());
+    void findByUserIsGuildScoped() {
+        repo.upsert(new PixKey("g1", "u1", "EMAIL", "a@b.com", "Loja X", "SAO PAULO"));
+        assertTrue(repo.findByUser("g2", "u1").isEmpty());
+    }
+
+    @Test
+    void keysAreSeparatePerUser() {
+        repo.upsert(new PixKey("g1", "u1", "EMAIL", "u1@b.com", "Loja 1", "SP"));
+        repo.upsert(new PixKey("g1", "u2", "EMAIL", "u2@b.com", "Loja 2", "RJ"));
+        assertEquals("u1@b.com", repo.findByUser("g1", "u1").orElseThrow().keyValue());
+        assertEquals("u2@b.com", repo.findByUser("g1", "u2").orElseThrow().keyValue());
     }
 }
