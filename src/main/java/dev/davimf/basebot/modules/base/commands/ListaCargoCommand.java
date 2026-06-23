@@ -4,7 +4,6 @@ import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.listacargo.ListaCargoView;
 import dev.davimf.basebot.ratelimit.BatchThrottler;
-import dev.davimf.basebot.util.Paginator;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -47,9 +46,9 @@ public final class ListaCargoCommand implements SlashCommand {
             return;
         }
         List<Member> members = event.getGuild().getMembersWithRoles(role);
-        int pages = Paginator.pageCount(members.size(), ListaCargoView.PAGE_SIZE);
-        event.replyEmbeds(ListaCargoView.embed(role, members, 0))
-                .addComponents(ListaCargoView.navRow(role.getId(), 0, pages))
+        event.replyComponents(ListaCargoView.container(role, members, 0))
+                .useComponentsV2()
+                .setAllowedMentions(java.util.Collections.emptyList()) // list members without pinging them
                 .queue();
 
         boolean ghostPing = Boolean.TRUE.equals(event.getOption("ghost_ping", OptionMapping::getAsBoolean));

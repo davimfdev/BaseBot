@@ -3,9 +3,11 @@ package dev.davimf.basebot.modules.base.setup;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
+import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
@@ -69,10 +71,11 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .setPlaceholder("Cargo para: " + SetupRoleKeys.labelFor(key))
                 .setRequiredRange(1, 1)
                 .build();
-        event.reply("Selecione o cargo do servidor para **" + SetupRoleKeys.labelFor(key) + "**:")
-                .addComponents(ActionRow.of(roleMenu))
-                .setEphemeral(true)
-                .queue();
+        Container panel = Panels.container(Panels.BLURPLE,
+                Panels.text("### 👥 Cargos\nSelecione o cargo do servidor para **"
+                        + SetupRoleKeys.labelFor(key) + "**:"),
+                ActionRow.of(roleMenu));
+        replyPanel(event, panel);
     }
 
     @Override
@@ -115,10 +118,10 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .setPlaceholder("Canal de logs de tickets")
                 .setRequiredRange(1, 1)
                 .build();
-        event.reply("Selecione os canais de log:")
-                .addComponents(ActionRow.of(logMenu), ActionRow.of(ticketMenu))
-                .setEphemeral(true)
-                .queue();
+        replyPanel(event, Panels.container(Panels.BLURPLE,
+                Panels.text("### 📋 Logs\nSelecione os canais de log:"),
+                ActionRow.of(logMenu),
+                ActionRow.of(ticketMenu)));
     }
 
     private void showRolesPanel(IReplyCallback event) {
@@ -128,10 +131,9 @@ public final class SetupComponentHandler implements ComponentHandler {
         for (var e : SetupRoleKeys.OPTIONS) {
             menu.addOption(e.getValue(), e.getKey());
         }
-        event.reply("Escolha qual função deseja mapear a um cargo:")
-                .addComponents(ActionRow.of(menu.build()))
-                .setEphemeral(true)
-                .queue();
+        replyPanel(event, Panels.container(Panels.BLURPLE,
+                Panels.text("### 👥 Cargos\nEscolha qual função deseja mapear a um cargo:"),
+                ActionRow.of(menu.build())));
     }
 
     private void showTicketsPanel(IReplyCallback event) {
@@ -146,29 +148,28 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .setPlaceholder("Cargos de staff com acesso aos tickets")
                 .setRequiredRange(1, 25)
                 .build();
-        event.reply("Configuração de tickets:")
-                .addComponents(
-                        ActionRow.of(category),
-                        ActionRow.of(staff),
-                        ActionRow.of(Button.secondary(
-                                ComponentId.of(SetupView.NS, "ticketinfo"), "Definir descrição/emoji")))
-                .setEphemeral(true)
-                .queue();
+        replyPanel(event, Panels.container(Panels.BLURPLE,
+                Panels.text("### 🎫 Tickets\nConfigure a categoria, os cargos de staff e os textos do painel."),
+                ActionRow.of(category),
+                ActionRow.of(staff),
+                ActionRow.of(Button.secondary(
+                        ComponentId.of(SetupView.NS, "ticketinfo"), "Definir descrição/emoji"))));
     }
 
     private void showBotPanel(IReplyCallback event) {
         net.dv8tion.jda.api.entities.SelfUser self = event.getJDA().getSelfUser();
-        net.dv8tion.jda.api.EmbedBuilder embed = new net.dv8tion.jda.api.EmbedBuilder()
-                .setTitle("🤖 Perfil do Bot")
-                .setColor(0x5865F2)
-                .setThumbnail(self.getEffectiveAvatarUrl())
-                .addField("Nome atual", self.getName(), true)
-                .addField("ID", self.getId(), true)
-                .setDescription("O **nome** e o **avatar** são globais (afetam o bot em todos os "
-                        + "servidores) e o Discord limita a **2 alterações por hora**. "
-                        + "Use `/bot-name` e `/bot-icon` para alterá-los, e `/bot-nick` para o "
-                        + "apelido apenas neste servidor.");
-        event.replyEmbeds(embed.build()).setEphemeral(true).queue();
+        replyPanel(event, Panels.container(Panels.BLURPLE,
+                Panels.text("## 🤖 Perfil do Bot\n"
+                        + "**Nome atual:** " + self.getName() + "\n"
+                        + "**ID:** " + self.getId() + "\n\n"
+                        + "O **nome** e o **avatar** são globais (afetam o bot em todos os servidores) e o "
+                        + "Discord limita a **2 alterações por hora**. Use `/bot-name` e `/bot-icon` para "
+                        + "alterá-los, e `/bot-nick` para o apelido apenas neste servidor.")));
+    }
+
+    /** Sends a Components V2 container as an ephemeral reply. */
+    private void replyPanel(IReplyCallback event, Container panel) {
+        event.replyComponents(panel).useComponentsV2().setEphemeral(true).queue();
     }
 
     private void openTicketInfoModal(ButtonInteractionEvent event) {

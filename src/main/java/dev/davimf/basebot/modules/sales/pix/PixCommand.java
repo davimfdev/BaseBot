@@ -3,9 +3,9 @@ package dev.davimf.basebot.modules.sales.pix;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.core.component.ComponentId;
+import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.PixKey;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -15,6 +15,9 @@ import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
+import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
 import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.math.BigDecimal;
@@ -127,23 +130,22 @@ public final class PixCommand implements SlashCommand {
         }
         String brCode = builder.build().toBrCode();
         byte[] qrPng = PixQrCode.pngBytes(brCode, 360);
+        FileUpload qr = FileUpload.fromData(qrPng, "pix.png");
 
         String ownerId = event.getUser().getId();
-        EmbedBuilder embed = new EmbedBuilder()
-                .setTitle("Cobrança Pix")
-                .setDescription("**Pix Copia e Cola:**\n```" + brCode + "```")
-                .setImage("attachment://pix.png")
-                .setColor(0x00B894);
-        if (valor != null && valor > 0) {
-            embed.addField("Valor", "R$ " + String.format("%.2f", valor), true);
-        }
-
+        String text = "## Cobrança Pix\n**Pix Copia e Cola:**\n```" + brCode + "```"
+                + ((valor != null && valor > 0) ? "\n**Valor:** R$ " + String.format("%.2f", valor) : "");
         Button confirm = Button.success(
                 ComponentId.of("pix", "confirmar", ownerId), "Confirmar Pagamento");
 
-        event.replyEmbeds(embed.build())
-                .addFiles(FileUpload.fromData(qrPng, "pix.png"))
-                .addComponents(ActionRow.of(confirm))
+        Container container = Panels.container(0x00B894,
+                Panels.text(text),
+                MediaGallery.of(MediaGalleryItem.fromUrl("attachment://pix.png")),
+                ActionRow.of(confirm));
+
+        event.replyComponents(container)
+                .useComponentsV2()
+                .addFiles(qr)
                 .queue();
     }
 }
