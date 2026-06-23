@@ -7,6 +7,7 @@ import dev.davimf.basebot.modules.base.commands.AddCargoCommand;
 import dev.davimf.basebot.modules.base.commands.BanCommand;
 import dev.davimf.basebot.modules.base.commands.BotIconCommand;
 import dev.davimf.basebot.modules.base.commands.BotNameCommand;
+import dev.davimf.basebot.modules.base.commands.BotNickCommand;
 import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
@@ -71,6 +72,7 @@ public final class BaseModule implements BotModule {
         // Bot profile (BOTSPECS Module 1) — /bot-name + /bot-icon are GLOBAL (2x/hour cap).
         registry.command(new BotNameCommand());
         registry.command(new BotIconCommand());
+        registry.command(new BotNickCommand());
 
         // Configuration hub (BOTSPECS Module 1).
         registry.command(new SetupCommand());
