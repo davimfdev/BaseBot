@@ -1,0 +1,88 @@
+package dev.davimf.basebot.modules.sales.pix;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Builds a Pix "BR Code" (EMV®QRCPS) static payload string. Fields are encoded as
+ * TLV (id + 2-digit length + value); tag 63 holds the CRC-16 over everything that
+ * precedes it (including the "6304" prefix). See BOTSPECS Module 3.
+ */
+public final class PixPayload {
+
+    private final String key;
+    private final String merchantName;
+    private final String merchantCity;
+    private final BigDecimal amount;     // nullable -> omitted (open amount)
+    private final String txid;           // nullable/blank -> "***"
+    private final String description;    // nullable -> omitted
+
+    private PixPayload(Builder b) {
+        if (b.key == null || b.key.isBlank()) {
+            throw new IllegalArgumentException("Pix key is required");
+        }
+        this.key = b.key.trim();
+        this.merchantName = clip(b.merchantName, 25);
+        this.merchantCity = clip(b.merchantCity, 15);
+        this.amount = b.amount;
+        this.txid = b.txid;
+        this.description = b.description;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /** TLV encode: id + 2-digit length + value. */
+    static String emv(String id, String value) {
+        return id + String.format("%02d", value.length()) + value;
+    }
+
+    public String toBrCode() {
+        String merchantAccount = emv("00", "br.gov.bcb.pix") + emv("01", key);
+        if (description != null && !description.isBlank()) {
+            merchantAccount += emv("02", description.trim());
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(emv("00", "01"));               // Payload Format Indicator
+        sb.append(emv("26", merchantAccount));    // Merchant Account Information (Pix)
+        sb.append(emv("52", "0000"));             // Merchant Category Code
+        sb.append(emv("53", "986"));              // Transaction Currency (BRL)
+        if (amount != null) {
+            sb.append(emv("54", amount.setScale(2, RoundingMode.HALF_UP).toPlainString()));
+        }
+        sb.append(emv("58", "BR"));               // Country Code
+        sb.append(emv("59", merchantName));       // Merchant Name
+        sb.append(emv("60", merchantCity));       // Merchant City
+        String ref = (txid == null || txid.isBlank()) ? "***" : txid.trim();
+        sb.append(emv("62", emv("05", ref)));     // Additional Data Field (reference label)
+        sb.append("6304");                         // CRC tag id + length
+        sb.append(Crc16.hex4(sb.toString().getBytes(StandardCharsets.UTF_8)));
+        return sb.toString();
+    }
+
+    private static String clip(String s, int max) {
+        String v = (s == null) ? "" : s.trim();
+        return v.length() > max ? v.substring(0, max) : v;
+    }
+
+    public static final class Builder {
+        private String key;
+        private String merchantName = "PIX";
+        private String merchantCity = "SAO PAULO";
+        private BigDecimal amount;
+        private String txid;
+        private String description;
+
+        public Builder key(String v) { this.key = v; return this; }
+        public Builder merchantName(String v) { this.merchantName = v; return this; }
+        public Builder merchantCity(String v) { this.merchantCity = v; return this; }
+        public Builder amount(BigDecimal v) { this.amount = v; return this; }
+        public Builder txid(String v) { this.txid = v; return this; }
+        public Builder description(String v) { this.description = v; return this; }
+
+        public PixPayload build() { return new PixPayload(this); }
+    }
+}
