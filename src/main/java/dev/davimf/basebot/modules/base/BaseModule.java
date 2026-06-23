@@ -4,6 +4,7 @@ import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
 import dev.davimf.basebot.modules.base.commands.AddCargoCommand;
+import dev.davimf.basebot.modules.base.commands.AddEmojiCommand;
 import dev.davimf.basebot.modules.base.commands.BanCommand;
 import dev.davimf.basebot.modules.base.commands.BotIconCommand;
 import dev.davimf.basebot.modules.base.commands.BotNameCommand;
@@ -62,6 +63,7 @@ public final class BaseModule implements BotModule {
         // Channel utilities (BOTSPECS Module 1).
         registry.command(new LockCommand());
         registry.command(new UnlockCommand());
+        registry.command(new AddEmojiCommand());
 
         // Voice moderation (BOTSPECS Module 1).
         registry.command(new DisconnectCommand());
