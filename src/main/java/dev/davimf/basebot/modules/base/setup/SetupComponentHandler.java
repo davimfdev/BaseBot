@@ -47,8 +47,7 @@ public final class SetupComponentHandler implements ComponentHandler {
             case "logs" -> showLogsPanel(event);
             case "roles" -> showRolesPanel(event);
             case "tickets" -> showTicketsPanel(event);
-            case "bot" -> placeholder(event, "Bot",
-                    "Perfil global do bot via /bot-name e /bot-icon (limite do Discord: 2x por hora).");
+            case "bot" -> showBotPanel(event);
             default -> placeholder(event, "Desconhecido", "Seção inválida.");
         }
     }
@@ -149,6 +148,21 @@ public final class SetupComponentHandler implements ComponentHandler {
                                 ComponentId.of(SetupView.NS, "ticketinfo"), "Definir descrição/emoji")))
                 .setEphemeral(true)
                 .queue();
+    }
+
+    private void showBotPanel(ButtonInteractionEvent event) {
+        net.dv8tion.jda.api.entities.SelfUser self = event.getJDA().getSelfUser();
+        net.dv8tion.jda.api.EmbedBuilder embed = new net.dv8tion.jda.api.EmbedBuilder()
+                .setTitle("🤖 Perfil do Bot")
+                .setColor(0x5865F2)
+                .setThumbnail(self.getEffectiveAvatarUrl())
+                .addField("Nome atual", self.getName(), true)
+                .addField("ID", self.getId(), true)
+                .setDescription("O **nome** e o **avatar** são globais (afetam o bot em todos os "
+                        + "servidores) e o Discord limita a **2 alterações por hora**. "
+                        + "Use `/bot-name` e `/bot-icon` para alterá-los, e `/bot-nick` para o "
+                        + "apelido apenas neste servidor.");
+        event.replyEmbeds(embed.build()).setEphemeral(true).queue();
     }
 
     private void openTicketInfoModal(ButtonInteractionEvent event) {

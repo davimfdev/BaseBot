@@ -22,8 +22,12 @@ public final class SetupView {
                         + "Todas as configurações são específicas deste servidor.")
                 .addField("📋 Logs gerais", channelOrUnset(cfg.logChannelId()), true)
                 .addField("🎫 Logs de tickets", channelOrUnset(cfg.ticketLogChannelId()), true)
+                .addField("📂 Categoria de tickets", channelOrUnset(cfg.channel("tickets-category")), true)
                 .addField("👥 Cargos configurados", String.valueOf(cfg.roles().size()), true)
-                .addField("🛡️ Cargos de staff (tickets)", String.valueOf(cfg.staffRoleIds().size()), true)
+                .addField("🛡️ Staff de tickets", String.valueOf(cfg.staffRoleIds().size()), true)
+                .addField("📝 Descrição definida",
+                        cfg.setting("ticket-description") == null
+                                || cfg.setting("ticket-description").isBlank() ? "Não" : "Sim", true)
                 .build();
     }
 
