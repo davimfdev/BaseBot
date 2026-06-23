@@ -12,6 +12,7 @@ import dev.davimf.basebot.modules.base.commands.BotNickCommand;
 import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
+import dev.davimf.basebot.modules.base.commands.ListaCargoCommand;
 import dev.davimf.basebot.modules.base.commands.LockCommand;
 import dev.davimf.basebot.modules.base.commands.MuteCallCommand;
 import dev.davimf.basebot.modules.base.commands.MuteCommand;
@@ -23,6 +24,7 @@ import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.commands.VoiceMoveCommand;
+import dev.davimf.basebot.modules.base.listacargo.ListaCargoComponentHandler;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
 import dev.davimf.basebot.modules.base.voice.VoiceMutePersistenceListener;
@@ -64,6 +66,8 @@ public final class BaseModule implements BotModule {
         registry.command(new LockCommand());
         registry.command(new UnlockCommand());
         registry.command(new AddEmojiCommand());
+        registry.command(new ListaCargoCommand());
+        registry.component(new ListaCargoComponentHandler());
 
         // Voice moderation (BOTSPECS Module 1).
         registry.command(new DisconnectCommand());
