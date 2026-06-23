@@ -1,0 +1,31 @@
+# Build output
+.gradle/
+build/
+out/
+bin/
+
+# Local runtime data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+/data/
+/logs/
+
+# Secrets & local config (never commit real tokens / DB URLs)
+config.yml
+.env
+.env.local
+*.local.yml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db

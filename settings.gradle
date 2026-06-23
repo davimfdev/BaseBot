@@ -1,0 +1,15 @@
+// settings.gradle — single deployable Gradle project producing one ShadowJar.
+//
+// NOTE ON "MULTI-MODULE": The BOTSPECS.MD modules (Base, Tickets, Sales, Facs) are
+// *feature* modules, not separate deployables. They live as Java packages under
+// `dev.davimf.basebot.modules.*` and are wired through a common runtime. Keeping a
+// single Gradle project means one fat jar (`basebot.jar`) to run, which is the
+// correct shape for a JDA bot. If a feature ever needs independent release, it can
+// be promoted to a Gradle subproject (`include 'modules:tickets'`) later.
+
+plugins {
+    // Auto-provisions the JDK 22 toolchain if it is not already installed locally.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.9.0'
+}
+
+rootProject.name = 'basebot'
