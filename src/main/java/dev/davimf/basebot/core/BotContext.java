@@ -6,6 +6,7 @@ import dev.davimf.basebot.crypto.TicketCrypto;
 import dev.davimf.basebot.database.DatabaseManager;
 import dev.davimf.basebot.integration.TicketIngestClient;
 import dev.davimf.basebot.ratelimit.Debouncer;
+import dev.davimf.basebot.ratelimit.ProfileRateLimiter;
 import net.dv8tion.jda.api.JDA;
 
 /**
@@ -23,6 +24,7 @@ public final class BotContext {
     private final Debouncer embedDebouncer;
     private final TicketCrypto ticketCrypto;
     private final TicketIngestClient ticketIngest;
+    private final ProfileRateLimiter profileRateLimiter = new ProfileRateLimiter(2, 3_600_000L);
 
     private volatile JDA jda;
 
@@ -47,6 +49,11 @@ public final class BotContext {
 
     public TaskScheduler scheduler() {
         return scheduler;
+    }
+
+    /** Guards the global bot-profile 2-changes-per-hour Discord cap (/bot-name, /bot-icon). */
+    public ProfileRateLimiter profileRateLimiter() {
+        return profileRateLimiter;
     }
 
     /** Debouncer pre-configured with the embed-refresh window (Hierarchy panel, etc.). */
