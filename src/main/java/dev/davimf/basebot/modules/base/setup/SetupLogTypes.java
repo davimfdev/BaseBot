@@ -1,6 +1,9 @@
 package dev.davimf.basebot.modules.base.setup;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Every log category has its OWN channel (BOTSPECS + user requirement) — never a single
@@ -46,5 +49,24 @@ public final class SetupLogTypes {
     public static String labelFor(String key) {
         return ALL.stream().filter(t -> t.key().equals(key))
                 .map(LogType::label).findFirst().orElse(key);
+    }
+
+    /**
+     * Splits the log types into screens, grouped by module (each page belongs to one
+     * module), chunked so no page exceeds {@code maxPerPage} selects — keeping every
+     * screen within Discord's component limit while showing as many as fit.
+     */
+    public static List<List<LogType>> pages(int maxPerPage) {
+        Map<String, List<LogType>> byModule = new LinkedHashMap<>();
+        for (LogType t : ALL) {
+            byModule.computeIfAbsent(t.module(), k -> new ArrayList<>()).add(t);
+        }
+        List<List<LogType>> pages = new ArrayList<>();
+        for (List<LogType> group : byModule.values()) {
+            for (int i = 0; i < group.size(); i += maxPerPage) {
+                pages.add(List.copyOf(group.subList(i, Math.min(group.size(), i + maxPerPage))));
+            }
+        }
+        return pages;
     }
 }

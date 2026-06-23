@@ -3,21 +3,32 @@ package dev.davimf.basebot.modules.base.setup;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.setup.SetupLogTypes.LogType;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
+import net.dv8tion.jda.api.components.selections.EntitySelectMenu.DefaultValue;
+import net.dv8tion.jda.api.components.selections.EntitySelectMenu.SelectTarget;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Builds every {@code /setup} screen as a Components V2 container. The flow is a wizard
- * that edits a single message: hub → section → sub-screen, each non-hub screen carrying
- * a "◀ Voltar" button back to the previous screen.
+ * Builds every {@code /setup} screen as a Components V2 container. To minimise steps,
+ * each screen packs as many channel/role selects as fit (each pre-filled with the
+ * current value); the Logs screen is paginated by module with a navigator. Every
+ * non-hub screen has a "◀ Voltar" button.
  */
 public final class SetupView {
 
     public static final String NS = "setup";
+
+    /** Max selects per screen — kept within Discord's component limit (matches the target UI). */
+    private static final int PER_PAGE = 8;
 
     private SetupView() {}
 
@@ -44,80 +55,71 @@ public final class SetupView {
         return Panels.container(Panels.BLURPLE, Panels.text(body), Panels.divider(), ActionRow.of(menu));
     }
 
-    // --- Logs (one channel per type) ------------------------------------------
+    // --- Logs (many selects per screen, paginated by module) ------------------
 
-    public static Container logsList() {
-        StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "logpick"))
-                .setPlaceholder("Selecione o tipo de log");
-        for (SetupLogTypes.LogType t : SetupLogTypes.ALL) {
-            menu.addOption(t.label(), t.key(), "Módulo " + t.module());
+    public static Container logsPage(GuildConfig cfg, int pageIndex) {
+        List<List<LogType>> pages = SetupLogTypes.pages(PER_PAGE);
+        int total = pages.size();
+        int idx = Math.max(0, Math.min(pageIndex, total - 1));
+        List<LogType> page = pages.get(idx);
+        String module = page.get(0).module();
+
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## 📋 Logs — " + module + "  (" + (idx + 1) + "/" + total + ")\n"
+                + "Selecione o canal de cada log. Salva ao selecionar."));
+        for (LogType t : page) {
+            kids.add(Panels.text("**" + t.label() + "**"));
+            kids.add(ActionRow.of(channelSelect("setlogchannel", t.key(),
+                    "Selecionar canal", cfg.channel(t.key()))));
         }
-        return Panels.container(Panels.BLURPLE,
-                Panels.text("### 📋 Logs\nCada tipo de log tem o **seu próprio canal**. "
-                        + "Selecione um tipo para definir o canal:"),
-                ActionRow.of(menu.build()),
-                backRow("hub"));
+        kids.add(ActionRow.of(
+                Button.secondary(ComponentId.of(NS, "logpage", String.valueOf(idx - 1)), "◀")
+                        .withDisabled(idx <= 0),
+                Button.secondary(ComponentId.of(NS, "logpage", String.valueOf(idx + 1)), "▶")
+                        .withDisabled(idx >= total - 1),
+                Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
+
+        return Panels.container(Panels.BLURPLE, kids.toArray(new ContainerChildComponent[0]));
     }
 
-    public static Container logChannelPicker(String logKey) {
-        EntitySelectMenu channel = EntitySelectMenu
-                .create(ComponentId.of(NS, "setlogchannel", logKey), EntitySelectMenu.SelectTarget.CHANNEL)
-                .setChannelTypes(ChannelType.TEXT)
-                .setPlaceholder("Canal para este log")
-                .setRequiredRange(1, 1)
-                .build();
-        return Panels.container(Panels.BLURPLE,
-                Panels.text("### 📋 Log: " + SetupLogTypes.labelFor(logKey)
-                        + "\nSelecione o canal onde este log será enviado:"),
-                ActionRow.of(channel),
-                backRow("logs"));
-    }
+    // --- Cargos (all role selects on one screen) -------------------------------
 
-    // --- Cargos ----------------------------------------------------------------
-
-    public static Container cargos() {
-        StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "rolekey"))
-                .setPlaceholder("Qual cargo lógico configurar?");
+    public static Container cargos(GuildConfig cfg) {
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## 👥 Cargos\nMapeie cada função a um cargo do servidor. Salva ao selecionar."));
         for (var e : SetupRoleKeys.OPTIONS) {
-            menu.addOption(e.getValue(), e.getKey());
+            kids.add(Panels.text("**" + e.getValue() + "**"));
+            kids.add(ActionRow.of(roleSelect("setrole", e.getKey(),
+                    "Selecionar cargo", cfg.role(e.getKey()))));
         }
-        return Panels.container(Panels.BLURPLE,
-                Panels.text("### 👥 Cargos\nMapeie cada função a um cargo do servidor:"),
-                ActionRow.of(menu.build()),
-                backRow("hub"));
-    }
-
-    public static Container rolePicker(String roleKey) {
-        EntitySelectMenu roleMenu = EntitySelectMenu
-                .create(ComponentId.of(NS, "setrole", roleKey), EntitySelectMenu.SelectTarget.ROLE)
-                .setPlaceholder("Cargo para: " + SetupRoleKeys.labelFor(roleKey))
-                .setRequiredRange(1, 1)
-                .build();
-        return Panels.container(Panels.BLURPLE,
-                Panels.text("### 👥 Cargo: " + SetupRoleKeys.labelFor(roleKey)
-                        + "\nSelecione o cargo do servidor:"),
-                ActionRow.of(roleMenu),
-                backRow("cargos"));
+        kids.add(backRow("hub"));
+        return Panels.container(Panels.BLURPLE, kids.toArray(new ContainerChildComponent[0]));
     }
 
     // --- Tickets ---------------------------------------------------------------
 
-    public static Container tickets() {
-        EntitySelectMenu category = EntitySelectMenu
-                .create(ComponentId.of(NS, "setcategory"), EntitySelectMenu.SelectTarget.CHANNEL)
+    public static Container tickets(GuildConfig cfg) {
+        EntitySelectMenu.Builder category = EntitySelectMenu
+                .create(ComponentId.of(NS, "setcategory"), SelectTarget.CHANNEL)
                 .setChannelTypes(ChannelType.CATEGORY)
                 .setPlaceholder("Categoria onde os tickets serão criados")
-                .setRequiredRange(1, 1)
-                .build();
-        EntitySelectMenu staff = EntitySelectMenu
-                .create(ComponentId.of(NS, "setstaff"), EntitySelectMenu.SelectTarget.ROLE)
+                .setRequiredRange(1, 1);
+        if (cfg.channel("tickets-category") != null) {
+            category.setDefaultValues(DefaultValue.channel(cfg.channel("tickets-category")));
+        }
+        EntitySelectMenu.Builder staff = EntitySelectMenu
+                .create(ComponentId.of(NS, "setstaff"), SelectTarget.ROLE)
                 .setPlaceholder("Cargos de staff com acesso aos tickets")
-                .setRequiredRange(1, 25)
-                .build();
+                .setRequiredRange(1, 25);
+        if (!cfg.staffRoleIds().isEmpty()) {
+            staff.setDefaultValues(cfg.staffRoleIds().stream().map(DefaultValue::role).toList());
+        }
         return Panels.container(Panels.BLURPLE,
-                Panels.text("### 🎫 Tickets\nConfigure a categoria, os cargos de staff e os textos do painel."),
-                ActionRow.of(category),
-                ActionRow.of(staff),
+                Panels.text("## 🎫 Tickets\nConfigure a categoria, os cargos de staff e os textos do painel."),
+                Panels.text("**Categoria dos tickets**"),
+                ActionRow.of(category.build()),
+                Panels.text("**Cargos de staff**"),
+                ActionRow.of(staff.build()),
                 ActionRow.of(
                         Button.secondary(ComponentId.of(NS, "ticketinfo"), "Definir descrição/emoji"),
                         Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
@@ -137,6 +139,29 @@ public final class SetupView {
     }
 
     // --- helpers ---------------------------------------------------------------
+
+    private static EntitySelectMenu channelSelect(String action, String key, String placeholder, String currentId) {
+        EntitySelectMenu.Builder b = EntitySelectMenu
+                .create(ComponentId.of(NS, action, key), SelectTarget.CHANNEL)
+                .setChannelTypes(ChannelType.TEXT)
+                .setPlaceholder(placeholder)
+                .setRequiredRange(1, 1);
+        if (currentId != null) {
+            b.setDefaultValues(DefaultValue.channel(currentId));
+        }
+        return b.build();
+    }
+
+    private static EntitySelectMenu roleSelect(String action, String key, String placeholder, String currentId) {
+        EntitySelectMenu.Builder b = EntitySelectMenu
+                .create(ComponentId.of(NS, action, key), SelectTarget.ROLE)
+                .setPlaceholder(placeholder)
+                .setRequiredRange(1, 1);
+        if (currentId != null) {
+            b.setDefaultValues(DefaultValue.role(currentId));
+        }
+        return b.build();
+    }
 
     private static ActionRow backRow(String navTarget) {
         return ActionRow.of(Button.secondary(ComponentId.of(NS, "nav", navTarget), "◀ Voltar"));

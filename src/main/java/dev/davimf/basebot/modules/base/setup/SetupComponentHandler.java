@@ -21,8 +21,9 @@ import java.util.List;
 
 /**
  * Drives the {@code /setup} wizard. Navigation edits the single ephemeral message
- * (hub → section → sub-screen), and every non-hub screen has a "◀ Voltar" button.
- * Each selection is persisted to {@code guild_config} and the screen is re-rendered.
+ * (hub → section, with the Logs section paginated by module). Each select saves to
+ * {@code guild_config} and is acknowledged silently (the choice stays selected); the
+ * value is re-shown as the select's default when the screen is rebuilt.
  */
 public final class SetupComponentHandler implements ComponentHandler {
 
@@ -33,8 +34,13 @@ public final class SetupComponentHandler implements ComponentHandler {
 
     @Override
     public void onButton(ButtonInteractionEvent event, ComponentId id, BotContext ctx) {
+        if (event.getGuild() == null) {
+            return;
+        }
         switch (id.action()) {
-            case "nav" -> navigate(event, ctx, String.valueOf(id.arg(0)));
+            case "nav" -> edit(event, SetupView.hub(config(ctx, event.getGuild().getId())));
+            case "logpage" -> edit(event, SetupView.logsPage(
+                    config(ctx, event.getGuild().getId()), parseInt(id.arg(0))));
             case "ticketinfo" -> event.replyModal(ticketInfoModal()).queue();
             default -> { /* not ours */ }
         }
@@ -42,33 +48,28 @@ public final class SetupComponentHandler implements ComponentHandler {
 
     @Override
     public void onStringSelect(StringSelectInteractionEvent event, ComponentId id, BotContext ctx) {
-        switch (id.action()) {
-            case "section" -> openSection(event, ctx, event.getValues().get(0));
-            case "logpick" -> edit(event, SetupView.logChannelPicker(event.getValues().get(0)));
-            case "rolekey" -> edit(event, SetupView.rolePicker(event.getValues().get(0)));
-            default -> { /* not ours */ }
+        if (!"section".equals(id.action()) || event.getGuild() == null) {
+            return;
         }
+        GuildConfig cfg = config(ctx, event.getGuild().getId());
+        Container screen = switch (event.getValues().get(0)) {
+            case "logs" -> SetupView.logsPage(cfg, 0);
+            case "roles" -> SetupView.cargos(cfg);
+            case "tickets" -> SetupView.tickets(cfg);
+            case "bot" -> SetupView.bot(event.getJDA().getSelfUser().getName(),
+                    event.getJDA().getSelfUser().getId());
+            default -> SetupView.hub(cfg);
+        };
+        edit(event, screen);
     }
 
     @Override
     public void onEntitySelect(EntitySelectInteractionEvent event, ComponentId id, BotContext ctx) {
         switch (id.action()) {
-            case "setlogchannel" -> {
-                saveChannel(event, ctx, id.arg(0), firstChannelId(event));
-                edit(event, SetupView.logsList());
-            }
-            case "setcategory" -> {
-                saveChannel(event, ctx, "tickets-category", firstChannelId(event));
-                edit(event, SetupView.tickets());
-            }
-            case "setrole" -> {
-                saveRole(event, ctx, id.arg(0), firstRoleId(event));
-                edit(event, SetupView.cargos());
-            }
-            case "setstaff" -> {
-                saveStaff(event, ctx);
-                edit(event, SetupView.tickets());
-            }
+            case "setlogchannel" -> { saveChannel(event, ctx, id.arg(0), firstChannelId(event)); ack(event); }
+            case "setcategory" -> { saveChannel(event, ctx, "tickets-category", firstChannelId(event)); ack(event); }
+            case "setrole" -> { saveRole(event, ctx, id.arg(0), firstRoleId(event)); ack(event); }
+            case "setstaff" -> { saveStaff(event, ctx); ack(event); }
             default -> { /* not ours */ }
         }
     }
@@ -80,38 +81,11 @@ public final class SetupComponentHandler implements ComponentHandler {
         }
         String desc = event.getValue("desc") == null ? "" : event.getValue("desc").getAsString();
         String emoji = event.getValue("emoji") == null ? "" : event.getValue("emoji").getAsString();
-        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        GuildConfig cfg = config(ctx, event.getGuild().getId());
         cfg = GuildConfigEdits.withSetting(cfg, "ticket-description", desc);
         cfg = GuildConfigEdits.withSetting(cfg, "ticket-emoji", emoji);
         ctx.database().guildConfig().save(cfg);
         event.reply("Descrição e emoji dos tickets atualizados.").setEphemeral(true).queue();
-    }
-
-    // --- navigation ------------------------------------------------------------
-
-    private void navigate(ButtonInteractionEvent event, BotContext ctx, String target) {
-        switch (target) {
-            case "logs" -> edit(event, SetupView.logsList());
-            case "cargos" -> edit(event, SetupView.cargos());
-            default -> edit(event, SetupView.hub(config(ctx, event.getGuild().getId())));
-        }
-    }
-
-    private void openSection(StringSelectInteractionEvent event, BotContext ctx, String section) {
-        Container screen = switch (section) {
-            case "logs" -> SetupView.logsList();
-            case "roles" -> SetupView.cargos();
-            case "tickets" -> SetupView.tickets();
-            case "bot" -> SetupView.bot(event.getJDA().getSelfUser().getName(),
-                    event.getJDA().getSelfUser().getId());
-            default -> SetupView.hub(config(ctx, event.getGuild().getId()));
-        };
-        edit(event, screen);
-    }
-
-    /** Edits the wizard message to a new Components V2 screen (V1 default would reject Container). */
-    private void edit(IMessageEditCallback event, Container screen) {
-        event.editComponents(screen).useComponentsV2().queue();
     }
 
     // --- persistence -----------------------------------------------------------
@@ -153,8 +127,26 @@ public final class SetupComponentHandler implements ComponentHandler {
 
     // --- helpers ---------------------------------------------------------------
 
+    /** Edits the wizard message to a new V2 screen (V1 default would reject Container). */
+    private void edit(IMessageEditCallback event, Container screen) {
+        event.editComponents(screen).useComponentsV2().queue();
+    }
+
+    /** Acknowledges a select without changing the message — the choice stays selected. */
+    private void ack(EntitySelectInteractionEvent event) {
+        event.deferEdit().queue();
+    }
+
     private GuildConfig config(BotContext ctx, String guildId) {
         return ctx.database().guildConfig().findOrEmpty(guildId);
+    }
+
+    private static int parseInt(String raw) {
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private static String firstChannelId(EntitySelectInteractionEvent event) {
