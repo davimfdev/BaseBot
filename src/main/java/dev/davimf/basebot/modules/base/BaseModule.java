@@ -9,8 +9,10 @@ import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
 import dev.davimf.basebot.modules.base.commands.MuteCallCommand;
+import dev.davimf.basebot.modules.base.commands.MuteCommand;
 import dev.davimf.basebot.modules.base.commands.RemoveCargoCommand;
 import dev.davimf.basebot.modules.base.commands.UnmuteCallCommand;
+import dev.davimf.basebot.modules.base.commands.UnmuteCommand;
 import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
@@ -59,6 +61,10 @@ public final class BaseModule implements BotModule {
         registry.command(new UnmuteCallCommand());
         // Re-apply persistent call mutes when a flagged member joins voice.
         registry.listener(new VoiceMutePersistenceListener(ctx));
+
+        // Text mute via the configured "mutado" role (set in /setup → Cargos).
+        registry.command(new MuteCommand());
+        registry.command(new UnmuteCommand());
 
         // Configuration hub (BOTSPECS Module 1).
         registry.command(new SetupCommand());
