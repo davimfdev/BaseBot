@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.interactions.callbacks.IMessageEditCallback;
 import net.dv8tion.jda.api.modals.Modal;
 
 import java.util.List;
@@ -43,8 +44,8 @@ public final class SetupComponentHandler implements ComponentHandler {
     public void onStringSelect(StringSelectInteractionEvent event, ComponentId id, BotContext ctx) {
         switch (id.action()) {
             case "section" -> openSection(event, ctx, event.getValues().get(0));
-            case "logpick" -> event.editComponents(SetupView.logChannelPicker(event.getValues().get(0))).queue();
-            case "rolekey" -> event.editComponents(SetupView.rolePicker(event.getValues().get(0))).queue();
+            case "logpick" -> edit(event, SetupView.logChannelPicker(event.getValues().get(0)));
+            case "rolekey" -> edit(event, SetupView.rolePicker(event.getValues().get(0)));
             default -> { /* not ours */ }
         }
     }
@@ -54,19 +55,19 @@ public final class SetupComponentHandler implements ComponentHandler {
         switch (id.action()) {
             case "setlogchannel" -> {
                 saveChannel(event, ctx, id.arg(0), firstChannelId(event));
-                event.editComponents(SetupView.logsList()).queue();
+                edit(event, SetupView.logsList());
             }
             case "setcategory" -> {
                 saveChannel(event, ctx, "tickets-category", firstChannelId(event));
-                event.editComponents(SetupView.tickets()).queue();
+                edit(event, SetupView.tickets());
             }
             case "setrole" -> {
                 saveRole(event, ctx, id.arg(0), firstRoleId(event));
-                event.editComponents(SetupView.cargos()).queue();
+                edit(event, SetupView.cargos());
             }
             case "setstaff" -> {
                 saveStaff(event, ctx);
-                event.editComponents(SetupView.tickets()).queue();
+                edit(event, SetupView.tickets());
             }
             default -> { /* not ours */ }
         }
@@ -90,9 +91,9 @@ public final class SetupComponentHandler implements ComponentHandler {
 
     private void navigate(ButtonInteractionEvent event, BotContext ctx, String target) {
         switch (target) {
-            case "logs" -> event.editComponents(SetupView.logsList()).queue();
-            case "cargos" -> event.editComponents(SetupView.cargos()).queue();
-            default -> event.editComponents(SetupView.hub(config(ctx, event.getGuild().getId()))).queue();
+            case "logs" -> edit(event, SetupView.logsList());
+            case "cargos" -> edit(event, SetupView.cargos());
+            default -> edit(event, SetupView.hub(config(ctx, event.getGuild().getId())));
         }
     }
 
@@ -105,7 +106,12 @@ public final class SetupComponentHandler implements ComponentHandler {
                     event.getJDA().getSelfUser().getId());
             default -> SetupView.hub(config(ctx, event.getGuild().getId()));
         };
-        event.editComponents(screen).queue();
+        edit(event, screen);
+    }
+
+    /** Edits the wizard message to a new Components V2 screen (V1 default would reject Container). */
+    private void edit(IMessageEditCallback event, Container screen) {
+        event.editComponents(screen).useComponentsV2().queue();
     }
 
     // --- persistence -----------------------------------------------------------
