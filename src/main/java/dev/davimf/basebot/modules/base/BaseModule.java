@@ -5,6 +5,8 @@ import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
 import dev.davimf.basebot.modules.base.commands.AddCargoCommand;
 import dev.davimf.basebot.modules.base.commands.BanCommand;
+import dev.davimf.basebot.modules.base.commands.BotIconCommand;
+import dev.davimf.basebot.modules.base.commands.BotNameCommand;
 import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
@@ -65,6 +67,10 @@ public final class BaseModule implements BotModule {
         // Text mute via the configured "mutado" role (set in /setup → Cargos).
         registry.command(new MuteCommand());
         registry.command(new UnmuteCommand());
+
+        // Bot profile (BOTSPECS Module 1) — /bot-name + /bot-icon are GLOBAL (2x/hour cap).
+        registry.command(new BotNameCommand());
+        registry.command(new BotIconCommand());
 
         // Configuration hub (BOTSPECS Module 1).
         registry.command(new SetupCommand());
