@@ -6,11 +6,13 @@ import dev.davimf.basebot.modules.ModuleRegistry;
 import dev.davimf.basebot.modules.base.commands.AddCargoCommand;
 import dev.davimf.basebot.modules.base.commands.BanCommand;
 import dev.davimf.basebot.modules.base.commands.ClearCommand;
+import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
 import dev.davimf.basebot.modules.base.commands.RemoveCargoCommand;
 import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
+import dev.davimf.basebot.modules.base.commands.VoiceMoveCommand;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
 
@@ -46,6 +48,10 @@ public final class BaseModule implements BotModule {
         // Role management (BOTSPECS Module 1) — hierarchy-validated.
         registry.command(new AddCargoCommand());
         registry.command(new RemoveCargoCommand());
+
+        // Voice moderation (BOTSPECS Module 1).
+        registry.command(new DisconnectCommand());
+        registry.command(new VoiceMoveCommand());
 
         // Configuration hub (BOTSPECS Module 1).
         registry.command(new SetupCommand());
