@@ -8,13 +8,16 @@ import dev.davimf.basebot.modules.base.commands.BanCommand;
 import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
+import dev.davimf.basebot.modules.base.commands.MuteCallCommand;
 import dev.davimf.basebot.modules.base.commands.RemoveCargoCommand;
+import dev.davimf.basebot.modules.base.commands.UnmuteCallCommand;
 import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.commands.VoiceMoveCommand;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
+import dev.davimf.basebot.modules.base.voice.VoiceMutePersistenceListener;
 
 /**
  * Module 1 — Base &amp; Utility (BOTSPECS §Module 1).
@@ -52,6 +55,10 @@ public final class BaseModule implements BotModule {
         // Voice moderation (BOTSPECS Module 1).
         registry.command(new DisconnectCommand());
         registry.command(new VoiceMoveCommand());
+        registry.command(new MuteCallCommand());
+        registry.command(new UnmuteCallCommand());
+        // Re-apply persistent call mutes when a flagged member joins voice.
+        registry.listener(new VoiceMutePersistenceListener(ctx));
 
         // Configuration hub (BOTSPECS Module 1).
         registry.command(new SetupCommand());
