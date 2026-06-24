@@ -9,7 +9,11 @@ import dev.davimf.basebot.modules.facs.commands.PunicoesCommand;
 import dev.davimf.basebot.modules.facs.commands.PunirCommand;
 import dev.davimf.basebot.modules.facs.hierarchy.HierarchyService;
 import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
+import dev.davimf.basebot.modules.facs.commands.PainelFinanceiroCommand;
 import dev.davimf.basebot.modules.facs.commands.SolicitarCargoCommand;
+import dev.davimf.basebot.modules.facs.economy.EconomyRepository;
+import dev.davimf.basebot.modules.facs.economy.FinanceComponentHandler;
+import dev.davimf.basebot.modules.facs.economy.FinanceService;
 import dev.davimf.basebot.modules.facs.punish.PunishComponentHandler;
 import dev.davimf.basebot.modules.facs.punish.PunishService;
 import dev.davimf.basebot.modules.facs.punish.PunishmentRepository;
@@ -57,8 +61,14 @@ public final class FacsModule implements BotModule {
         registry.command(new SolicitarCargoCommand());
         registry.component(new SetRequestComponentHandler());
 
-        // TODO(Module 4): /produzir, /painel-financeiro, /painel-acoes, /relatorio,
-        // /farm, plus the Actions/Reservations priority queue and recruitment pipeline.
+        // Economy: /painel-financeiro treasury panel (deposit/withdraw/transfer + toggles).
+        EconomyRepository economy = new EconomyRepository(ctx.database().sqlite());
+        FinanceService finance = new FinanceService(ctx, economy);
+        registry.command(new PainelFinanceiroCommand(finance));
+        registry.component(new FinanceComponentHandler(finance));
+
+        // TODO(Module 4): /produzir, /painel-acoes, /relatorio, /farm, plus the
+        // Actions/Reservations priority queue and recruitment pipeline.
     }
 
     @Override
