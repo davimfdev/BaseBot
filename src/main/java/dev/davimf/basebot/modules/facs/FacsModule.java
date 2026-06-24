@@ -3,6 +3,7 @@ package dev.davimf.basebot.modules.facs;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
+import dev.davimf.basebot.modules.facs.commands.PdCommand;
 import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
 
 /**
@@ -27,7 +28,10 @@ public final class FacsModule implements BotModule {
         // burst of role changes triggers only one embed refresh (BOTSPECS §1, §Module 4).
         registry.listener(new HierarchyListener(ctx));
 
-        // TODO(Module 4): /pd, /solicitar-cargo, /produzir, /painel-financeiro,
+        // Disciplinary: /pd removes a member + logs to PD and Punishments channels.
+        registry.command(new PdCommand());
+
+        // TODO(Module 4): /solicitar-cargo, /produzir, /painel-financeiro,
         // /painel-acoes, /relatorio, /hierarquia, /punir, /punições, /farm, plus the
         // Actions/Reservations priority queue and recruitment Set pipeline.
     }
