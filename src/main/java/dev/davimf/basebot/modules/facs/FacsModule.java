@@ -11,8 +11,10 @@ import dev.davimf.basebot.modules.facs.hierarchy.HierarchyService;
 import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
 import dev.davimf.basebot.modules.facs.commands.FarmCommand;
 import dev.davimf.basebot.modules.facs.commands.PainelFinanceiroCommand;
+import dev.davimf.basebot.modules.facs.commands.ProduzirCommand;
 import dev.davimf.basebot.modules.facs.commands.SolicitarCargoCommand;
 import dev.davimf.basebot.modules.facs.economy.EconomyRepository;
+import dev.davimf.basebot.modules.facs.economy.RecipeRepository;
 import dev.davimf.basebot.modules.facs.economy.FarmComponentHandler;
 import dev.davimf.basebot.modules.facs.economy.FarmRepository;
 import dev.davimf.basebot.modules.facs.economy.FarmService;
@@ -76,8 +78,11 @@ public final class FacsModule implements BotModule {
         registry.command(new FarmCommand(farm));
         registry.component(new FarmComponentHandler(farm));
 
-        // TODO(Module 4): /produzir, /painel-acoes, /relatorio, plus the
-        // Actions/Reservations priority queue and recruitment pipeline.
+        // Production: /produzir defines recipes + crafts products from stock.
+        registry.command(new ProduzirCommand(economy, new RecipeRepository(ctx.database().sqlite())));
+
+        // TODO(Module 4): /painel-acoes, /relatorio, plus the Actions/Reservations
+        // priority queue and recruitment pipeline.
     }
 
     @Override
