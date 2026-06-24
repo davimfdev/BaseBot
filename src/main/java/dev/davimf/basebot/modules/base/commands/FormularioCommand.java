@@ -89,7 +89,10 @@ public final class FormularioCommand implements SlashCommand {
             return;
         }
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(event.getGuild().getId()));
-        event.replyComponents(FormView.panel(accent, form.get())).useComponentsV2().queue();
+        // Post as a normal channel message (editable via /mensagem editar); confirm ephemerally.
+        event.getChannel().sendMessageComponents(FormView.panel(accent, form.get())).useComponentsV2().queue(
+                msg -> event.reply("📋 Formulário publicado.").setEphemeral(true).queue(),
+                err -> event.reply("Falha ao publicar: " + err.getMessage()).setEphemeral(true).queue());
     }
 
     private void lista(SlashCommandInteractionEvent event) {
