@@ -29,17 +29,18 @@ public final class TicketComponentHandler implements ComponentHandler {
         return "ticket";
     }
 
-    /** Panel select: a member chose a category → open a ticket. */
+    /** Panel select: a member chose a category → ask the reason via a modal. */
     @Override
     public void onStringSelect(StringSelectInteractionEvent event, ComponentId id, BotContext ctx) {
         if (!"open".equals(id.action()) || event.getGuild() == null) {
             return;
         }
         String categoryId = event.getValues().get(0);
-        event.deferReply(true).queue();
-        ctx.database().ticketCategories().find(categoryId).ifPresentOrElse(
-                cat -> service.openTicket(event, cat),
-                () -> event.getHook().sendMessage("Essa categoria não existe mais.").queue());
+        if (ctx.database().ticketCategories().find(categoryId).isEmpty()) {
+            event.reply("Essa categoria não existe mais.").setEphemeral(true).queue();
+            return;
+        }
+        event.replyModal(TicketView.openReasonModal(categoryId)).queue();
     }
 
     @Override
@@ -64,13 +65,25 @@ public final class TicketComponentHandler implements ComponentHandler {
         }
     }
 
-    /** Rename + close modal submits. */
+    /** Open-reason, rename + close modal submits. */
     @Override
     public void onModal(ModalInteractionEvent event, ComponentId id, BotContext ctx) {
         switch (id.action()) {
+            case "openform" -> openTicket(event, id.arg(0), ctx);
             case "renomeform" -> service.rename(event, id.arg(0));
-            case "closeform"  -> service.closeTicket(event, id.arg(0));
-            default           -> { /* not ours */ }
+            case "closeform" -> service.closeTicket(event, id.arg(0));
+            default -> { /* not ours */ }
         }
+    }
+
+    private void openTicket(ModalInteractionEvent event, String categoryId, BotContext ctx) {
+        if (event.getGuild() == null) {
+            return;
+        }
+        String reason = event.getValue("motivo") == null ? "" : event.getValue("motivo").getAsString();
+        event.deferReply(true).queue();
+        ctx.database().ticketCategories().find(categoryId).ifPresentOrElse(
+                cat -> service.openTicket(event, cat, reason),
+                () -> event.getHook().sendMessage("Essa categoria não existe mais.").queue());
     }
 }

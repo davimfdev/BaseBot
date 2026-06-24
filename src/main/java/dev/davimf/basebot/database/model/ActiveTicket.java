@@ -12,7 +12,8 @@ public record ActiveTicket(
         String creatorId,
         String assignedStaffId,  // nullable until "Assumir Atendimento"
         String suffix,
-        String status            // OPEN | CLOSING | CLOSED
+        String status,           // OPEN | CLOSING | CLOSED
+        String reason            // reason the member gave when opening (asked via modal)
 ) {
     public static final String OPEN = "OPEN";
     public static final String CLOSING = "CLOSING";

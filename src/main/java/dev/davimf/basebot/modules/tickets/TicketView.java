@@ -3,6 +3,7 @@ package dev.davimf.basebot.modules.tickets;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.TicketCategory;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
@@ -12,6 +13,7 @@ import net.dv8tion.jda.api.components.selections.EntitySelectMenu.SelectTarget;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.modals.Modal;
 
 import java.util.List;
@@ -43,24 +45,44 @@ public final class TicketView {
     }
 
     /**
-     * Dashboard, optionally showing the staff member who assumed it. When assigned, the
-     * "Assumir" button is disabled so it visibly reflects the claim (BOTSPECS Module 2).
+     * Dashboard. Before the ticket is assumed it stays clean — only Assumir + Fechar
+     * (cancel). Once a staff member assumes it, the full action set (Criar Call, Membro,
+     * Notificar, Renomear) appears and the header shows who is handling it.
      */
     public static Container dashboard(int accent, String ticketId, String headerMarkdown,
                                       String assignedStaffId) {
-        String text = assignedStaffId == null ? headerMarkdown
-                : headerMarkdown + "\n\n🙋 **Atendimento assumido por** <@" + assignedStaffId + ">";
+        if (assignedStaffId == null) {
+            return Panels.container(accent,
+                    Panels.text(headerMarkdown),
+                    ActionRow.of(
+                            Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir"),
+                            Button.danger(ComponentId.of(NS, "fechar", ticketId), "Fechar")));
+        }
         return Panels.container(accent,
-                Panels.text(text),
+                Panels.text(headerMarkdown + "\n\n🙋 **Atendimento assumido por** <@" + assignedStaffId + ">"),
                 ActionRow.of(
-                        Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir")
-                                .withDisabled(assignedStaffId != null),
+                        Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir").withDisabled(true),
                         Button.secondary(ComponentId.of(NS, "call", ticketId), "Criar Call"),
                         Button.secondary(ComponentId.of(NS, "membro", ticketId), "Membro"),
                         Button.secondary(ComponentId.of(NS, "notificar", ticketId), "Notificar")),
                 ActionRow.of(
                         Button.secondary(ComponentId.of(NS, "renomear", ticketId), "Renomear"),
                         Button.danger(ComponentId.of(NS, "fechar", ticketId), "Fechar")));
+    }
+
+    /** Modal asking the member why they are opening the ticket (shown before creation). */
+    public static Modal openReasonModal(String categoryId) {
+        TextInput motivo = TextInput.create("motivo", TextInputStyle.PARAGRAPH)
+                .setPlaceholder("Descreva o motivo do seu atendimento").setRequired(true).setMaxLength(500)
+                .build();
+        return Modal.create(ComponentId.of(NS, "openform", categoryId), "Abrir ticket")
+                .addComponents(Label.of("Motivo", motivo))
+                .build();
+    }
+
+    /** A classic embed for an in-channel action notice (visible to all + saved in the transcript). */
+    public static MessageEmbed actionEmbed(int accent, String text) {
+        return new EmbedBuilder().setColor(accent).setDescription(text).build();
     }
 
     /** Closure-reason modal shown by the "Fechar" button before the transcript runs. */
