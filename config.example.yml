@@ -8,8 +8,9 @@
 discord:
   # Bot token from the Discord Developer Portal. Env: BOT_TOKEN
   token: "YOUR_BOT_TOKEN"
-  # Optional: register slash commands instantly to this guild during dev.
-  # Leave blank/null for global command registration. Env: DEV_GUILD_ID
+  # Optional: register slash commands instantly to these guild(s) during dev.
+  # Accepts one id or several comma-separated (e.g. "111,222"). Leave blank/null to
+  # register per-guild to every server the bot is in. Env: DEV_GUILD_ID
   devGuildId: null
 
 # PostgreSQL — source of truth for Guild Configurations (Setup, Roles, Toggles).

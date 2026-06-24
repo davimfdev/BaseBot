@@ -19,9 +19,9 @@ import java.util.Map;
  *
  * <p>Commands are registered <b>per guild</b> (so they appear instantly): on
  * {@code onReady} to every guild the bot is already in, and on {@link #onGuildJoin}
- * whenever the bot joins a new server. A {@code devGuildId} restricts registration to a
- * single guild during development. Every handler runs inside a try/catch so one failing
- * command never tears down the listener.
+ * whenever the bot joins a new server. A {@code devGuildId} (one or more, comma-separated)
+ * restricts registration to those guilds during development. Every handler runs inside a
+ * try/catch so one failing command never tears down the listener.
  */
 public final class CommandManager extends ListenerAdapter {
 
@@ -50,15 +50,15 @@ public final class CommandManager extends ListenerAdapter {
     @Override
     public void onReady(ReadyEvent event) {
         JDA jda = event.getJDA();
-        String devGuildId = context.config().discord().devGuildId();
 
         if (context.config().discord().hasDevGuild()) {
-            Guild guild = jda.getGuildById(devGuildId);
-            if (guild != null) {
-                registerTo(guild);
-            } else {
-                log.warn("devGuildId {} not found; registering to all current guilds instead.", devGuildId);
-                jda.getGuilds().forEach(this::registerTo);
+            for (String id : context.config().discord().devGuildIds()) {
+                Guild guild = jda.getGuildById(id);
+                if (guild != null) {
+                    registerTo(guild);
+                } else {
+                    log.warn("devGuildId {} not found — is the bot a member of that guild?", id);
+                }
             }
             return;
         }
@@ -69,9 +69,9 @@ public final class CommandManager extends ListenerAdapter {
     /** Registers the commands in a guild as soon as the bot joins it. */
     @Override
     public void onGuildJoin(GuildJoinEvent event) {
-        // In dev mode only the dev guild is managed; ignore other joins.
+        // In dev mode only the listed dev guild(s) are managed; ignore other joins.
         if (context.config().discord().hasDevGuild()
-                && !event.getGuild().getId().equals(context.config().discord().devGuildId())) {
+                && !context.config().discord().devGuildIds().contains(event.getGuild().getId())) {
             return;
         }
         registerTo(event.getGuild());
