@@ -90,7 +90,7 @@ public final class TicketService {
         List<Permission> allow = List.of(
                 Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND, Permission.MESSAGE_HISTORY);
         ChannelAction<TextChannel> action = guild
-                .createTextChannel(TicketChannelName.of(cat.emoji(), cat.name(), creator.getUser().getName()), parent)
+                .createTextChannel(TicketChannelName.opened(creator.getUser().getName()), parent)
                 .addRolePermissionOverride(guild.getPublicRole().getIdLong(), List.of(), List.of(Permission.VIEW_CHANNEL))
                 .addMemberPermissionOverride(creator.getIdLong(), allow, List.of());
         for (String roleId : cat.staffRoleIds()) {
@@ -104,7 +104,7 @@ public final class TicketService {
         action.reason("Ticket " + cat.name() + " por " + creator.getUser().getName()).queue(channel -> {
             String ticketId = newId();
             ctx.database().tickets().create(new ActiveTicket(ticketId, guild.getId(), channel.getId(),
-                    null, creator.getId(), null, cat.name(), ActiveTicket.OPEN, reason));
+                    null, creator.getId(), null, cat.name(), ActiveTicket.OPEN, reason, cat.emoji()));
             ctx.database().tickets().addEvent(ticketId,
                     "📝 Ticket aberto por " + creator.getAsMention() + " · Motivo: " + reason,
                     System.currentTimeMillis());
@@ -115,8 +115,8 @@ public final class TicketService {
                     .map(r -> "<@&" + r + ">").collect(Collectors.joining(" "));
             String emoji = (cat.emoji() != null && !cat.emoji().isBlank()) ? cat.emoji() + " " : "";
             String header = "## " + emoji + cat.name() + "\n"
-                    + creator.getAsMention() + (staffMentions.isBlank() ? "" : " " + staffMentions) + "\n\n"
-                    + "**📝 Motivo:** " + reason;
+                    + creator.getAsMention() + (staffMentions.isBlank() ? "" : " " + staffMentions)
+                    + "\n\n**📝 Motivo:**\n```\n" + codeBlockSafe(reason) + "\n```";
             // V2 text mentions DO ping — intended here (creator + staff).
             channel.sendMessageComponents(TicketView.dashboard(accent(guild.getId()), ticketId, header))
                     .useComponentsV2().queue();
@@ -143,10 +143,17 @@ public final class TicketService {
         ctx.database().tickets().assignStaff(ticketId, event.getUser().getId());
         ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                 "TICKET_ASSIGN", ticketId);
-        // Reveal the full action set + show who is handling it (BOTSPECS Module 2).
+        // Remove Assumir, reveal the full action set, keep the reason in the header.
         event.editComponents(TicketView.dashboard(accent(t.guildId()), ticketId,
                         headerFor(t), event.getUser().getId()))
                 .useComponentsV2().queue();
+        // Rename: <category emoji or 🔒>・<staff who assumed>.
+        TextChannel channel = event.getGuild().getTextChannelById(t.textChannelId());
+        if (channel != null) {
+            channel.getManager()
+                    .setName(TicketChannelName.assumed(t.emoji(), event.getMember().getEffectiveName()))
+                    .reason("Ticket assumido").queue(ok -> {}, e -> {});
+        }
         announce(event.getChannel(), t.guildId(), ticketId,
                 "🙋 " + event.getUser().getAsMention() + " assumiu o atendimento.");
     }
@@ -287,22 +294,27 @@ public final class TicketService {
             ephemeral(event, "Ticket não encontrado.");
             return;
         }
-        String raw = event.getValue("nome") == null ? "" : event.getValue("nome").getAsString();
-        String suffix = TicketChannelName.slug(raw);
+        String raw = event.getValue("nome") == null ? "" : event.getValue("nome").getAsString().trim();
+        if (raw.isBlank()) {
+            ephemeral(event, "Informe um nome.");
+            return;
+        }
         TextChannel text = event.getGuild().getTextChannelById(t.textChannelId());
         if (text == null) {
             ephemeral(event, "O canal do ticket não existe mais.");
             return;
         }
-        ctx.database().tickets().rename(ticketId, suffix);
+        // Keep the category emoji prefix: <category emoji or 🔒>・<new name>.
+        String channelName = TicketChannelName.renamed(t.emoji(), raw);
+        ctx.database().tickets().rename(ticketId, raw);
         ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
-                "TICKET_RENAME", suffix);
+                "TICKET_RENAME", raw);
         event.deferReply(true).queue();
-        text.getManager().setName(suffix).reason("Ticket renomeado").queue(
+        text.getManager().setName(channelName).reason("Ticket renomeado").queue(
                 ok -> {
-                    announce(event.getChannel(), t.guildId(), ticketId, "✏️ Ticket renomeado para `" + suffix
+                    announce(event.getChannel(), t.guildId(), ticketId, "✏️ Ticket renomeado para `" + raw
                             + "` por " + event.getUser().getAsMention() + ".");
-                    event.getHook().sendMessage("Ticket renomeado para `" + suffix + "`.").queue();
+                    event.getHook().sendMessage("Ticket renomeado para `" + channelName + "`.").queue();
                 },
                 err -> event.getHook().sendMessage("Falha ao renomear: " + err.getMessage()).queue());
     }
@@ -564,9 +576,16 @@ public final class TicketService {
         return event.getUser().getId().equals(t.creatorId());
     }
 
-    /** Minimal dashboard header reconstructed from stored ticket data (used on edit). */
+    /** Dashboard header reconstructed from stored ticket data — always keeps the reason. */
     private static String headerFor(ActiveTicket t) {
-        return "## " + t.suffix() + "\n<@" + t.creatorId() + ">";
+        String emoji = (t.emoji() != null && !t.emoji().isBlank()) ? t.emoji() + " " : "";
+        return "## " + emoji + t.suffix() + "\n<@" + t.creatorId() + ">"
+                + "\n\n**📝 Motivo:**\n```\n" + codeBlockSafe(t.reason()) + "\n```";
+    }
+
+    /** Neutralises triple backticks so a reason can't break out of the code block. */
+    private static String codeBlockSafe(String s) {
+        return s == null ? "" : s.replace("```", "`​``");
     }
 
     private static void ephemeral(ButtonInteractionEvent event, String msg) {

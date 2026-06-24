@@ -45,9 +45,10 @@ public final class TicketView {
     }
 
     /**
-     * Dashboard. Before the ticket is assumed it stays clean — only Assumir + Fechar
-     * (cancel). Once a staff member assumes it, the full action set (Criar Call, Membro,
-     * Notificar, Renomear) appears and the header shows who is handling it.
+     * Dashboard. Before the ticket is assumed it stays clean — only Assumir + Fechar.
+     * Once a staff member assumes it, the Assumir button is removed entirely and the full
+     * action set (Criar Call, Membro, Notificar, Renomear) appears, with the header showing
+     * who is handling it. The header (including the reason) is always preserved.
      */
     public static Container dashboard(int accent, String ticketId, String headerMarkdown,
                                       String assignedStaffId) {
@@ -61,7 +62,6 @@ public final class TicketView {
         return Panels.container(accent,
                 Panels.text(headerMarkdown + "\n\n🙋 **Atendimento assumido por** <@" + assignedStaffId + ">"),
                 ActionRow.of(
-                        Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir").withDisabled(true),
                         Button.secondary(ComponentId.of(NS, "call", ticketId), "Criar Call"),
                         Button.secondary(ComponentId.of(NS, "membro", ticketId), "Membro"),
                         Button.secondary(ComponentId.of(NS, "notificar", ticketId), "Notificar")),

@@ -13,7 +13,8 @@ public record ActiveTicket(
         String assignedStaffId,  // nullable until "Assumir Atendimento"
         String suffix,
         String status,           // OPEN | CLOSING | CLOSED
-        String reason            // reason the member gave when opening (asked via modal)
+        String reason,           // reason the member gave when opening (asked via modal)
+        String emoji             // category emoji, kept in the channel name + header
 ) {
     public static final String OPEN = "OPEN";
     public static final String CLOSING = "CLOSING";
