@@ -55,6 +55,8 @@ public final class UnmuteCommand implements SlashCommand {
         }
         event.getGuild().removeRoleFromMember(target, role).queue(
                 ok -> {
+                    ctx.database().mutes().remove(event.getGuild().getId(), target.getId(),
+                            dev.davimf.basebot.modules.base.voice.MuteRepository.TEXT);
                     ctx.database().actionLogs().log(event.getGuild().getId(),
                             event.getUser().getId(), target.getId(), "UNMUTE", null);
                     event.reply(target.getUser().getAsTag() + " foi dessilenciado.").queue();
