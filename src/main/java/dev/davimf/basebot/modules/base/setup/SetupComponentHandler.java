@@ -5,6 +5,7 @@ import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.TicketCategory;
+import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.TicketEmoji;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.entities.Role;
@@ -18,6 +19,7 @@ import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
@@ -57,6 +59,8 @@ public final class SetupComponentHandler implements ComponentHandler {
                         "TICKET_CATEGORY_DELETE", null);
                 edit(event, ticketsScreen(ctx, guildId));
             }
+            case "botcolor" -> event.replyModal(
+                    SetupView.colorModal(EmbedColor.hex(EmbedColor.resolve(config(ctx, guildId))))).queue();
             default -> { /* not ours */ }
         }
     }
@@ -74,14 +78,15 @@ public final class SetupComponentHandler implements ComponentHandler {
                     case "logs" -> SetupView.logsPage(cfg, 0);
                     case "roles" -> SetupView.cargos(cfg);
                     case "tickets" -> ticketsScreen(ctx, guildId);
-                    case "bot" -> SetupView.bot(event.getJDA().getSelfUser().getName(),
-                            event.getJDA().getSelfUser().getId());
+                    case "bot" -> SetupView.bot(EmbedColor.resolve(cfg),
+                            event.getJDA().getSelfUser().getName(), event.getJDA().getSelfUser().getId());
                     default -> hubScreen(ctx, guildId);
                 };
                 edit(event, screen);
             }
             case "ticketcat" -> ctx.database().ticketCategories().find(event.getValues().get(0))
-                    .ifPresent(cat -> edit(event, SetupView.ticketDetail(cat)));
+                    .ifPresent(cat -> edit(event,
+                            SetupView.ticketDetail(EmbedColor.resolve(config(ctx, guildId)), cat)));
             default -> { /* not ours */ }
         }
     }
@@ -97,7 +102,14 @@ public final class SetupComponentHandler implements ComponentHandler {
 
     @Override
     public void onModal(ModalInteractionEvent event, ComponentId id, BotContext ctx) {
-        if (!"ticketform".equals(id.action()) || event.getGuild() == null) {
+        if (event.getGuild() == null) {
+            return;
+        }
+        if ("botcolorform".equals(id.action())) {
+            saveColor(event, ctx);
+            return;
+        }
+        if (!"ticketform".equals(id.action())) {
             return;
         }
         String guildId = event.getGuild().getId();
@@ -127,6 +139,23 @@ public final class SetupComponentHandler implements ComponentHandler {
         event.replyComponents(ticketsScreen(ctx, guildId)).useComponentsV2().setEphemeral(true).queue();
     }
 
+    private void saveColor(ModalInteractionEvent event, BotContext ctx) {
+        String guildId = event.getGuild().getId();
+        OptionalInt parsed = EmbedColor.parse(value(event, "cor"));
+        if (parsed.isEmpty()) {
+            event.reply("Cor inválida. Use um hex como `#5865F2`.").setEphemeral(true).queue();
+            return;
+        }
+        int color = parsed.getAsInt();
+        GuildConfig cfg = GuildConfigEdits.withSetting(
+                config(ctx, guildId), EmbedColor.SETTING_KEY, EmbedColor.hex(color));
+        ctx.database().guildConfig().save(cfg);
+        ctx.database().actionLogs().log(guildId, event.getUser().getId(), null,
+                "SETUP_COLOR", EmbedColor.hex(color));
+        event.replyComponents(SetupView.bot(color, event.getJDA().getSelfUser().getName(),
+                event.getJDA().getSelfUser().getId())).useComponentsV2().setEphemeral(true).queue();
+    }
+
     // --- screens ---------------------------------------------------------------
 
     private Container hubScreen(BotContext ctx, String guildId) {
@@ -134,7 +163,8 @@ public final class SetupComponentHandler implements ComponentHandler {
     }
 
     private Container ticketsScreen(BotContext ctx, String guildId) {
-        return SetupView.ticketsList(ctx.database().ticketCategories().listByGuild(guildId));
+        return SetupView.ticketsList(EmbedColor.resolve(config(ctx, guildId)),
+                ctx.database().ticketCategories().listByGuild(guildId));
     }
 
     // --- persistence -----------------------------------------------------------

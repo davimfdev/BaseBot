@@ -4,6 +4,7 @@ import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.listacargo.ListaCargoView;
 import dev.davimf.basebot.ratelimit.BatchThrottler;
+import dev.davimf.basebot.util.EmbedColor;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -46,7 +47,8 @@ public final class ListaCargoCommand implements SlashCommand {
             return;
         }
         List<Member> members = event.getGuild().getMembersWithRoles(role);
-        event.replyComponents(ListaCargoView.container(role, members, 0))
+        int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(event.getGuild().getId()));
+        event.replyComponents(ListaCargoView.container(accent, role, members, 0))
                 .useComponentsV2()
                 .setAllowedMentions(java.util.Collections.emptyList()) // list members without pinging them
                 .queue();

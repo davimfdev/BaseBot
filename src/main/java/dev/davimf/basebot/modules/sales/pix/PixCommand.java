@@ -6,6 +6,7 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.PixKey;
+import dev.davimf.basebot.util.EmbedColor;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -70,8 +71,9 @@ public final class PixCommand implements SlashCommand {
             event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
             return;
         }
-        String sellerRoleId = sellerRoleId(event, ctx);
-        if (sellerRoleId == null) {
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        String sellerRoleId = cfg.role(SELLER_ROLE_KEY);
+        if (sellerRoleId == null || sellerRoleId.isBlank()) {
             event.reply("Cargo de vendedor não configurado. Defina em /setup → Cargos → Vendedor (Pix).")
                     .setEphemeral(true).queue();
             return;
@@ -88,17 +90,10 @@ public final class PixCommand implements SlashCommand {
         if ("registrar".equals(sub)) {
             registrar(event);
         } else if ("gerar".equals(sub)) {
-            gerar(event);
+            gerar(event, EmbedColor.resolve(cfg));
         } else {
             event.reply("Subcomando inválido.").setEphemeral(true).queue();
         }
-    }
-
-    /** Resolves the configured seller role id from guild config, or null if unset. */
-    private String sellerRoleId(SlashCommandInteractionEvent event, BotContext ctx) {
-        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
-        String roleId = cfg.role(SELLER_ROLE_KEY);
-        return (roleId == null || roleId.isBlank()) ? null : roleId;
     }
 
     private void registrar(SlashCommandInteractionEvent event) {
@@ -111,7 +106,7 @@ public final class PixCommand implements SlashCommand {
         event.reply("Sua chave Pix foi registrada.").setEphemeral(true).queue();
     }
 
-    private void gerar(SlashCommandInteractionEvent event) {
+    private void gerar(SlashCommandInteractionEvent event, int accent) {
         Optional<PixKey> maybe = keys.findByUser(event.getGuild().getId(), event.getUser().getId());
         if (maybe.isEmpty()) {
             event.reply("Você ainda não registrou sua chave Pix. Use /pix registrar primeiro.")
@@ -138,7 +133,7 @@ public final class PixCommand implements SlashCommand {
         Button confirm = Button.success(
                 ComponentId.of("pix", "confirmar", ownerId), "Confirmar Pagamento");
 
-        Container container = Panels.container(0x00B894,
+        Container container = Panels.container(accent,
                 Panels.text(text),
                 MediaGallery.of(MediaGalleryItem.fromUrl("attachment://pix.png")),
                 ActionRow.of(confirm));

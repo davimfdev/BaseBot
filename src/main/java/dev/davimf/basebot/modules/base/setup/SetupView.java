@@ -5,6 +5,7 @@ import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.TicketCategory;
 import dev.davimf.basebot.modules.base.setup.SetupLogTypes.LogType;
+import dev.davimf.basebot.util.EmbedColor;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
@@ -52,10 +53,11 @@ public final class SetupView {
                 .addOption("Logs", "logs", "Um canal próprio para cada tipo de log")
                 .addOption("Cargos", "roles", "Mapear cargos lógicos a cargos do servidor")
                 .addOption("Tickets", "tickets", "Categoria, staff, descrição e emoji")
-                .addOption("Bot", "bot", "Perfil global do bot")
+                .addOption("Bot", "bot", "Perfil e cor das embeds do bot")
                 .build();
 
-        return Panels.container(Panels.BLURPLE, Panels.text(body), Panels.divider(), ActionRow.of(menu));
+        return Panels.container(EmbedColor.resolve(cfg),
+                Panels.text(body), Panels.divider(), ActionRow.of(menu));
     }
 
     // --- Logs (many selects per screen, paginated by module) ------------------
@@ -82,7 +84,7 @@ public final class SetupView {
                         .withDisabled(idx >= total - 1),
                 Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
 
-        return Panels.container(Panels.BLURPLE, kids.toArray(new ContainerChildComponent[0]));
+        return Panels.container(EmbedColor.resolve(cfg), kids.toArray(new ContainerChildComponent[0]));
     }
 
     // --- Cargos (all role selects on one screen) -------------------------------
@@ -96,12 +98,12 @@ public final class SetupView {
                     "Selecionar cargo", cfg.role(e.getKey()))));
         }
         kids.add(backRow("hub"));
-        return Panels.container(Panels.BLURPLE, kids.toArray(new ContainerChildComponent[0]));
+        return Panels.container(EmbedColor.resolve(cfg), kids.toArray(new ContainerChildComponent[0]));
     }
 
     // --- Tickets ---------------------------------------------------------------
 
-    public static Container ticketsList(List<TicketCategory> categories) {
+    public static Container ticketsList(int accent, List<TicketCategory> categories) {
         List<ContainerChildComponent> kids = new ArrayList<>();
         kids.add(Panels.text("## 🎫 Tickets\nSelecione uma categoria para editar ou remover, "
                 + "ou crie uma nova."));
@@ -121,10 +123,10 @@ public final class SetupView {
         kids.add(ActionRow.of(
                 Button.success(ComponentId.of(NS, "ticketnew"), "➕ Nova categoria"),
                 Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
-        return Panels.container(Panels.BLURPLE, kids.toArray(new ContainerChildComponent[0]));
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
 
-    public static Container ticketDetail(TicketCategory cat) {
+    public static Container ticketDetail(int accent, TicketCategory cat) {
         String roles = cat.staffRoleIds().isEmpty() ? "*nenhum*"
                 : String.join(" ", cat.staffRoleIds().stream().map(r -> "<@&" + r + ">").toList());
         String body = "## 🎫 " + (cat.emoji() != null && !cat.emoji().isBlank() ? cat.emoji() + " " : "")
@@ -133,7 +135,7 @@ public final class SetupView {
                         ? "" : cat.description() + "\n")
                 + "\n📂 **Categoria Discord:** <#" + cat.discordCategoryId() + ">\n"
                 + "🛡️ **Cargos que atendem:** " + roles;
-        return Panels.container(Panels.BLURPLE,
+        return Panels.container(accent,
                 Panels.text(body),
                 ActionRow.of(
                         Button.primary(ComponentId.of(NS, "ticketedit", cat.id()), "✏️ Editar"),
@@ -180,21 +182,34 @@ public final class SetupView {
                 .build();
     }
 
+    /** Modal to set the guild's embed accent color (hex). */
+    public static Modal colorModal(String currentHex) {
+        TextInput cor = TextInput.create("cor", TextInputStyle.SHORT)
+                .setPlaceholder("Ex: #5865F2").setRequired(true).setMinLength(3).setMaxLength(9)
+                .setValue(currentHex).build();
+        return Modal.create(ComponentId.of(NS, "botcolorform"), "Cor das embeds")
+                .addComponents(Label.of("Cor (hex)", cor))
+                .build();
+    }
+
     private static String trim(String s, int max) {
         return s.length() > max ? s.substring(0, max) : s;
     }
 
     // --- Bot -------------------------------------------------------------------
 
-    public static Container bot(String botName, String botId) {
-        return Panels.container(Panels.BLURPLE,
+    public static Container bot(int accent, String botName, String botId) {
+        return Panels.container(accent,
                 Panels.text("## 🤖 Perfil do Bot\n"
                         + "**Nome atual:** " + botName + "\n"
-                        + "**ID:** " + botId + "\n\n"
+                        + "**ID:** " + botId + "\n"
+                        + "🎨 **Cor das embeds:** `" + EmbedColor.hex(accent) + "`\n\n"
                         + "O **nome** e o **avatar** são globais (afetam o bot em todos os servidores) e o "
                         + "Discord limita a **2 alterações por hora**. Use `/bot-name` e `/bot-icon` para "
                         + "alterá-los, e `/bot-nick` para o apelido apenas neste servidor."),
-                backRow("hub"));
+                ActionRow.of(
+                        Button.primary(ComponentId.of(NS, "botcolor"), "🎨 Definir cor"),
+                        Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
     }
 
     // --- helpers ---------------------------------------------------------------

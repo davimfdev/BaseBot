@@ -3,6 +3,7 @@ package dev.davimf.basebot.modules.tickets;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.TicketCategory;
+import dev.davimf.basebot.util.EmbedColor;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -34,13 +35,14 @@ public final class TicketPanelCommand implements SlashCommand {
             event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
             return;
         }
-        List<TicketCategory> categories =
-                ctx.database().ticketCategories().listByGuild(event.getGuild().getId());
+        String guildId = event.getGuild().getId();
+        List<TicketCategory> categories = ctx.database().ticketCategories().listByGuild(guildId);
         if (categories.isEmpty()) {
             event.reply("Nenhuma categoria de ticket configurada. Use /setup → Tickets primeiro.")
                     .setEphemeral(true).queue();
             return;
         }
-        event.replyComponents(TicketView.panel(categories)).useComponentsV2().queue();
+        int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(guildId));
+        event.replyComponents(TicketView.panel(accent, categories)).useComponentsV2().queue();
     }
 }

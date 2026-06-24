@@ -4,6 +4,7 @@ import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.crypto.TicketCrypto;
 import dev.davimf.basebot.database.model.ActiveTicket;
 import dev.davimf.basebot.database.model.TicketCategory;
+import dev.davimf.basebot.util.EmbedColor;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -95,7 +96,9 @@ public final class TicketService {
                     + (cat.description() == null || cat.description().isBlank()
                             ? "Descreva seu pedido e a equipe irá atendê-lo." : cat.description());
             // V2 text mentions DO ping — intended here (creator + staff).
-            channel.sendMessageComponents(TicketView.dashboard(ticketId, header)).useComponentsV2().queue();
+            int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(guild.getId()));
+            channel.sendMessageComponents(TicketView.dashboard(accent, ticketId, header))
+                    .useComponentsV2().queue();
             event.getHook().sendMessage("Ticket criado: " + channel.getAsMention()).queue();
         }, err -> event.getHook().sendMessage("Falha ao criar o ticket: " + err.getMessage()).queue());
     }

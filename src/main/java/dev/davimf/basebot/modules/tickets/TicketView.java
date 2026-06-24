@@ -18,7 +18,7 @@ public final class TicketView {
     private TicketView() {}
 
     /** Public panel members use to open a ticket — one category per select option. */
-    public static Container panel(List<TicketCategory> categories) {
+    public static Container panel(int accent, List<TicketCategory> categories) {
         StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "open"))
                 .setPlaceholder("Selecione uma categoria para abrir um ticket");
         for (TicketCategory c : categories) {
@@ -26,14 +26,14 @@ public final class TicketView {
             menu.addOption(trim(label, 100), c.id(),
                     c.description() == null ? null : trim(c.description(), 100));
         }
-        return Panels.container(Panels.BLURPLE,
+        return Panels.container(accent,
                 Panels.text("## 🎫 Central de Tickets\nSelecione uma categoria abaixo para abrir um ticket."),
                 ActionRow.of(menu.build()));
     }
 
     /** In-channel dashboard posted as the first message of a new ticket. */
-    public static Container dashboard(String ticketId, String headerMarkdown) {
-        return Panels.container(Panels.BLURPLE,
+    public static Container dashboard(int accent, String ticketId, String headerMarkdown) {
+        return Panels.container(accent,
                 Panels.text(headerMarkdown),
                 ActionRow.of(
                         Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir"),
