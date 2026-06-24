@@ -46,7 +46,8 @@ public final class SqliteMigrator {
             "/db/sqlite/013_forms.sql",
             "/db/sqlite/014_ticket_reason.sql",
             "/db/sqlite/015_ticket_events.sql",
-            "/db/sqlite/016_ticket_emoji.sql"
+            "/db/sqlite/016_ticket_emoji.sql",
+            "/db/sqlite/017_message_drafts.sql"
     );
 
     private final SqliteManager sqlite;

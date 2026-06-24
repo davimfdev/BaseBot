@@ -61,6 +61,7 @@ public final class TicketView {
         }
         return Panels.container(accent,
                 Panels.text(headerMarkdown + "\n\n🙋 **Atendimento assumido por** <@" + assignedStaffId + ">"),
+                Panels.divider(),
                 ActionRow.of(
                         Button.secondary(ComponentId.of(NS, "call", ticketId), "Criar Call"),
                         Button.secondary(ComponentId.of(NS, "membro", ticketId), "Membro"),

@@ -11,8 +11,6 @@ import dev.davimf.basebot.modules.base.commands.BotNameCommand;
 import dev.davimf.basebot.modules.base.commands.BotNickCommand;
 import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
-import dev.davimf.basebot.modules.base.commands.EditEmbedCommand;
-import dev.davimf.basebot.modules.base.commands.EmbedCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
 import dev.davimf.basebot.modules.base.commands.ListaCargoCommand;
 import dev.davimf.basebot.modules.base.commands.LockCommand;
@@ -27,10 +25,12 @@ import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.commands.VoiceMoveCommand;
 import dev.davimf.basebot.modules.base.commands.FormularioCommand;
-import dev.davimf.basebot.modules.base.embed.EmbedComponentHandler;
-import dev.davimf.basebot.modules.base.embed.EmbedService;
+import dev.davimf.basebot.modules.base.commands.MensagemCommand;
 import dev.davimf.basebot.modules.base.forms.FormComponentHandler;
 import dev.davimf.basebot.modules.base.forms.FormRepository;
+import dev.davimf.basebot.modules.base.message.MessageBuilderComponentHandler;
+import dev.davimf.basebot.modules.base.message.MessageBuilderService;
+import dev.davimf.basebot.modules.base.message.MessageDraftRepository;
 import dev.davimf.basebot.modules.base.listacargo.ListaCargoComponentHandler;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
@@ -97,12 +97,12 @@ public final class BaseModule implements BotModule {
         registry.command(new SetupCommand());
         registry.component(new SetupComponentHandler());
 
-        // Embeds (BOTSPECS Module 1) — /embed + /editembed via a managed webhook
-        // (per-message name/avatar impersonation; edits preserve existing select menus).
-        EmbedService embedService = new EmbedService(ctx);
-        registry.command(new EmbedCommand());
-        registry.command(new EditEmbedCommand());
-        registry.component(new EmbedComponentHandler(embedService));
+        // Message builder (BOTSPECS Module 1) — /mensagem: interactive embed/Container V2
+        // builder with block management and optional webhook impersonation on send.
+        MessageBuilderService messageBuilder = new MessageBuilderService(
+                ctx, new MessageDraftRepository(ctx.database().sqlite()));
+        registry.command(new MensagemCommand(messageBuilder));
+        registry.component(new MessageBuilderComponentHandler(messageBuilder));
 
         // Configurable forms (BOTSPECS Module 1) — /formulario dispatches a modal whose
         // answers are posted to #log-formularios.
