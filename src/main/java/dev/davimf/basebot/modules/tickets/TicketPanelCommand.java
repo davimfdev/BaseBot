@@ -43,6 +43,9 @@ public final class TicketPanelCommand implements SlashCommand {
             return;
         }
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(guildId));
-        event.replyComponents(TicketView.panel(accent, categories)).useComponentsV2().queue();
+        // Post as a normal channel message (editable via /mensagem editar); confirm ephemerally.
+        event.getChannel().sendMessageComponents(TicketView.panel(accent, categories)).useComponentsV2().queue(
+                msg -> event.reply("🎫 Painel de tickets publicado.").setEphemeral(true).queue(),
+                err -> event.reply("Falha ao publicar: " + err.getMessage()).setEphemeral(true).queue());
     }
 }

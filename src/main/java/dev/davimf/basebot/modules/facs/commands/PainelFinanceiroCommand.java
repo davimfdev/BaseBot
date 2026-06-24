@@ -35,6 +35,9 @@ public final class PainelFinanceiroCommand implements SlashCommand {
             event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
             return;
         }
-        event.replyComponents(service.panel(event.getGuild().getId())).useComponentsV2().queue();
+        // Post as a normal channel message (editable via /mensagem editar); confirm ephemerally.
+        event.getChannel().sendMessageComponents(service.panel(event.getGuild().getId())).useComponentsV2().queue(
+                msg -> event.reply("💰 Painel financeiro publicado.").setEphemeral(true).queue(),
+                err -> event.reply("Falha ao publicar: " + err.getMessage()).setEphemeral(true).queue());
     }
 }
