@@ -11,12 +11,15 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 /**
- * Sends and edits messages through a Discord webhook URL (BOTSPECS Module 1 — /embed,
- * /editembed). JDA core can't post as a webhook with a per-message username/avatar, so
- * this talks the webhook REST API directly. Editing omits {@code components}, so any
- * existing select menus on the target message are preserved.
+ * Posts messages through a Discord webhook URL (BOTSPECS Module 1 — /mensagem). JDA core
+ * can't post as a webhook with a per-message username/avatar, so this talks the webhook
+ * REST API directly. The caller builds the body (embeds or Components V2); this only adds
+ * the impersonation fields and performs the request.
  */
 public final class WebhookSender {
+
+    /** Discord message flag: this message uses Components V2. */
+    public static final int IS_COMPONENTS_V2 = 1 << 15;
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final HttpClient HTTP = HttpClient.newBuilder()
@@ -24,64 +27,35 @@ public final class WebhookSender {
 
     private WebhookSender() {}
 
-    /** Builds an embed JSON object; null/blank title or description are omitted. */
-    public static ObjectNode embed(String title, String description, int color) {
-        ObjectNode embed = JSON.createObjectNode();
-        if (title != null && !title.isBlank()) {
-            embed.put("title", title);
-        }
-        if (description != null && !description.isBlank()) {
-            embed.put("description", description);
-        }
-        embed.put("color", color & 0xFFFFFF);
-        return embed;
+    /** Shared mapper so callers build component/embed trees with the same factory. */
+    public static ObjectMapper mapper() {
+        return JSON;
     }
 
     /**
-     * Posts an embed via the webhook, impersonating {@code username}/{@code avatarUrl}
-     * when given. Returns the created message id (uses {@code ?wait=true}).
+     * POSTs a fully-built body to the webhook, adding {@code username}/{@code avatar_url}
+     * when given. Returns the created message id ({@code ?wait=true}).
      */
-    public static String send(String webhookUrl, String username, String avatarUrl, ObjectNode embed) {
-        ObjectNode body = JSON.createObjectNode();
+    public static String post(String webhookUrl, String username, String avatarUrl, ObjectNode body) {
         if (username != null && !username.isBlank()) {
             body.put("username", username);
         }
         if (avatarUrl != null && !avatarUrl.isBlank()) {
             body.put("avatar_url", avatarUrl);
         }
-        body.putArray("embeds").add(embed);
         try {
             HttpResponse<String> res = HTTP.send(
                     request(webhookUrl + "?wait=true").POST(json(body)).build(),
                     HttpResponse.BodyHandlers.ofString());
             if (res.statusCode() / 100 != 2) {
-                throw new WebhookException("webhook send HTTP " + res.statusCode() + ": " + res.body());
+                throw new WebhookException("webhook HTTP " + res.statusCode() + ": " + res.body());
             }
             JsonNode node = JSON.readTree(res.body());
             return node.path("id").asText(null);
         } catch (WebhookException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebhookException("failed to send webhook message", e);
-        }
-    }
-
-    /** Edits a webhook message's embed, leaving its components (select menus) untouched. */
-    public static void edit(String webhookUrl, String messageId, ObjectNode embed) {
-        ObjectNode body = JSON.createObjectNode();
-        body.putArray("embeds").add(embed);
-        try {
-            HttpResponse<String> res = HTTP.send(
-                    request(webhookUrl + "/messages/" + messageId)
-                            .method("PATCH", json(body)).build(),
-                    HttpResponse.BodyHandlers.ofString());
-            if (res.statusCode() / 100 != 2) {
-                throw new WebhookException("webhook edit HTTP " + res.statusCode() + ": " + res.body());
-            }
-        } catch (WebhookException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new WebhookException("failed to edit webhook message", e);
+            throw new WebhookException("failed to post webhook message", e);
         }
     }
 
@@ -99,7 +73,7 @@ public final class WebhookSender {
         }
     }
 
-    /** Thrown when a webhook send/edit fails. */
+    /** Thrown when a webhook post fails. */
     public static final class WebhookException extends RuntimeException {
         public WebhookException(String message) {
             super(message);

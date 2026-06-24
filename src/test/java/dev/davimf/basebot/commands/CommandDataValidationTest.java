@@ -6,8 +6,8 @@ import dev.davimf.basebot.modules.facs.commands.PunirCommand;
 import dev.davimf.basebot.modules.facs.commands.ProduzirCommand;
 import dev.davimf.basebot.modules.facs.commands.RelatorioCommand;
 import dev.davimf.basebot.modules.sales.budget.BudgetCommand;
-import dev.davimf.basebot.modules.base.commands.EditEmbedCommand;
 import dev.davimf.basebot.modules.base.commands.FormularioCommand;
+import dev.davimf.basebot.modules.base.commands.MensagemCommand;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -31,7 +31,7 @@ class CommandDataValidationTest {
                 new PunirCommand(null),
                 new FormularioCommand(null),
                 new BudgetCommand(null),
-                new EditEmbedCommand());
+                new MensagemCommand(null));
         for (SlashCommand cmd : commands) {
             assertDoesNotThrow(cmd::data, "Invalid command data for /" + cmd.name());
         }

@@ -2,31 +2,36 @@ package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
-import dev.davimf.basebot.modules.base.embed.EmbedView;
+import dev.davimf.basebot.modules.base.message.MessageBuilderService;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 
 /**
- * /editembed — edits an embed previously sent by the bot's webhook in this channel,
- * preserving any select menus on the message (BOTSPECS Module 1).
+ * /mensagem enviar — opens the interactive message builder (BOTSPECS Module 1): pick
+ * Embed clássico or Container V2, edit fields/blocks, then send (optionally via webhook).
  */
-public final class EditEmbedCommand implements SlashCommand {
+public final class MensagemCommand implements SlashCommand {
+
+    private final MessageBuilderService service;
+
+    public MensagemCommand(MessageBuilderService service) {
+        this.service = service;
+    }
 
     @Override
     public String name() {
-        return "editembed";
+        return "mensagem";
     }
 
     @Override
     public SlashCommandData data() {
-        return Commands.slash("editembed", "Edita um embed enviado pelo bot (preserva os menus).")
+        return Commands.slash("mensagem", "Construtor de mensagens (embed clássico ou Container V2).")
                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER))
-                .addOption(OptionType.STRING, "mensagem", "ID da mensagem do embed", true);
+                .addSubcommands(new SubcommandData("enviar", "Abre o construtor de mensagem."));
     }
 
     @Override
@@ -35,11 +40,6 @@ public final class EditEmbedCommand implements SlashCommand {
             event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
             return;
         }
-        String messageId = event.getOption("mensagem", OptionMapping::getAsString).trim();
-        if (!messageId.matches("\\d{15,25}")) {
-            event.reply("ID de mensagem inválido.").setEphemeral(true).queue();
-            return;
-        }
-        event.replyModal(EmbedView.edit(messageId)).queue();
+        service.open(event);
     }
 }
