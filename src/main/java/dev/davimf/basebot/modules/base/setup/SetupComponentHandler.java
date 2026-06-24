@@ -4,10 +4,9 @@ import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.database.model.TicketCategory;
+import dev.davimf.basebot.util.TicketEmoji;
 import net.dv8tion.jda.api.components.container.Container;
-import net.dv8tion.jda.api.components.label.Label;
-import net.dv8tion.jda.api.components.textinput.TextInput;
-import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
@@ -15,15 +14,16 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.callbacks.IMessageEditCallback;
-import net.dv8tion.jda.api.modals.Modal;
+import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
- * Drives the {@code /setup} wizard. Navigation edits the single ephemeral message
- * (hub → section, with the Logs section paginated by module). Each select saves to
- * {@code guild_config} and is acknowledged silently (the choice stays selected); the
- * value is re-shown as the select's default when the screen is rebuilt.
+ * Drives the {@code /setup} wizard (Components V2). Navigation edits the single ephemeral
+ * message; the Tickets section is a multi-category CRUD (list → detail → create/edit via
+ * a modal that includes channel/role selects). Selects save on change.
  */
 public final class SetupComponentHandler implements ComponentHandler {
 
@@ -37,55 +37,104 @@ public final class SetupComponentHandler implements ComponentHandler {
         if (event.getGuild() == null) {
             return;
         }
+        String guildId = event.getGuild().getId();
         switch (id.action()) {
-            case "nav" -> edit(event, SetupView.hub(config(ctx, event.getGuild().getId())));
-            case "logpage" -> edit(event, SetupView.logsPage(
-                    config(ctx, event.getGuild().getId()), parseInt(id.arg(0))));
-            case "ticketinfo" -> event.replyModal(ticketInfoModal()).queue();
+            case "nav" -> edit(event, "tickets".equals(id.arg(0))
+                    ? ticketsScreen(ctx, guildId) : hubScreen(ctx, guildId));
+            case "logpage" -> edit(event, SetupView.logsPage(config(ctx, guildId), parseInt(id.arg(0))));
+            case "ticketnew" -> event.replyModal(SetupView.ticketModal("new", null)).queue();
+            case "ticketedit" -> {
+                Optional<TicketCategory> cat = ctx.database().ticketCategories().find(id.arg(0));
+                if (cat.isPresent()) {
+                    event.replyModal(SetupView.ticketModal(cat.get().id(), cat.get())).queue();
+                } else {
+                    event.reply("Categoria não encontrada.").setEphemeral(true).queue();
+                }
+            }
+            case "ticketdel" -> {
+                ctx.database().ticketCategories().delete(id.arg(0));
+                ctx.database().actionLogs().log(guildId, event.getUser().getId(), id.arg(0),
+                        "TICKET_CATEGORY_DELETE", null);
+                edit(event, ticketsScreen(ctx, guildId));
+            }
             default -> { /* not ours */ }
         }
     }
 
     @Override
     public void onStringSelect(StringSelectInteractionEvent event, ComponentId id, BotContext ctx) {
-        if (!"section".equals(id.action()) || event.getGuild() == null) {
+        if (event.getGuild() == null) {
             return;
         }
-        GuildConfig cfg = config(ctx, event.getGuild().getId());
-        Container screen = switch (event.getValues().get(0)) {
-            case "logs" -> SetupView.logsPage(cfg, 0);
-            case "roles" -> SetupView.cargos(cfg);
-            case "tickets" -> SetupView.tickets(cfg);
-            case "bot" -> SetupView.bot(event.getJDA().getSelfUser().getName(),
-                    event.getJDA().getSelfUser().getId());
-            default -> SetupView.hub(cfg);
-        };
-        edit(event, screen);
+        String guildId = event.getGuild().getId();
+        switch (id.action()) {
+            case "section" -> {
+                GuildConfig cfg = config(ctx, guildId);
+                Container screen = switch (event.getValues().get(0)) {
+                    case "logs" -> SetupView.logsPage(cfg, 0);
+                    case "roles" -> SetupView.cargos(cfg);
+                    case "tickets" -> ticketsScreen(ctx, guildId);
+                    case "bot" -> SetupView.bot(event.getJDA().getSelfUser().getName(),
+                            event.getJDA().getSelfUser().getId());
+                    default -> hubScreen(ctx, guildId);
+                };
+                edit(event, screen);
+            }
+            case "ticketcat" -> ctx.database().ticketCategories().find(event.getValues().get(0))
+                    .ifPresent(cat -> edit(event, SetupView.ticketDetail(cat)));
+            default -> { /* not ours */ }
+        }
     }
 
     @Override
     public void onEntitySelect(EntitySelectInteractionEvent event, ComponentId id, BotContext ctx) {
         switch (id.action()) {
             case "setlogchannel" -> { saveChannel(event, ctx, id.arg(0), firstChannelId(event)); ack(event); }
-            case "setcategory" -> { saveChannel(event, ctx, "tickets-category", firstChannelId(event)); ack(event); }
             case "setrole" -> { saveRole(event, ctx, id.arg(0), firstRoleId(event)); ack(event); }
-            case "setstaff" -> { saveStaff(event, ctx); ack(event); }
             default -> { /* not ours */ }
         }
     }
 
     @Override
     public void onModal(ModalInteractionEvent event, ComponentId id, BotContext ctx) {
-        if (!"ticketinfo".equals(id.action()) || event.getGuild() == null) {
+        if (!"ticketform".equals(id.action()) || event.getGuild() == null) {
             return;
         }
-        String desc = event.getValue("desc") == null ? "" : event.getValue("desc").getAsString();
-        String emoji = event.getValue("emoji") == null ? "" : event.getValue("emoji").getAsString();
-        GuildConfig cfg = config(ctx, event.getGuild().getId());
-        cfg = GuildConfigEdits.withSetting(cfg, "ticket-description", desc);
-        cfg = GuildConfigEdits.withSetting(cfg, "ticket-emoji", emoji);
-        ctx.database().guildConfig().save(cfg);
-        event.reply("Descrição e emoji dos tickets atualizados.").setEphemeral(true).queue();
+        String guildId = event.getGuild().getId();
+        String nome = value(event, "nome");
+        String emoji = TicketEmoji.channelSafe(value(event, "emoji"));
+        String descricao = value(event, "descricao");
+
+        ModalMapping catMap = event.getValue("categoria");
+        ModalMapping cargosMap = event.getValue("cargos");
+        List<GuildChannel> cats = catMap == null ? List.of() : catMap.getAsMentions().getChannels();
+        List<Role> roles = cargosMap == null ? List.of() : cargosMap.getAsMentions().getRoles();
+
+        if (nome == null || nome.isBlank() || cats.isEmpty() || roles.isEmpty()) {
+            event.reply("Preencha o nome, a categoria do Discord e ao menos um cargo que atende.")
+                    .setEphemeral(true).queue();
+            return;
+        }
+
+        String catId = "new".equals(id.arg(0)) ? newId() : id.arg(0);
+        TicketCategory tc = new TicketCategory(catId, guildId, nome.trim(),
+                emoji.isBlank() ? null : emoji,
+                (descricao == null || descricao.isBlank()) ? null : descricao.trim(),
+                cats.get(0).getId(), roles.stream().map(Role::getId).toList());
+        ctx.database().ticketCategories().upsert(tc);
+        ctx.database().actionLogs().log(guildId, event.getUser().getId(), catId, "TICKET_CATEGORY_SAVE", nome);
+
+        event.replyComponents(ticketsScreen(ctx, guildId)).useComponentsV2().setEphemeral(true).queue();
+    }
+
+    // --- screens ---------------------------------------------------------------
+
+    private Container hubScreen(BotContext ctx, String guildId) {
+        return SetupView.hub(config(ctx, guildId), ctx.database().ticketCategories().count(guildId));
+    }
+
+    private Container ticketsScreen(BotContext ctx, String guildId) {
+        return SetupView.ticketsList(ctx.database().ticketCategories().listByGuild(guildId));
     }
 
     // --- persistence -----------------------------------------------------------
@@ -112,33 +161,27 @@ public final class SetupComponentHandler implements ComponentHandler {
         ctx.database().actionLogs().log(guildId, event.getUser().getId(), roleId, "SETUP_ROLE", key);
     }
 
-    private void saveStaff(EntitySelectInteractionEvent event, BotContext ctx) {
-        if (event.getGuild() == null) {
-            return;
-        }
-        List<String> roleIds = event.getMentions().getRoles().stream().map(Role::getId).toList();
-        String guildId = event.getGuild().getId();
-        GuildConfig updated = GuildConfigEdits.withStaffRoles(
-                ctx.database().guildConfig().findOrEmpty(guildId), roleIds);
-        ctx.database().guildConfig().save(updated);
-        ctx.database().actionLogs().log(guildId, event.getUser().getId(), null,
-                "SETUP_STAFF_ROLES", String.valueOf(roleIds.size()));
-    }
-
     // --- helpers ---------------------------------------------------------------
 
-    /** Edits the wizard message to a new V2 screen (V1 default would reject Container). */
     private void edit(IMessageEditCallback event, Container screen) {
         event.editComponents(screen).useComponentsV2().queue();
     }
 
-    /** Acknowledges a select without changing the message — the choice stays selected. */
     private void ack(EntitySelectInteractionEvent event) {
         event.deferEdit().queue();
     }
 
     private GuildConfig config(BotContext ctx, String guildId) {
         return ctx.database().guildConfig().findOrEmpty(guildId);
+    }
+
+    private static String value(ModalInteractionEvent event, String key) {
+        ModalMapping m = event.getValue(key);
+        return m == null ? null : m.getAsString();
+    }
+
+    private static String newId() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
 
     private static int parseInt(String raw) {
@@ -157,21 +200,5 @@ public final class SetupComponentHandler implements ComponentHandler {
     private static String firstRoleId(EntitySelectInteractionEvent event) {
         List<Role> roles = event.getMentions().getRoles();
         return roles.isEmpty() ? null : roles.get(0).getId();
-    }
-
-    private static Modal ticketInfoModal() {
-        TextInput desc = TextInput.create("desc", TextInputStyle.PARAGRAPH)
-                .setPlaceholder("Texto exibido no painel de tickets")
-                .setRequired(false)
-                .setMaxLength(200)
-                .build();
-        TextInput emoji = TextInput.create("emoji", TextInputStyle.SHORT)
-                .setPlaceholder("Ex.: 🎫")
-                .setRequired(false)
-                .setMaxLength(8)
-                .build();
-        return Modal.create(ComponentId.of(SetupView.NS, "ticketinfo"), "Descrição & Emoji dos Tickets")
-                .addComponents(Label.of("Descrição", desc), Label.of("Emoji", emoji))
-                .build();
     }
 }
