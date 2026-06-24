@@ -37,6 +37,10 @@ public final class RecrutamentoCommand implements SlashCommand {
         }
         String description = event.getOption("descricao", OptionMapping::getAsString);
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(event.getGuild().getId()));
-        event.replyComponents(RecruitView.panel(accent, description)).useComponentsV2().queue();
+        // Post as a normal channel message (not an interaction response) so it can be
+        // cleanly edited later via /mensagem editar; confirm to the user ephemerally.
+        event.getChannel().sendMessageComponents(RecruitView.panel(accent, description)).useComponentsV2().queue(
+                msg -> event.reply("📝 Painel de recrutamento publicado.").setEphemeral(true).queue(),
+                err -> event.reply("Falha ao publicar: " + err.getMessage()).setEphemeral(true).queue());
     }
 }
