@@ -3,6 +3,9 @@ package dev.davimf.basebot.modules.sales;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
+import dev.davimf.basebot.modules.sales.catalog.CatalogRepository;
+import dev.davimf.basebot.modules.sales.catalog.TabelaCommand;
+import dev.davimf.basebot.modules.sales.catalog.TabelaComponentHandler;
 import dev.davimf.basebot.modules.sales.pix.PixCommand;
 import dev.davimf.basebot.modules.sales.pix.PixComponentHandler;
 import dev.davimf.basebot.modules.sales.pix.PixKeyRepository;
@@ -27,9 +30,13 @@ public final class SalesModule implements BotModule {
         registry.command(new PixCommand(pixKeys));
         registry.component(new PixComponentHandler());
 
-        // TODO(Module 3): /orçamento (selector + approval embed + auto-dispatch Pix),
-        // /tabela (paginated catalog). Budget expiry uses ctx.scheduler() to auto-cancel
-        // rows past `expires_at` in the `budgets` table.
+        // Product catalog (BOTSPECS Module 3) — categories -> products, paginated.
+        CatalogRepository catalog = new CatalogRepository(ctx.database().sqlite());
+        registry.command(new TabelaCommand(catalog));
+        registry.component(new TabelaComponentHandler(catalog));
+
+        // TODO(Module 3): /orçamento (selector + approval embed + auto-dispatch Pix).
+        // Budget expiry uses ctx.scheduler() to auto-cancel rows past `expires_at`.
     }
 
     @Override
