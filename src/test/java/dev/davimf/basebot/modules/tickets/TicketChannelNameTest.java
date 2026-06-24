@@ -15,15 +15,25 @@ class TicketChannelNameTest {
     }
 
     @Test
-    void ofCombinesEmojiCategoryAndUser() {
-        assertEquals("🛠️suporte-davi", TicketChannelName.of("🛠️", "Suporte", "Davi"));
-        assertEquals("suporte-davi", TicketChannelName.of(null, "Suporte", "Davi"));
-        assertEquals("suporte-davi", TicketChannelName.of("", "Suporte", "Davi"));
+    void openedUsesOpenLockAndCreator() {
+        assertEquals("🔓・davi", TicketChannelName.opened("Davi"));
     }
 
     @Test
-    void ofClampsLength() {
-        String name = TicketChannelName.of("", "x".repeat(80), "y".repeat(80));
-        assertTrue(name.length() <= 90);
+    void assumedKeepsCategoryEmojiOrFallsBackToClosedLock() {
+        assertEquals("🛠️・mod", TicketChannelName.assumed("🛠️", "Mod"));
+        assertEquals("🔒・mod", TicketChannelName.assumed(null, "Mod"));
+        assertEquals("🔒・mod", TicketChannelName.assumed("", "Mod"));
+    }
+
+    @Test
+    void renamedKeepsCategoryEmojiPrefix() {
+        assertEquals("🛠️・urgente", TicketChannelName.renamed("🛠️", "Urgente"));
+        assertEquals("🔒・urgente", TicketChannelName.renamed(null, "Urgente"));
+    }
+
+    @Test
+    void clampsLength() {
+        assertTrue(TicketChannelName.renamed("", "y".repeat(120)).length() <= 90);
     }
 }

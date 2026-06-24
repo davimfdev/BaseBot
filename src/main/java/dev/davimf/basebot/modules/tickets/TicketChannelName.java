@@ -2,16 +2,48 @@ package dev.davimf.basebot.modules.tickets;
 
 import java.util.Locale;
 
-/** Builds a valid Discord channel name for a ticket: {@code <emoji>category-user}. */
+/**
+ * Builds ticket channel names (BOTSPECS Module 2). The scheme encodes the ticket's state
+ * in the prefix emoji + a katakana middle dot separator:
+ * <ul>
+ *   <li>open: {@code 🔓・<creator>}</li>
+ *   <li>assumed: {@code <category emoji or 🔒>・<staff>}</li>
+ *   <li>renamed: {@code <category emoji or 🔒>・<new name>}</li>
+ * </ul>
+ */
 public final class TicketChannelName {
+
+    /** Open padlock used while the ticket is unassigned. */
+    public static final String OPEN_LOCK = "🔓";
+    /** Closed padlock used once assumed/renamed when the category has no emoji. */
+    public static final String CLOSED_LOCK = "🔒";
+    /** Katakana middle dot separator between the prefix and the name. */
+    public static final String SEP = "・";
 
     private static final int MAX = 90;
 
     private TicketChannelName() {}
 
-    public static String of(String emoji, String categoryName, String username) {
-        String prefix = (emoji != null && !emoji.isBlank()) ? emoji : "";
-        String name = prefix + slug(categoryName) + "-" + slug(username);
+    /** {@code 🔓・<creator>} — the freshly opened, unassigned ticket. */
+    public static String opened(String creatorName) {
+        return clamp(OPEN_LOCK + SEP + slug(creatorName));
+    }
+
+    /** {@code <category emoji or 🔒>・<staff>} — once a staff member assumes it. */
+    public static String assumed(String categoryEmoji, String staffName) {
+        return clamp(prefix(categoryEmoji) + SEP + slug(staffName));
+    }
+
+    /** {@code <category emoji or 🔒>・<name>} — keeps the category emoji on rename. */
+    public static String renamed(String categoryEmoji, String newName) {
+        return clamp(prefix(categoryEmoji) + SEP + slug(newName));
+    }
+
+    private static String prefix(String emoji) {
+        return (emoji != null && !emoji.isBlank()) ? emoji : CLOSED_LOCK;
+    }
+
+    private static String clamp(String name) {
         return name.length() > MAX ? name.substring(0, MAX) : name;
     }
 
