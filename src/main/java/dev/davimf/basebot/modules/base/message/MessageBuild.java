@@ -8,6 +8,7 @@ import dev.davimf.basebot.util.WebhookSender;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.separator.Separator;
@@ -53,10 +54,16 @@ public final class MessageBuild {
                 case MessageState.BLOCK_BUTTONS -> {
                     List<Button> buttons = new ArrayList<>();
                     for (var bn : (ArrayNode) b.get("buttons")) {
-                        String label = MessageState.str((ObjectNode) bn, "label");
-                        String url = MessageState.str((ObjectNode) bn, "url");
-                        if (valid(label, url)) {
-                            buttons.add(Button.link(url, label));
+                        ObjectNode btn = (ObjectNode) bn;
+                        String label = MessageState.str(btn, "label");
+                        if (MessageState.isInteraction(btn)) {
+                            buttons.add(Button.of(buttonStyle(MessageState.str(btn, "style")),
+                                    MessageState.str(btn, "customId"), label == null ? "" : label));
+                        } else {
+                            String url = MessageState.str(btn, "url");
+                            if (valid(label, url)) {
+                                buttons.add(Button.link(url, label));
+                            }
                         }
                     }
                     if (!buttons.isEmpty()) {
@@ -120,14 +127,23 @@ public final class MessageBuild {
                 case MessageState.BLOCK_BUTTONS -> {
                     ArrayNode row = WebhookSender.mapper().createArrayNode();
                     for (var bn : (ArrayNode) b.get("buttons")) {
-                        String label = MessageState.str((ObjectNode) bn, "label");
-                        String url = MessageState.str((ObjectNode) bn, "url");
-                        if (valid(label, url)) {
+                        ObjectNode src = (ObjectNode) bn;
+                        String label = MessageState.str(src, "label");
+                        if (MessageState.isInteraction(src)) {
                             ObjectNode btn = row.addObject();
                             btn.put("type", 2);
-                            btn.put("style", 5);
-                            btn.put("label", label);
-                            btn.put("url", url);
+                            btn.put("style", styleNumber(MessageState.str(src, "style")));
+                            btn.put("label", label == null ? "" : label);
+                            btn.put("custom_id", MessageState.str(src, "customId"));
+                        } else {
+                            String url = MessageState.str(src, "url");
+                            if (valid(label, url)) {
+                                ObjectNode btn = row.addObject();
+                                btn.put("type", 2);
+                                btn.put("style", 5);
+                                btn.put("label", label);
+                                btn.put("url", url);
+                            }
                         }
                     }
                     if (!row.isEmpty()) {
@@ -149,6 +165,23 @@ public final class MessageBuild {
     }
 
     // --- helpers ---------------------------------------------------------------
+
+    private static ButtonStyle buttonStyle(String name) {
+        try {
+            return name == null ? ButtonStyle.PRIMARY : ButtonStyle.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            return ButtonStyle.PRIMARY;
+        }
+    }
+
+    private static int styleNumber(String name) {
+        return switch (name == null ? "PRIMARY" : name) {
+            case "SECONDARY" -> 2;
+            case "SUCCESS" -> 3;
+            case "DANGER" -> 4;
+            default -> 1; // PRIMARY
+        };
+    }
 
     private static boolean valid(String label, String url) {
         return label != null && !label.isBlank() && url != null

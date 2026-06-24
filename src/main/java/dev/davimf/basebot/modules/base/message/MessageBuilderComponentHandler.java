@@ -27,7 +27,7 @@ public final class MessageBuilderComponentHandler implements ComponentHandler {
         if (event.getGuild() == null) {
             return;
         }
-        service.onButton(event, id.action(), id.arg(0));
+        service.onButton(event, id);
     }
 
     @Override
@@ -35,7 +35,7 @@ public final class MessageBuilderComponentHandler implements ComponentHandler {
         if (event.getGuild() == null) {
             return;
         }
-        service.onStringSelect(event, id.action());
+        service.onStringSelect(event, id);
     }
 
     @Override
@@ -51,6 +51,6 @@ public final class MessageBuilderComponentHandler implements ComponentHandler {
         if (event.getGuild() == null) {
             return;
         }
-        service.onModal(event, id.action(), id.arg(0));
+        service.onModal(event, id);
     }
 }

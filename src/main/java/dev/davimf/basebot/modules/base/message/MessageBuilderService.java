@@ -3,6 +3,7 @@ package dev.davimf.basebot.modules.base.message;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.davimf.basebot.core.BotContext;
+import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.modules.base.message.MessageBuilderView.Field;
 import dev.davimf.basebot.util.EmbedColor;
@@ -44,15 +45,17 @@ public final class MessageBuilderService {
 
     // --- selects ---------------------------------------------------------------
 
-    public void onStringSelect(StringSelectInteractionEvent event, String action) {
+    public void onStringSelect(StringSelectInteractionEvent event, ComponentId id) {
         ObjectNode state = load(event.getUser().getId());
-        switch (action) {
+        switch (id.action()) {
             case "type" -> {
                 state.put("type", event.getValues().get(0));
                 saveAndRender(event, state);
             }
             case "manage" -> render(event, MessageBuilderView.blockPanel(state,
                     Integer.parseInt(event.getValues().get(0))));
+            case "managebtn" -> render(event, MessageBuilderView.buttonPanel(state,
+                    Integer.parseInt(id.arg(0)), Integer.parseInt(event.getValues().get(0))));
             case "addblock" -> addBlock(event, state, event.getValues().get(0));
             default -> { /* not ours */ }
         }
@@ -81,7 +84,9 @@ public final class MessageBuilderService {
 
     // --- buttons ---------------------------------------------------------------
 
-    public void onButton(ButtonInteractionEvent event, String action, String arg) {
+    public void onButton(ButtonInteractionEvent event, ComponentId id) {
+        String action = id.action();
+        String arg = id.arg(0);
         switch (action) {
             case "fld" -> {
                 Field f = MessageBuilderView.field(arg);
@@ -106,10 +111,97 @@ public final class MessageBuilderService {
             case "bup" -> moveBlock(event, arg, -1);
             case "bdown" -> moveBlock(event, arg, 1);
             case "back" -> saveAndRender(event, load(event.getUser().getId()));
+            case "btback" -> render(event, MessageBuilderView.blockPanel(
+                    load(event.getUser().getId()), Integer.parseInt(arg)));
+            case "btype" -> cycleButtonStyle(event, arg, id.arg(1));
+            case "btlabel" -> openButtonModal(event, "btlabelform", arg, id.arg(1), "Título", "label");
+            case "blink" -> openButtonModal(event, "blinkform", arg, id.arg(1), "Link (URL)", "url");
+            case "btup" -> moveButton(event, arg, id.arg(1), -1);
+            case "btdown" -> moveButton(event, arg, id.arg(1), 1);
+            case "btdel" -> removeButton(event, arg, id.arg(1));
             case "cancel" -> { drafts.delete(event.getUser().getId()); render(event, Panels.container(EmbedColor.DEFAULT, Panels.text("Construtor cancelado."))); }
             case "send" -> send(event);
             default -> { /* not ours */ }
         }
+    }
+
+    // --- per-button editing ----------------------------------------------------
+
+    private void cycleButtonStyle(ButtonInteractionEvent event, String bi, String ji) {
+        ObjectNode state = load(event.getUser().getId());
+        ObjectNode btn = buttonAt(state, bi, ji);
+        if (btn != null && MessageState.isInteraction(btn)) {
+            String[] styles = MessageState.STYLES;
+            int idx = 0;
+            String cur = MessageState.str(btn, "style");
+            for (int i = 0; i < styles.length; i++) {
+                if (styles[i].equals(cur)) {
+                    idx = i;
+                }
+            }
+            btn.put("style", styles[(idx + 1) % styles.length]);
+        }
+        saveButton(event, state, bi, ji);
+    }
+
+    private void openButtonModal(ButtonInteractionEvent event, String form, String bi, String ji,
+                                 String label, String field) {
+        ObjectNode btn = buttonAt(load(event.getUser().getId()), bi, ji);
+        String current = btn == null ? "" : MessageState.str(btn, field);
+        event.replyModal(MessageBuilderView.inputModal(
+                dev.davimf.basebot.core.component.ComponentId.of(MessageBuilderView.NS, form, bi, ji),
+                label, label, label, current)).queue();
+    }
+
+    private void moveButton(ButtonInteractionEvent event, String bi, String ji, int dir) {
+        ObjectNode state = load(event.getUser().getId());
+        ArrayNode buttons = buttonsOf(state, bi);
+        if (buttons == null) {
+            saveAndRender(event, state);
+            return;
+        }
+        int i = Integer.parseInt(ji);
+        int j = i + dir;
+        if (i >= 0 && j >= 0 && i < buttons.size() && j < buttons.size()) {
+            var moved = buttons.remove(i);
+            buttons.insert(j, moved);
+            drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(state));
+            render(event, MessageBuilderView.buttonPanel(state, Integer.parseInt(bi), j));
+        } else {
+            saveAndRender(event, state);
+        }
+    }
+
+    private void removeButton(ButtonInteractionEvent event, String bi, String ji) {
+        ObjectNode state = load(event.getUser().getId());
+        ArrayNode buttons = buttonsOf(state, bi);
+        if (buttons != null) {
+            buttons.remove(Integer.parseInt(ji));
+        }
+        drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(state));
+        render(event, MessageBuilderView.blockPanel(state, Integer.parseInt(bi)));
+    }
+
+    private void saveButton(ButtonInteractionEvent event, ObjectNode state, String bi, String ji) {
+        drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(state));
+        render(event, MessageBuilderView.buttonPanel(state, Integer.parseInt(bi), Integer.parseInt(ji)));
+    }
+
+    private static ArrayNode buttonsOf(ObjectNode state, String bi) {
+        ArrayNode blocks = MessageState.blocks(state);
+        int i = Integer.parseInt(bi);
+        if (i < 0 || i >= blocks.size()) {
+            return null;
+        }
+        ObjectNode block = (ObjectNode) blocks.get(i);
+        return MessageState.BLOCK_BUTTONS.equals(MessageState.str(block, "type"))
+                ? MessageState.buttons(block) : null;
+    }
+
+    private static ObjectNode buttonAt(ObjectNode state, String bi, String ji) {
+        ArrayNode buttons = buttonsOf(state, bi);
+        int j = Integer.parseInt(ji);
+        return buttons != null && j >= 0 && j < buttons.size() ? (ObjectNode) buttons.get(j) : null;
     }
 
     private void blockEdit(ButtonInteractionEvent event, String arg) {
@@ -151,8 +243,21 @@ public final class MessageBuilderService {
 
     // --- modals ----------------------------------------------------------------
 
-    public void onModal(ModalInteractionEvent event, String action, String arg) {
+    public void onModal(ModalInteractionEvent event, ComponentId id) {
+        String action = id.action();
+        String arg = id.arg(0);
         ObjectNode state = load(event.getUser().getId());
+        // Per-button edits re-render the button panel, not the main builder.
+        if ("btlabelform".equals(action) || "blinkform".equals(action)) {
+            ObjectNode btn = buttonAt(state, arg, id.arg(1));
+            if (btn != null) {
+                btn.put("btlabelform".equals(action) ? "label" : "url", value(event, "v"));
+            }
+            drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(state));
+            render(event, MessageBuilderView.buttonPanel(state, Integer.parseInt(arg),
+                    Integer.parseInt(id.arg(1))));
+            return;
+        }
         switch (action) {
             case "fldform" -> {
                 Field f = MessageBuilderView.field(arg);

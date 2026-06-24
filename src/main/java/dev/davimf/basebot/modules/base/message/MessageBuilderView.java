@@ -129,16 +129,69 @@ public final class MessageBuilderView {
     public static Container blockPanel(ObjectNode state, int index) {
         ArrayNode blocks = MessageState.blocks(state);
         ObjectNode block = (ObjectNode) blocks.get(index);
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## Bloco " + (index + 1) + "\n" + MessageState.describe(block)));
+
+        if (MessageState.BLOCK_BUTTONS.equals(MessageState.str(block, "type"))) {
+            ArrayNode buttons = MessageState.buttons(block);
+            if (!buttons.isEmpty()) {
+                StringSelectMenu.Builder pick = StringSelectMenu
+                        .create(ComponentId.of(NS, "managebtn", String.valueOf(index)))
+                        .setPlaceholder("Gerenciar um botão");
+                for (int i = 0; i < buttons.size(); i++) {
+                    pick.addOption(trim((i + 1) + ". " + MessageState.describeButton((ObjectNode) buttons.get(i)), 100),
+                            String.valueOf(i));
+                }
+                kids.add(ActionRow.of(pick.build()));
+            }
+        }
+        kids.add(ActionRow.of(
+                Button.primary(ComponentId.of(NS, "bedit", String.valueOf(index)), "➕ Botão de link"),
+                Button.danger(ComponentId.of(NS, "bdel", String.valueOf(index)), "Remover bloco"),
+                Button.secondary(ComponentId.of(NS, "bup", String.valueOf(index)), "↑")
+                        .withDisabled(index == 0),
+                Button.secondary(ComponentId.of(NS, "bdown", String.valueOf(index)), "↓")
+                        .withDisabled(index == blocks.size() - 1)));
+        kids.add(ActionRow.of(Button.secondary(ComponentId.of(NS, "back"), "◀ Voltar")));
+        return Panels.container(builderAccent(state), kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    /** Per-button controls: type (colour, normal buttons only), title, link, reorder, remove. */
+    public static Container buttonPanel(ObjectNode state, int blockIndex, int btnIndex) {
+        ArrayNode buttons = MessageState.buttons((ObjectNode) MessageState.blocks(state).get(blockIndex));
+        ObjectNode btn = (ObjectNode) buttons.get(btnIndex);
+        boolean interaction = MessageState.isInteraction(btn);
+
+        List<Button> edit = new ArrayList<>();
+        if (interaction) {
+            edit.add(Button.secondary(ComponentId.of(NS, "btype", String.valueOf(blockIndex),
+                    String.valueOf(btnIndex)), "🎨 Tipo: " + MessageState.str(btn, "style")));
+        }
+        edit.add(Button.secondary(ComponentId.of(NS, "btlabel", String.valueOf(blockIndex),
+                String.valueOf(btnIndex)), "✏️ Título"));
+        if (!interaction) {
+            edit.add(Button.secondary(ComponentId.of(NS, "blink", String.valueOf(blockIndex),
+                    String.valueOf(btnIndex)), "🔗 Link"));
+        }
         return Panels.container(builderAccent(state),
-                Panels.text("## Bloco " + (index + 1) + "\n" + MessageState.describe(block)),
+                Panels.text("## Botão " + (btnIndex + 1) + "\n" + MessageState.describeButton(btn)
+                        + (interaction ? "\n-# O id deste botão é preservado." : "")),
+                ActionRow.of(edit),
                 ActionRow.of(
-                        Button.primary(ComponentId.of(NS, "bedit", String.valueOf(index)), "Editar"),
-                        Button.danger(ComponentId.of(NS, "bdel", String.valueOf(index)), "Remover"),
-                        Button.secondary(ComponentId.of(NS, "bup", String.valueOf(index)), "↑")
-                                .withDisabled(index == 0),
-                        Button.secondary(ComponentId.of(NS, "bdown", String.valueOf(index)), "↓")
-                                .withDisabled(index == blocks.size() - 1)),
-                ActionRow.of(Button.secondary(ComponentId.of(NS, "back"), "◀ Voltar")));
+                        Button.secondary(ComponentId.of(NS, "btup", String.valueOf(blockIndex),
+                                String.valueOf(btnIndex)), "↑").withDisabled(btnIndex == 0),
+                        Button.secondary(ComponentId.of(NS, "btdown", String.valueOf(blockIndex),
+                                String.valueOf(btnIndex)), "↓").withDisabled(btnIndex == buttons.size() - 1),
+                        Button.danger(ComponentId.of(NS, "btdel", String.valueOf(blockIndex),
+                                String.valueOf(btnIndex)), "Remover")),
+                ActionRow.of(Button.secondary(ComponentId.of(NS, "btback", String.valueOf(blockIndex)), "◀ Voltar")));
+    }
+
+    /** Single-input modal addressed by a pre-built custom id. */
+    public static Modal inputModal(String customId, String title, String labelText, String placeholder, String current) {
+        TextInput input = TextInput.create("v", TextInputStyle.SHORT)
+                .setPlaceholder(placeholder).setRequired(true).setMaxLength(500).setValue(current).build();
+        return Modal.create(customId, title).addComponents(Label.of(labelText, input)).build();
     }
 
     // --- modals ----------------------------------------------------------------

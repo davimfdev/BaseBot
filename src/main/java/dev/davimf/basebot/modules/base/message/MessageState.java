@@ -95,11 +95,43 @@ public final class MessageState {
         return b;
     }
 
+    /** Interaction button styles (colours) a "normal" button can cycle through. */
+    public static final String[] STYLES = {"PRIMARY", "SECONDARY", "SUCCESS", "DANGER"};
+
+    /** A link button (style LINK), built by the user from scratch. */
     public static void addButton(ObjectNode buttonsBlock, String label, String url) {
         ObjectNode btn = JSON.createObjectNode();
         btn.put("label", label);
         btn.put("url", url);
         ((ArrayNode) buttonsBlock.get("buttons")).add(btn);
+    }
+
+    /** An interaction button (preserved from an edited message — its customId is never changed). */
+    public static void addInteractionButton(ObjectNode buttonsBlock, String label, String customId, String style) {
+        ObjectNode btn = JSON.createObjectNode();
+        btn.put("label", label == null ? "" : label);
+        btn.put("customId", customId);
+        btn.put("style", style);
+        ((ArrayNode) buttonsBlock.get("buttons")).add(btn);
+    }
+
+    /** True for an interaction (non-link) button — has a customId, editable colour/label only. */
+    public static boolean isInteraction(ObjectNode button) {
+        return button.hasNonNull("customId");
+    }
+
+    public static ArrayNode buttons(ObjectNode buttonsBlock) {
+        return (ArrayNode) buttonsBlock.get("buttons");
+    }
+
+    /** Short label for a button in the management lists. */
+    public static String describeButton(ObjectNode button) {
+        String label = str(button, "label");
+        String shown = label == null || label.isBlank() ? "(sem texto)" : label;
+        if (isInteraction(button)) {
+            return shown + " · " + str(button, "style");
+        }
+        return shown + " · link";
     }
 
     /** Short human label for a block, used in the builder lists. */
