@@ -34,7 +34,10 @@ import dev.davimf.basebot.modules.base.message.MessageDraftRepository;
 import dev.davimf.basebot.modules.base.listacargo.ListaCargoComponentHandler;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
+import dev.davimf.basebot.modules.base.voice.MuteService;
 import dev.davimf.basebot.modules.base.voice.VoiceMutePersistenceListener;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Module 1 — Base &amp; Utility (BOTSPECS §Module 1).
@@ -46,9 +49,20 @@ import dev.davimf.basebot.modules.base.voice.VoiceMutePersistenceListener;
  */
 public final class BaseModule implements BotModule {
 
+    private MuteService muteService;
+
     @Override
     public String name() {
         return "Base";
+    }
+
+    @Override
+    public void onReady(BotContext ctx) {
+        // Lift expired text/voice mutes shortly after they end (sweep also catches any
+        // mutes whose timer elapsed while the bot was offline).
+        if (muteService != null) {
+            ctx.scheduler().repeating(muteService::sweepExpired, 5, 30, TimeUnit.SECONDS);
+        }
     }
 
     @Override
@@ -81,8 +95,10 @@ public final class BaseModule implements BotModule {
         registry.command(new VoiceMoveCommand());
         registry.command(new MuteCallCommand());
         registry.command(new UnmuteCallCommand());
-        // Re-apply persistent call mutes when a flagged member joins voice.
+        // Re-apply persistent call mutes when a flagged member joins voice / is un-muted.
         registry.listener(new VoiceMutePersistenceListener(ctx));
+        // Sweeper that lifts text/voice mutes once their timer expires (scheduled onReady).
+        this.muteService = new MuteService(ctx);
 
         // Text mute via the configured "mutado" role (set in /setup → Cargos).
         registry.command(new MuteCommand());

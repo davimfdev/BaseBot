@@ -43,7 +43,8 @@ public final class UnmuteCallCommand implements SlashCommand {
             event.reply("Hierarquia insuficiente.").setEphemeral(true).queue();
             return;
         }
-        ctx.database().voiceMutes().remove(event.getGuild().getId(), target.getId());
+        ctx.database().mutes().remove(event.getGuild().getId(), target.getId(),
+                dev.davimf.basebot.modules.base.voice.MuteRepository.VOICE);
         ctx.database().actionLogs().log(event.getGuild().getId(),
                 event.getUser().getId(), target.getId(), "VOICE_UNMUTE", null);
 
