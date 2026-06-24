@@ -43,10 +43,12 @@ public final class ClearCommand implements SlashCommand {
 
     @Override
     public SlashCommandData data() {
-        String desc = onlyOwn
-                ? "Apaga as suas próprias mensagens recentes (até 14 dias)."
-                : "Apaga mensagens recentes do canal (até 14 dias).";
-        return Commands.slash(name, desc)
+        if (onlyOwn) {
+            // No options: always clears all of the executor's messages in the last 100.
+            return Commands.slash(name, "Apaga todas as suas mensagens (últimas 100, até 14 dias).")
+                    .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE));
+        }
+        return Commands.slash(name, "Apaga mensagens recentes do canal (até 14 dias).")
                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
                 .addOption(OptionType.INTEGER, "quantidade", "Quantas mensagens (1-100)", true);
     }
@@ -57,9 +59,9 @@ public final class ClearCommand implements SlashCommand {
             event.reply("Use este comando em um canal de texto do servidor.").setEphemeral(true).queue();
             return;
         }
-        long requested = event.getOption("quantidade", 0L, OptionMapping::getAsLong);
-        int amount = (int) Math.max(1, Math.min(100, requested));
-        // When filtering to the executor, scan a wider window and keep up to `amount` of theirs.
+        // /cl: scan the last 100 and delete ALL the executor's. /clear: the last N from anyone.
+        int amount = onlyOwn ? SCAN_WINDOW
+                : (int) Math.max(1, Math.min(100, event.getOption("quantidade", 0L, OptionMapping::getAsLong)));
         int fetch = onlyOwn ? SCAN_WINDOW : amount;
         String authorId = event.getUser().getId();
 
