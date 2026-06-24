@@ -69,6 +69,42 @@ public final class TicketRepository {
         update("UPDATE active_tickets SET suffix = ? WHERE id = ?", suffix, id);
     }
 
+    /** A persisted ticket action notice (for the transcript). */
+    public record TicketEvent(String text, long createdAtMillis) {}
+
+    /** Records an action notice so it survives into the transcript regardless of intents. */
+    public void addEvent(String ticketId, String text, long millis) {
+        String sql = "INSERT INTO ticket_events (id, ticket_id, text, created_at_millis) VALUES (?, ?, ?, ?)";
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+            ps.setString(2, ticketId);
+            ps.setString(3, text);
+            ps.setLong(4, millis);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RepositoryException("add ticket event " + ticketId, e);
+        }
+    }
+
+    public java.util.List<TicketEvent> listEvents(String ticketId) {
+        String sql = "SELECT text, created_at_millis FROM ticket_events WHERE ticket_id = ? "
+                + "ORDER BY created_at_millis";
+        java.util.List<TicketEvent> out = new java.util.ArrayList<>();
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, ticketId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new TicketEvent(rs.getString("text"), rs.getLong("created_at_millis")));
+                }
+            }
+            return out;
+        } catch (SQLException e) {
+            throw new RepositoryException("list ticket events " + ticketId, e);
+        }
+    }
+
     private void update(String sql, String value, String id) {
         try (Connection c = sqlite.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
