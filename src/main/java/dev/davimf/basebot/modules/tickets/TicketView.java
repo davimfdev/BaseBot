@@ -39,16 +39,45 @@ public final class TicketView {
 
     /** In-channel dashboard posted as the first message of a new ticket. */
     public static Container dashboard(int accent, String ticketId, String headerMarkdown) {
+        return dashboard(accent, ticketId, headerMarkdown, null);
+    }
+
+    /**
+     * Dashboard, optionally showing the staff member who assumed it. When assigned, the
+     * "Assumir" button is disabled so it visibly reflects the claim (BOTSPECS Module 2).
+     */
+    public static Container dashboard(int accent, String ticketId, String headerMarkdown,
+                                      String assignedStaffId) {
+        String text = assignedStaffId == null ? headerMarkdown
+                : headerMarkdown + "\n\n🙋 **Atendimento assumido por** <@" + assignedStaffId + ">";
         return Panels.container(accent,
-                Panels.text(headerMarkdown),
+                Panels.text(text),
                 ActionRow.of(
-                        Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir"),
+                        Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir")
+                                .withDisabled(assignedStaffId != null),
                         Button.secondary(ComponentId.of(NS, "call", ticketId), "Criar Call"),
                         Button.secondary(ComponentId.of(NS, "membro", ticketId), "Membro"),
                         Button.secondary(ComponentId.of(NS, "notificar", ticketId), "Notificar")),
                 ActionRow.of(
                         Button.secondary(ComponentId.of(NS, "renomear", ticketId), "Renomear"),
                         Button.danger(ComponentId.of(NS, "fechar", ticketId), "Fechar")));
+    }
+
+    /** Closure-reason modal shown by the "Fechar" button before the transcript runs. */
+    public static Modal closeReasonModal(String ticketId) {
+        TextInput motivo = TextInput.create("motivo", TextInputStyle.PARAGRAPH)
+                .setPlaceholder("Motivo do fechamento (opcional)").setRequired(false).setMaxLength(400)
+                .build();
+        return Modal.create(ComponentId.of(NS, "closeform", ticketId), "Fechar ticket")
+                .addComponents(Label.of("Motivo", motivo))
+                .build();
+    }
+
+    /** DM sent by "Notificar": a link button that jumps back to the ticket channel. */
+    public static Container notifyDm(int accent, String guildName, String channelUrl) {
+        return Panels.container(accent,
+                Panels.text("🔔 A equipe de **" + guildName + "** solicita sua atenção no seu ticket."),
+                ActionRow.of(Button.link(channelUrl, "Ir para o canal")));
     }
 
     /** Ephemeral picker for the "Membro" action — add a user to the ticket channel. */
@@ -74,12 +103,13 @@ public final class TicketView {
     }
 
     /** Closure embed (sent to #log-tickets and the creator's DM): link + one-time password. */
-    public static Container closure(int accent, String category, String creatorId,
-                                    String closerId, String url, String password) {
+    public static Container closure(int accent, String channelName, String creatorId,
+                                    String closerId, String reason, String url, String password) {
         String body = "## 🔒 Ticket fechado\n"
-                + "**Categoria:** " + category + "\n"
+                + "**Canal:** " + channelName + "\n"
                 + "**Aberto por:** <@" + creatorId + ">\n"
                 + "**Fechado por:** <@" + closerId + ">\n"
+                + "**Motivo:** " + (reason == null || reason.isBlank() ? "*não informado*" : reason) + "\n"
                 + "**Senha (uso único):** `" + password + "`\n"
                 + "-# A senha é necessária para abrir o transcript e não será exibida novamente.";
         return Panels.container(accent,

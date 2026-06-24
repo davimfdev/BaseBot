@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.PermissionOverride;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
@@ -135,7 +136,10 @@ public final class TicketService {
         ctx.database().tickets().assignStaff(ticketId, event.getUser().getId());
         ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                 "TICKET_ASSIGN", ticketId);
-        event.reply("🙋 " + event.getUser().getAsMention() + " assumiu o atendimento.").queue();
+        // Visually update the dashboard with the staff member (BOTSPECS Module 2).
+        event.editComponents(TicketView.dashboard(accent(t.guildId()), ticketId,
+                        headerFor(t), event.getUser().getId()))
+                .useComponentsV2().queue();
     }
 
     /** "Criar Call": open a private voice channel mirroring the ticket's access. */
@@ -183,7 +187,7 @@ public final class TicketService {
         }, err -> event.getHook().sendMessage("Falha ao criar a call: " + err.getMessage()).queue());
     }
 
-    /** "Notificar": ping the ticket creator to request their attention. */
+    /** "Notificar": DM the ticket creator with a jump-to-channel button (BOTSPECS Module 2). */
     public void notifyCreator(ButtonInteractionEvent event, String ticketId) {
         ActiveTicket t = lookup(event, ticketId);
         if (t == null) {
@@ -193,9 +197,19 @@ public final class TicketService {
             ephemeral(event, "Apenas a equipe pode notificar o autor.");
             return;
         }
-        ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
-                "TICKET_NOTIFY", ticketId);
-        event.reply("🔔 <@" + t.creatorId() + ">, a equipe solicita sua atenção neste ticket.").queue();
+        Guild guild = event.getGuild();
+        String channelUrl = "https://discord.com/channels/" + guild.getId() + "/" + t.textChannelId();
+        event.deferReply(true).queue();
+        guild.getJDA().retrieveUserById(t.creatorId())
+                .flatMap(User::openPrivateChannel)
+                .flatMap(dm -> dm.sendMessageComponents(
+                        TicketView.notifyDm(accent(t.guildId()), guild.getName(), channelUrl)).useComponentsV2())
+                .queue(ok -> {
+                    ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
+                            "TICKET_NOTIFY", ticketId);
+                    event.getHook().sendMessage("🔔 O autor foi notificado por DM.").queue();
+                }, err -> event.getHook().sendMessage(
+                        "Não foi possível enviar DM ao autor (DMs fechadas?).").queue());
     }
 
     /** "Membro": prompt a staff member to pick a user to add to the ticket. */
@@ -276,14 +290,8 @@ public final class TicketService {
 
     // --- Closure & transcript --------------------------------------------------
 
-    /**
-     * Full closure (BOTSPECS §Closure & Transcript): render the history to JSON,
-     * encrypt + POST it to the dashboard, deliver the closure embed (password + link)
-     * to {@code #log-tickets} and the creator's DM, then delete the text + voice
-     * channels. If the transcript step fails the channels are kept and the ticket
-     * stays open so nothing is lost.
-     */
-    public void closeTicket(ButtonInteractionEvent event, String ticketId) {
+    /** "Fechar": prompt for a closure reason before running the transcript pipeline. */
+    public void promptClose(ButtonInteractionEvent event, String ticketId) {
         ActiveTicket t = lookup(event, ticketId);
         if (t == null) {
             return;
@@ -292,6 +300,31 @@ public final class TicketService {
             ephemeral(event, "Este ticket já está sendo fechado.");
             return;
         }
+        event.replyModal(TicketView.closeReasonModal(ticketId)).queue();
+    }
+
+    /**
+     * Full closure (BOTSPECS §Closure & Transcript): render the history to JSON,
+     * encrypt + POST it to the dashboard, deliver the closure embed (reason + password
+     * + link) to {@code #log-tickets} and the creator's DM, then delete the text + voice
+     * channels. If the transcript step fails the channels are kept and the ticket
+     * stays open so nothing is lost.
+     */
+    public void closeTicket(ModalInteractionEvent event, String ticketId) {
+        if (event.getGuild() == null) {
+            ephemeral(event, "Use isto em um servidor.");
+            return;
+        }
+        ActiveTicket t = ctx.database().tickets().findById(ticketId).orElse(null);
+        if (t == null) {
+            ephemeral(event, "Ticket não encontrado.");
+            return;
+        }
+        if (!ActiveTicket.OPEN.equals(t.status())) {
+            ephemeral(event, "Este ticket já está sendo fechado.");
+            return;
+        }
+        String reason = event.getValue("motivo") == null ? null : event.getValue("motivo").getAsString();
         Guild guild = event.getGuild();
         TextChannel channel = guild.getTextChannelById(t.textChannelId());
         if (channel == null) {
@@ -306,7 +339,7 @@ public final class TicketService {
 
         String guildName = guild.getName();
         String channelName = channel.getName();
-        renderTranscript(channel, t, guildName)
+        renderTranscript(channel, t, guildName, reason)
                 .thenApplyAsync(json -> buildTranscriptLink(t, guildName, channelName, json),
                         ctx.scheduler().executor())
                 .whenComplete((result, err) -> {
@@ -317,14 +350,14 @@ public final class TicketService {
                                 + rootMessage(err) + "\nO ticket **não** foi fechado.").queue();
                         return;
                     }
-                    deliverClosure(guild, t, channel, channelName, closerId, result);
+                    deliverClosure(guild, t, channel, channelName, closerId, reason, result);
                 });
     }
 
     private void deliverClosure(Guild guild, ActiveTicket t, TextChannel channel,
-                                String channelName, String closerId, ClosureResult result) {
-        var closure = TicketView.closure(accent(t.guildId()), t.suffix(), t.creatorId(),
-                closerId, result.transcriptUrl(), result.password());
+                                String channelName, String closerId, String reason, ClosureResult result) {
+        var closure = TicketView.closure(accent(t.guildId()), channelName, t.creatorId(),
+                closerId, reason, result.transcriptUrl(), result.password());
 
         // 1) Post to the ticket log channel (per spec the password lives here + in the DM).
         String logId = ticketLogChannelId(t.guildId());
@@ -337,7 +370,7 @@ public final class TicketService {
 
         // 2) DM the creator with the transcript link + one-time password.
         guild.getJDA().retrieveUserById(t.creatorId())
-                .flatMap(net.dv8tion.jda.api.entities.User::openPrivateChannel)
+                .flatMap(User::openPrivateChannel)
                 .flatMap(dm -> dm.sendMessageComponents(closure).useComponentsV2())
                 .queue(ok -> {}, err -> log.debug("Could not DM ticket creator {}: {}",
                         t.creatorId(), err.getMessage()));
@@ -356,7 +389,8 @@ public final class TicketService {
     }
 
     /** Pulls up to {@link #TRANSCRIPT_LIMIT} messages and renders them to a JSON string. */
-    private CompletableFuture<String> renderTranscript(TextChannel channel, ActiveTicket t, String guildName) {
+    private CompletableFuture<String> renderTranscript(TextChannel channel, ActiveTicket t,
+                                                       String guildName, String reason) {
         return channel.getIterableHistory().takeAsync(TRANSCRIPT_LIMIT).thenApply(messages -> {
             ObjectNode root = JSON.createObjectNode();
             root.put("ticketId", t.id());
@@ -366,6 +400,7 @@ public final class TicketService {
             root.put("category", t.suffix());
             root.put("creatorId", t.creatorId());
             root.put("assignedStaffId", t.assignedStaffId());
+            root.put("closeReason", reason);
             root.put("closedAt", java.time.Instant.now().toString());
             ArrayNode arr = root.putArray("messages");
             // takeAsync returns newest-first; render oldest-first for a readable transcript.
@@ -421,6 +456,11 @@ public final class TicketService {
 
     private static boolean isCreator(ButtonInteractionEvent event, ActiveTicket t) {
         return event.getUser().getId().equals(t.creatorId());
+    }
+
+    /** Minimal dashboard header reconstructed from stored ticket data (used on edit). */
+    private static String headerFor(ActiveTicket t) {
+        return "## " + t.suffix() + "\n<@" + t.creatorId() + ">";
     }
 
     private static void ephemeral(ButtonInteractionEvent event, String msg) {

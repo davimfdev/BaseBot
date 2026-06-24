@@ -46,7 +46,7 @@ public final class TicketComponentHandler implements ComponentHandler {
     public void onButton(ButtonInteractionEvent event, ComponentId id, BotContext ctx) {
         String ticketId = id.arg(0);
         switch (id.action()) {
-            case "fechar"    -> service.closeTicket(event, ticketId);
+            case "fechar"    -> service.promptClose(event, ticketId);
             case "assumir"   -> service.assume(event, ticketId);
             case "call"      -> service.createCall(event, ticketId);
             case "membro"    -> service.promptAddMember(event, ticketId);
@@ -64,11 +64,13 @@ public final class TicketComponentHandler implements ComponentHandler {
         }
     }
 
-    /** Rename modal submit. */
+    /** Rename + close modal submits. */
     @Override
     public void onModal(ModalInteractionEvent event, ComponentId id, BotContext ctx) {
-        if ("renomeform".equals(id.action())) {
-            service.rename(event, id.arg(0));
+        switch (id.action()) {
+            case "renomeform" -> service.rename(event, id.arg(0));
+            case "closeform"  -> service.closeTicket(event, id.arg(0));
+            default           -> { /* not ours */ }
         }
     }
 }
