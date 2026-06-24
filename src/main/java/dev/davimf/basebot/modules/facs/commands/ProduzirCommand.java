@@ -42,12 +42,13 @@ public final class ProduzirCommand implements SlashCommand {
 
     @Override
     public SlashCommandData data() {
+        // Discord requires all required options before optional ones.
         SubcommandData receita = new SubcommandData("receita", "Define/atualiza uma receita de produção.")
                 .addOption(OptionType.STRING, "produto", "Produto final", true)
-                .addOptions(new OptionData(OptionType.INTEGER, "saida", "Qtd produzida por fabricação", false)
-                        .setMinValue(1))
                 .addOption(OptionType.STRING, "entrada1", "Material 1", true)
                 .addOptions(new OptionData(OptionType.INTEGER, "qtd1", "Qtd do material 1", true).setMinValue(1))
+                .addOptions(new OptionData(OptionType.INTEGER, "saida", "Qtd produzida por fabricação", false)
+                        .setMinValue(1))
                 .addOption(OptionType.STRING, "entrada2", "Material 2 (opcional)", false)
                 .addOptions(new OptionData(OptionType.INTEGER, "qtd2", "Qtd do material 2", false).setMinValue(1))
                 .addOption(OptionType.STRING, "entrada3", "Material 3 (opcional)", false)
