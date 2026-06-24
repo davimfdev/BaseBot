@@ -22,9 +22,10 @@ public final class TicketsModule implements BotModule {
     @Override
     public void register(ModuleRegistry registry, BotContext ctx) {
         TicketService service = new TicketService(ctx);
+        registry.command(new TicketPanelCommand());
         registry.component(new TicketComponentHandler(service));
 
-        // TODO(Module 2): /ticket painel command (StringSelectMenu), channel creation
-        // with creator+staff ping, and the dashboard buttons routed to TicketService.
+        // TODO(Module 2): dashboard buttons (Assumir, Criar Call, Membro, Notificar,
+        // Renomear) and the full closure/transcript pipeline (AES -> davimf.dev).
     }
 }
