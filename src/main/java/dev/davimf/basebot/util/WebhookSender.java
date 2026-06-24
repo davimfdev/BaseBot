@@ -59,6 +59,22 @@ public final class WebhookSender {
         }
     }
 
+    /** PATCHes an existing webhook message (edit) with a fully-built body. */
+    public static void patch(String webhookUrl, String messageId, ObjectNode body) {
+        try {
+            HttpResponse<String> res = HTTP.send(
+                    request(webhookUrl + "/messages/" + messageId).method("PATCH", json(body)).build(),
+                    HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() / 100 != 2) {
+                throw new WebhookException("webhook edit HTTP " + res.statusCode() + ": " + res.body());
+            }
+        } catch (WebhookException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WebhookException("failed to edit webhook message", e);
+        }
+    }
+
     private static HttpRequest.Builder request(String url) {
         return HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(15))

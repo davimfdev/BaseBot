@@ -183,61 +183,148 @@ public final class MessageBuilderService {
 
     private void send(ButtonInteractionEvent event) {
         ObjectNode state = load(event.getUser().getId());
+        if (state.hasNonNull("editMessageId")) {
+            editExisting(event, state);
+            return;
+        }
         String channelId = MessageState.str(state, "channelId");
         TextChannel channel = channelId == null ? null : event.getGuild().getTextChannelById(channelId);
         if (channel == null) {
             event.reply("Selecione um canal de destino primeiro.").setEphemeral(true).queue();
             return;
         }
-        int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(event.getGuild().getId()));
+        int accent = accent(event);
         boolean container = MessageState.isContainer(state);
         boolean webhook = state.path("webhook").asBoolean();
         event.deferEdit().queue();
 
         if (webhook) {
-            sendWebhook(event, channel, state, accent, container);
+            String name = MessageState.str(state, "webhookName");
+            String avatar = MessageState.str(state, "webhookAvatar");
+            webhook(channel)
+                    .thenAcceptAsync(wh -> WebhookSender.post(wh.getUrl(), name, avatar,
+                            webhookBody(state, accent, container)), ctx.scheduler().executor())
+                    .whenComplete((v, ex) -> finishWebhook(event, channel, ex, false));
             return;
         }
         if (container) {
             channel.sendMessageComponents(MessageBuild.jdaContainer(MessageState.container(state), accent))
-                    .useComponentsV2().queue(m -> done(event, channel), err -> fail(event, err));
+                    .useComponentsV2().queue(m -> done(event, channel, false), err -> fail(event, err));
         } else {
             var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent);
             String content = MessageState.str(MessageState.classic(state), "content");
             var action = (content != null && !content.isBlank())
                     ? channel.sendMessage(content).setEmbeds(embed)
                     : channel.sendMessageEmbeds(embed);
-            action.queue(m -> done(event, channel), err -> fail(event, err));
+            action.queue(m -> done(event, channel, false), err -> fail(event, err));
         }
     }
 
-    private void sendWebhook(ButtonInteractionEvent event, TextChannel channel, ObjectNode state,
-                             int accent, boolean container) {
-        String name = MessageState.str(state, "webhookName");
-        String avatar = MessageState.str(state, "webhookAvatar");
-        webhook(channel).thenAcceptAsync(wh -> {
-            ObjectNode body = WebhookSender.mapper().createObjectNode();
-            if (container) {
-                body.put("flags", WebhookSender.IS_COMPONENTS_V2);
-                body.set("components", MessageBuild.webhookContainer(MessageState.container(state), accent));
-            } else {
-                String content = MessageState.str(MessageState.classic(state), "content");
-                if (content != null && !content.isBlank()) {
-                    body.put("content", content);
-                }
-                body.putArray("embeds").add(MessageBuild.webhookEmbed(MessageState.classic(state), accent));
+    // --- edit existing ---------------------------------------------------------
+
+    public void openEdit(SlashCommandInteractionEvent event, String ref) {
+        String[] loc = parseRef(event, ref);
+        TextChannel channel = event.getGuild().getTextChannelById(loc[0]);
+        if (channel == null) {
+            event.reply("Canal da mensagem não encontrado.").setEphemeral(true).queue();
+            return;
+        }
+        event.deferReply(true).queue();
+        channel.retrieveMessageById(loc[1]).queue(msg -> {
+            boolean webhookMsg = msg.isWebhookMessage();
+            boolean mine = event.getJDA().getSelfUser().getId().equals(msg.getAuthor().getId());
+            if (!mine && !webhookMsg) {
+                event.getHook().sendMessage("Só posso editar mensagens enviadas por mim ou pelo meu webhook.")
+                        .queue();
+                return;
             }
-            WebhookSender.post(wh.getUrl(), name, avatar, body);
-        }, ctx.scheduler().executor())
-                .whenComplete((v, ex) -> {
-                    if (ex != null) {
-                        event.getHook().sendMessage("Falha ao enviar via webhook: " + root(ex)
-                                + "\n-# O bot precisa da permissão **Gerenciar Webhooks** no canal.")
-                                .setEphemeral(true).queue();
-                    } else {
-                        done(event, channel);
-                    }
-                });
+            ObjectNode state = MessageBuilderParse.fromMessage(msg);
+            state.put("channelId", channel.getId());
+            state.put("editChannelId", channel.getId());
+            state.put("editMessageId", msg.getId());
+            if (webhookMsg) {
+                state.put("editWebhook", true);
+                state.put("editWebhookId", msg.getAuthor().getId());
+                state.put("webhook", true);
+            }
+            drafts.save(event.getUser().getId(), event.getGuild().getId(), MessageState.stringify(state));
+            event.getHook().sendMessageComponents(MessageBuilderView.panel(state)).useComponentsV2().queue();
+        }, err -> event.getHook().sendMessage("Mensagem não encontrada nesse canal.").queue());
+    }
+
+    private void editExisting(ButtonInteractionEvent event, ObjectNode state) {
+        String channelId = MessageState.str(state, "editChannelId");
+        String messageId = MessageState.str(state, "editMessageId");
+        TextChannel channel = channelId == null ? null : event.getGuild().getTextChannelById(channelId);
+        if (channel == null) {
+            event.reply("O canal da mensagem não existe mais.").setEphemeral(true).queue();
+            return;
+        }
+        int accent = accent(event);
+        boolean container = MessageState.isContainer(state);
+        event.deferEdit().queue();
+
+        if (state.path("editWebhook").asBoolean()) {
+            String whId = MessageState.str(state, "editWebhookId");
+            channel.retrieveWebhooks().submit().thenAcceptAsync(list -> {
+                Webhook wh = list.stream()
+                        .filter(w -> w.getId().equals(whId) && w.getToken() != null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException(
+                                "sem acesso ao webhook desta mensagem"));
+                WebhookSender.patch(wh.getUrl(), messageId, webhookBody(state, accent, container));
+            }, ctx.scheduler().executor())
+                    .whenComplete((v, ex) -> finishWebhook(event, channel, ex, true));
+            return;
+        }
+        if (container) {
+            channel.editMessageComponentsById(messageId,
+                            MessageBuild.jdaContainer(MessageState.container(state), accent))
+                    .useComponentsV2().queue(m -> done(event, channel, true), err -> fail(event, err));
+        } else {
+            var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent);
+            String content = MessageState.str(MessageState.classic(state), "content");
+            var action = (content != null && !content.isBlank())
+                    ? channel.editMessageById(messageId, content).setEmbeds(embed)
+                    : channel.editMessageEmbedsById(messageId, embed);
+            action.queue(m -> done(event, channel, true), err -> fail(event, err));
+        }
+    }
+
+    /** Builds the webhook request body (content/embeds or V2 components) for send + edit. */
+    private static ObjectNode webhookBody(ObjectNode state, int accent, boolean container) {
+        ObjectNode body = WebhookSender.mapper().createObjectNode();
+        if (container) {
+            body.put("flags", WebhookSender.IS_COMPONENTS_V2);
+            body.set("components", MessageBuild.webhookContainer(MessageState.container(state), accent));
+        } else {
+            String content = MessageState.str(MessageState.classic(state), "content");
+            body.put("content", content == null ? "" : content);
+            body.putArray("embeds").add(MessageBuild.webhookEmbed(MessageState.classic(state), accent));
+        }
+        return body;
+    }
+
+    private void finishWebhook(ButtonInteractionEvent event, TextChannel channel, Throwable ex, boolean edit) {
+        if (ex != null) {
+            event.getHook().sendMessage("Falha via webhook: " + root(ex)
+                    + "\n-# O bot precisa da permissão **Gerenciar Webhooks** no canal.")
+                    .setEphemeral(true).queue();
+        } else {
+            done(event, channel, edit);
+        }
+    }
+
+    private int accent(net.dv8tion.jda.api.interactions.Interaction event) {
+        return EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(event.getGuild().getId()));
+    }
+
+    private static String[] parseRef(SlashCommandInteractionEvent event, String ref) {
+        String r = ref == null ? "" : ref.trim();
+        if (r.contains("/channels/")) {
+            String[] p = r.split("/");
+            return new String[]{p[p.length - 2], p[p.length - 1]};
+        }
+        return new String[]{event.getChannelId(), r};
     }
 
     private CompletableFuture<Webhook> webhook(TextChannel channel) {
@@ -248,10 +335,11 @@ public final class MessageBuilderService {
                 .orElseGet(() -> channel.createWebhook(WEBHOOK_NAME).reason("/mensagem").submit()));
     }
 
-    private void done(ButtonInteractionEvent event, TextChannel channel) {
+    private void done(ButtonInteractionEvent event, TextChannel channel, boolean edit) {
         drafts.delete(event.getUser().getId());
         event.getHook().editOriginalComponents(Panels.container(EmbedColor.DEFAULT,
-                        Panels.text("✅ Mensagem enviada em " + channel.getAsMention() + ".")))
+                        Panels.text("✅ Mensagem " + (edit ? "editada" : "enviada") + " em "
+                                + channel.getAsMention() + ".")))
                 .useComponentsV2().queue(ok -> {}, e -> {});
     }
 
