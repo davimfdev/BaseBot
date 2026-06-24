@@ -3,16 +3,18 @@ package dev.davimf.basebot.modules.tickets;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 
 /**
- * Routes the internal ticket dashboard buttons (BOTSPECS §Internal Ticket Dashboard):
+ * Routes the internal ticket dashboard interactions (BOTSPECS §Internal Ticket Dashboard):
  * Assumir Atendimento, Criar Call, Membro, Notificar, Renomear, Fechar.
  *
  * <p>Custom-id convention: {@code ticket:<action>:<ticketId>}. Wired into
  * {@link dev.davimf.basebot.core.component.ComponentRouter} under the {@code "ticket"}
- * namespace. Only the routing skeleton is present; each action is a TODO.
+ * namespace. Each action delegates to {@link TicketService}.
  */
 public final class TicketComponentHandler implements ComponentHandler {
 
@@ -42,19 +44,31 @@ public final class TicketComponentHandler implements ComponentHandler {
 
     @Override
     public void onButton(ButtonInteractionEvent event, ComponentId id, BotContext ctx) {
+        String ticketId = id.arg(0);
         switch (id.action()) {
-            case "fechar"   -> service.closeTicket(event, id.arg(0));
-            case "assumir"  -> notImplemented(event, "Assumir Atendimento");
-            case "call"     -> notImplemented(event, "Criar Call");
-            case "membro"   -> notImplemented(event, "Membro");
-            case "notificar"-> notImplemented(event, "Notificar");
-            case "renomear" -> notImplemented(event, "Renomear");
-            default         -> notImplemented(event, id.action());
+            case "fechar"    -> service.closeTicket(event, ticketId);
+            case "assumir"   -> service.assume(event, ticketId);
+            case "call"      -> service.createCall(event, ticketId);
+            case "membro"    -> service.promptAddMember(event, ticketId);
+            case "notificar" -> service.notifyCreator(event, ticketId);
+            case "renomear"  -> service.promptRename(event, ticketId);
+            default          -> event.reply("Ação de ticket desconhecida.").setEphemeral(true).queue();
         }
     }
 
-    private void notImplemented(ButtonInteractionEvent event, String action) {
-        event.reply("Ação de ticket '" + action + "' ainda não implementada.")
-                .setEphemeral(true).queue();
+    /** Member picker from the "Membro" button. */
+    @Override
+    public void onEntitySelect(EntitySelectInteractionEvent event, ComponentId id, BotContext ctx) {
+        if ("addmember".equals(id.action())) {
+            service.addMember(event, id.arg(0));
+        }
+    }
+
+    /** Rename modal submit. */
+    @Override
+    public void onModal(ModalInteractionEvent event, ComponentId id, BotContext ctx) {
+        if ("renomeform".equals(id.action())) {
+            service.rename(event, id.arg(0));
+        }
     }
 }

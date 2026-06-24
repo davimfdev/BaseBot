@@ -9,8 +9,9 @@ import dev.davimf.basebot.modules.ModuleRegistry;
  *
  * <p>Creation flow ({@code /ticket painel} -&gt; StringSelectMenu -&gt; private channel),
  * the internal dashboard (Assumir, Criar Call, Membro, Notificar, Renomear, Fechar),
- * and the closure/transcript pipeline. The transcript encryption + dashboard ingest is
- * implemented in {@link TicketService}; UI wiring is scaffolded.
+ * and the closure/transcript pipeline (render history -&gt; AES-encrypt -&gt; POST to
+ * davimf.dev -&gt; closure embed to #log-tickets + creator DM -&gt; delete channels),
+ * all driven by {@link TicketService}.
  */
 public final class TicketsModule implements BotModule {
 
@@ -24,8 +25,5 @@ public final class TicketsModule implements BotModule {
         TicketService service = new TicketService(ctx);
         registry.command(new TicketPanelCommand());
         registry.component(new TicketComponentHandler(service));
-
-        // TODO(Module 2): dashboard buttons (Assumir, Criar Call, Membro, Notificar,
-        // Renomear) and the full closure/transcript pipeline (AES -> davimf.dev).
     }
 }
