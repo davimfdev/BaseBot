@@ -93,9 +93,18 @@ at `https://davimf.dev/ticket/{id}` and decrypt it in-browser with the one-time 
 
 ## Status
 
-Infrastructure is complete and the project builds, tests, and packages
-(`./gradlew test shadowJar` is green). Feature commands/interactions are scaffolded with
-`TODO(Module N)` markers tied to the spec sections; the reference implementations
-(`/ping`, command logging, the hierarchy debounce listener, the ticket
-encrypt→ingest path) demonstrate each framework seam end-to-end.
+The project builds, tests, and packages (`./gradlew test shadowJar` is green).
+
+- **Module 1 — Base & Utility:** moderation, role management (hierarchy-validated), voice
+  moderation, channel lock/unlock, `/addemoji`, `/listacargo`, bot profile, the `/setup`
+  hub (logs/roles/tickets/bot + per-guild embed color) and SQLite action logging. Gaps:
+  `/embed`, `/editembed`, `/formulario`, and channel-facing log embeds.
+- **Module 2 — Tickets:** multi-category setup, `/ticket painel`, creation flow, the full
+  dashboard (Assumir/Criar Call/Membro/Notificar/Renomear/Fechar) and the closure pipeline
+  (render → AES-encrypt → POST to davimf.dev → closure embed + DM → delete channels).
+- **Module 3 — Sales:** `/pix` (BR Code/QR), `/tabela` catalog, and `/orçamento` budgets
+  with client approval, Pix auto-dispatch, and 24h auto-cancel.
+- **Module 4 — Facs/FiveM:** `/hierarquia`, `/pd`, `/solicitar-cargo`, `/punir` + `/punições`
+  (ADV 20-day expiry), `/painel-financeiro`, `/farm`, `/produzir`, `/relatorio`,
+  `/recrutamento`, and `/painel-acoes` (Elite-priority reservation queue).
 ```
