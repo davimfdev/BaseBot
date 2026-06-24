@@ -9,9 +9,11 @@ import dev.davimf.basebot.modules.facs.commands.PunicoesCommand;
 import dev.davimf.basebot.modules.facs.commands.PunirCommand;
 import dev.davimf.basebot.modules.facs.hierarchy.HierarchyService;
 import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
+import dev.davimf.basebot.modules.facs.commands.SolicitarCargoCommand;
 import dev.davimf.basebot.modules.facs.punish.PunishComponentHandler;
 import dev.davimf.basebot.modules.facs.punish.PunishService;
 import dev.davimf.basebot.modules.facs.punish.PunishmentRepository;
+import dev.davimf.basebot.modules.facs.sets.SetRequestComponentHandler;
 
 import java.util.concurrent.TimeUnit;
 
@@ -51,9 +53,12 @@ public final class FacsModule implements BotModule {
         registry.command(new PunicoesCommand(punishService));
         registry.component(new PunishComponentHandler(punishService));
 
-        // TODO(Module 4): /solicitar-cargo, /produzir, /painel-financeiro,
-        // /painel-acoes, /relatorio, /farm, plus the Actions/Reservations priority
-        // queue and recruitment Set pipeline.
+        // Set pipeline: /solicitar-cargo posts a request; managers approve/reject.
+        registry.command(new SolicitarCargoCommand());
+        registry.component(new SetRequestComponentHandler());
+
+        // TODO(Module 4): /produzir, /painel-financeiro, /painel-acoes, /relatorio,
+        // /farm, plus the Actions/Reservations priority queue and recruitment pipeline.
     }
 
     @Override
