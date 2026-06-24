@@ -5,8 +5,15 @@ import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
 import dev.davimf.basebot.modules.facs.commands.HierarquiaCommand;
 import dev.davimf.basebot.modules.facs.commands.PdCommand;
+import dev.davimf.basebot.modules.facs.commands.PunicoesCommand;
+import dev.davimf.basebot.modules.facs.commands.PunirCommand;
 import dev.davimf.basebot.modules.facs.hierarchy.HierarchyService;
 import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
+import dev.davimf.basebot.modules.facs.punish.PunishComponentHandler;
+import dev.davimf.basebot.modules.facs.punish.PunishService;
+import dev.davimf.basebot.modules.facs.punish.PunishmentRepository;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Module 4 — Facs / FiveM roleplay management (BOTSPECS §Module 4).
@@ -18,6 +25,8 @@ import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
  * reference; the rest are TODOs.
  */
 public final class FacsModule implements BotModule {
+
+    private PunishService punishService;
 
     @Override
     public String name() {
@@ -35,13 +44,23 @@ public final class FacsModule implements BotModule {
         // Disciplinary: /pd removes a member + logs to PD and Punishments channels.
         registry.command(new PdCommand());
 
+        // Punishments: /punir (Blacklist/Rebaixamento/ADV) + /punições history & revoke.
+        PunishmentRepository punishments = new PunishmentRepository(ctx.database().sqlite());
+        this.punishService = new PunishService(ctx, punishments);
+        registry.command(new PunirCommand(punishService));
+        registry.command(new PunicoesCommand(punishService));
+        registry.component(new PunishComponentHandler(punishService));
+
         // TODO(Module 4): /solicitar-cargo, /produzir, /painel-financeiro,
-        // /painel-acoes, /relatorio, /punir, /punições, /farm, plus the
-        // Actions/Reservations priority queue and recruitment Set pipeline.
+        // /painel-acoes, /relatorio, /farm, plus the Actions/Reservations priority
+        // queue and recruitment Set pipeline.
     }
 
     @Override
     public void onReady(BotContext ctx) {
-        // TODO: schedule the 20-day ADV/Warn expiry sweep (DB check on boot + repeating).
+        // 20-day ADV expiry: sweep once on boot, then hourly (BOTSPECS §4).
+        if (punishService != null) {
+            ctx.scheduler().repeating(punishService::sweepExpiredAdvs, 0, 1, TimeUnit.HOURS);
+        }
     }
 }
