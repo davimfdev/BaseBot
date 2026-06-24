@@ -52,6 +52,10 @@ public final class MessageBuilderParse {
                     if (b.getStyle() == ButtonStyle.LINK && b.getUrl() != null) {
                         MessageState.addButton(block, b.getLabel(), b.getUrl());
                         any = true;
+                    } else if (b.getCustomId() != null) {
+                        // Interaction button: keep its custom id so it stays wired up.
+                        MessageState.addInteractionButton(block, b.getLabel(), b.getCustomId(), b.getStyle().name());
+                        any = true;
                     }
                 }
                 if (any) {
