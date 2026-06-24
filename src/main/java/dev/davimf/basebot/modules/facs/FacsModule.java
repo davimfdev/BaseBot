@@ -39,10 +39,11 @@ import java.util.concurrent.TimeUnit;
  * Module 4 — Facs / FiveM roleplay management (BOTSPECS §Module 4).
  *
  * <p>Hierarchy-aware commands ({@code /pd}, {@code /solicitar-cargo}, {@code /produzir},
- * panels, {@code /relatorio}, {@code /hierarquia}), the Actions/Reservations system with
- * its priority queue, recruitment pipeline, and punishments/farm (ADV 20-day expiry).
- * The auto-updating Hierarchy panel listener (with 5s debounce) is wired as the
- * reference; the rest are TODOs.
+ * {@code /painel-financeiro}, {@code /painel-acoes}, {@code /relatorio}, {@code /hierarquia},
+ * {@code /punir}, {@code /punições}, {@code /farm}, {@code /recrutamento}), the
+ * Actions/Reservations Elite-priority queue, the recruitment/Set pipeline, and
+ * punishments (ADV 20-day expiry). The Hierarchy panel auto-updates on role changes
+ * (5s debounce); ADV expiry runs on the scheduler.
  */
 public final class FacsModule implements BotModule {
 
