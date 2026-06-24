@@ -94,9 +94,7 @@ public final class BaseModule implements BotModule {
         // voice traffic, bans, kicks (BOTSPECS §General Logging).
         registry.listener(new GeneralLoggingListener(ctx));
 
-        // TODO(Module 1): /setup, /cl, /clear, /bot-name, /bot-icon, /bot-nick,
-        // /disconnect, /voice-move, /mute, /unmute, /mutecall, /unmutecall, /kick,
-        // /ban, /unban, /addcargo, /removecargo, /listacargo, /lock, /unlock,
-        // /embed, /editembed, /addemoji, /formulario.
+        // Remaining Module 1 gaps (not yet built): /embed, /editembed, /formulario, and
+        // channel-facing log embeds in GeneralLoggingListener (currently SQLite-only).
     }
 }
