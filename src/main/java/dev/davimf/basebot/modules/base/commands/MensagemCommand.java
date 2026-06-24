@@ -6,6 +6,8 @@ import dev.davimf.basebot.modules.base.message.MessageBuilderService;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
@@ -31,7 +33,11 @@ public final class MensagemCommand implements SlashCommand {
     public SlashCommandData data() {
         return Commands.slash("mensagem", "Construtor de mensagens (embed clássico ou Container V2).")
                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER))
-                .addSubcommands(new SubcommandData("enviar", "Abre o construtor de mensagem."));
+                .addSubcommands(
+                        new SubcommandData("enviar", "Abre o construtor de mensagem."),
+                        new SubcommandData("editar", "Edita uma mensagem do bot no construtor.")
+                                .addOption(OptionType.STRING, "mensagem",
+                                        "ID ou link da mensagem a editar", true));
     }
 
     @Override
@@ -40,6 +46,10 @@ public final class MensagemCommand implements SlashCommand {
             event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
             return;
         }
-        service.open(event);
+        if ("editar".equals(event.getSubcommandName())) {
+            service.openEdit(event, event.getOption("mensagem", OptionMapping::getAsString));
+        } else {
+            service.open(event);
+        }
     }
 }

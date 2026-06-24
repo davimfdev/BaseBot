@@ -51,12 +51,13 @@ public final class MessageBuilderView {
     public static Container panel(ObjectNode state) {
         boolean container = MessageState.isContainer(state);
         boolean wh = state.path("webhook").asBoolean();
+        boolean editing = state.hasNonNull("editMessageId");
         String whName = MessageState.str(state, "webhookName");
         String channelId = MessageState.str(state, "channelId");
 
         List<ContainerChildComponent> kids = new ArrayList<>();
-        kids.add(Panels.text("## </> Construtor de mensagem\nTipo atual: **"
-                + (container ? "Container V2" : "Embed clássico") + "**"
+        kids.add(Panels.text("## </> Construtor de mensagem" + (editing ? " · editando" : "")
+                + "\nTipo atual: **" + (container ? "Container V2" : "Embed clássico") + "**"
                 + (wh ? " · via webhook" + (whName != null ? " como `" + whName + "`" : "") : "")));
         kids.add(ActionRow.of(StringSelectMenu.create(ComponentId.of(NS, "type"))
                 .addOption("Embed clássico", MessageState.CLASSIC)
@@ -97,24 +98,30 @@ public final class MessageBuilderView {
         }
 
         kids.add(Panels.divider());
-        kids.add(Panels.text("**Envio**" + (wh && whName != null ? " · webhook como `" + whName + "`" : "")));
-        List<Button> envio = new ArrayList<>();
-        envio.add(wh ? Button.success(ComponentId.of(NS, "webhook"), "Webhook: ON")
-                : Button.secondary(ComponentId.of(NS, "webhook"), "Webhook: OFF"));
-        if (wh) {
-            envio.add(Button.secondary(ComponentId.of(NS, "whname"), "Nome"));
-            envio.add(Button.secondary(ComponentId.of(NS, "whavatar"), "Avatar"));
+        if (editing) {
+            // Editing an existing message: target channel + webhook-ness are fixed.
+            kids.add(Panels.text("**Edição** — salva diretamente na mensagem original."));
+        } else {
+            kids.add(Panels.text("**Envio**" + (wh && whName != null ? " · webhook como `" + whName + "`" : "")));
+            List<Button> envio = new ArrayList<>();
+            envio.add(wh ? Button.success(ComponentId.of(NS, "webhook"), "Webhook: ON")
+                    : Button.secondary(ComponentId.of(NS, "webhook"), "Webhook: OFF"));
+            if (wh) {
+                envio.add(Button.secondary(ComponentId.of(NS, "whname"), "Nome"));
+                envio.add(Button.secondary(ComponentId.of(NS, "whavatar"), "Avatar"));
+            }
+            kids.add(ActionRow.of(envio));
+            EntitySelectMenu.Builder channel = EntitySelectMenu
+                    .create(ComponentId.of(NS, "channel"), SelectTarget.CHANNEL)
+                    .setChannelTypes(ChannelType.TEXT, ChannelType.NEWS)
+                    .setPlaceholder("Canal de destino");
+            if (channelId != null) {
+                channel.setDefaultValues(DefaultValue.channel(channelId));
+            }
+            kids.add(ActionRow.of(channel.build()));
         }
-        kids.add(ActionRow.of(envio));
-        EntitySelectMenu.Builder channel = EntitySelectMenu.create(ComponentId.of(NS, "channel"), SelectTarget.CHANNEL)
-                .setChannelTypes(ChannelType.TEXT, ChannelType.NEWS)
-                .setPlaceholder("Canal de destino");
-        if (channelId != null) {
-            channel.setDefaultValues(DefaultValue.channel(channelId));
-        }
-        kids.add(ActionRow.of(channel.build()));
         kids.add(ActionRow.of(
-                Button.success(ComponentId.of(NS, "send"), "Enviar"),
+                Button.success(ComponentId.of(NS, "send"), editing ? "Salvar" : "Enviar"),
                 Button.danger(ComponentId.of(NS, "cancel"), "Cancelar")));
         return Panels.container(builderAccent(state), kids.toArray(new ContainerChildComponent[0]));
     }
