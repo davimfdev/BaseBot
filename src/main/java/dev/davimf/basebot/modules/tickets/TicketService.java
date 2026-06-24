@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.crypto.TicketCrypto;
+import dev.davimf.basebot.database.sqlite.TicketRepository;
 import dev.davimf.basebot.database.model.ActiveTicket;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.TicketCategory;
@@ -104,6 +105,9 @@ public final class TicketService {
             String ticketId = newId();
             ctx.database().tickets().create(new ActiveTicket(ticketId, guild.getId(), channel.getId(),
                     null, creator.getId(), null, cat.name(), ActiveTicket.OPEN, reason));
+            ctx.database().tickets().addEvent(ticketId,
+                    "📝 Ticket aberto por " + creator.getAsMention() + " · Motivo: " + reason,
+                    System.currentTimeMillis());
             ctx.database().actionLogs().log(guild.getId(), creator.getId(), channel.getId(),
                     "TICKET_OPEN", cat.name());
 
@@ -143,7 +147,7 @@ public final class TicketService {
         event.editComponents(TicketView.dashboard(accent(t.guildId()), ticketId,
                         headerFor(t), event.getUser().getId()))
                 .useComponentsV2().queue();
-        announce(event.getChannel(), t.guildId(),
+        announce(event.getChannel(), t.guildId(), ticketId,
                 "🙋 " + event.getUser().getAsMention() + " assumiu o atendimento.");
     }
 
@@ -188,7 +192,7 @@ public final class TicketService {
             ctx.database().tickets().setVoiceChannel(ticketId, vc.getId());
             ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                     "TICKET_CALL", vc.getId());
-            announce(event.getChannel(), t.guildId(),
+            announce(event.getChannel(), t.guildId(), ticketId,
                     "🔊 Call criada por " + event.getUser().getAsMention() + ": " + vc.getAsMention());
             event.getHook().sendMessage("🔊 Call criada: " + vc.getAsMention()).queue();
         }, err -> event.getHook().sendMessage("Falha ao criar a call: " + err.getMessage()).queue());
@@ -214,7 +218,7 @@ public final class TicketService {
                 .queue(ok -> {
                     ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                             "TICKET_NOTIFY", ticketId);
-                    announce(event.getChannel(), t.guildId(),
+                    announce(event.getChannel(), t.guildId(), ticketId,
                             "🔔 <@" + t.creatorId() + "> foi notificado por " + event.getUser().getAsMention() + ".");
                     event.getHook().sendMessage("🔔 O autor foi notificado por DM.").queue();
                 }, err -> event.getHook().sendMessage(
@@ -256,7 +260,7 @@ public final class TicketService {
                 .queue(ok -> {
                     ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), userId,
                             "TICKET_MEMBER_ADD", ticketId);
-                    announce(event.getChannel(), t.guildId(), "👤 " + member.getAsMention()
+                    announce(event.getChannel(), t.guildId(), ticketId, "👤 " + member.getAsMention()
                             + " foi adicionado ao ticket por " + event.getUser().getAsMention() + ".");
                     event.getHook().sendMessage("Adicionado " + member.getAsMention() + " ao ticket.").queue();
                 }, err -> event.getHook().sendMessage("Falha ao adicionar: " + err.getMessage()).queue()),
@@ -296,7 +300,7 @@ public final class TicketService {
         event.deferReply(true).queue();
         text.getManager().setName(suffix).reason("Ticket renomeado").queue(
                 ok -> {
-                    announce(event.getChannel(), t.guildId(), "✏️ Ticket renomeado para `" + suffix
+                    announce(event.getChannel(), t.guildId(), ticketId, "✏️ Ticket renomeado para `" + suffix
                             + "` por " + event.getUser().getAsMention() + ".");
                     event.getHook().sendMessage("Ticket renomeado para `" + suffix + "`.").queue();
                 },
@@ -415,6 +419,9 @@ public final class TicketService {
     private CompletableFuture<String> renderTranscript(TextChannel channel, ActiveTicket t,
                                                        String closeReason, String openerName,
                                                        String closerName) {
+        String botName = channel.getJDA().getSelfUser().getName();
+        String botAvatar = channel.getJDA().getSelfUser().getEffectiveAvatarUrl();
+        int accent = accent(t.guildId());
         return channel.getIterableHistory().takeAsync(TRANSCRIPT_LIMIT).thenApply(messages -> {
             ObjectNode root = JSON.createObjectNode();
             root.put("categoryLabel", t.suffix());
@@ -427,16 +434,23 @@ public final class TicketService {
             } else {
                 root.put("closeReason", closeReason);
             }
-            ArrayNode arr = root.putArray("messages");
-            // takeAsync returns newest-first; render oldest-first for a readable transcript.
-            for (int i = messages.size() - 1; i >= 0; i--) {
-                Message m = messages.get(i);
-                ObjectNode mn = arr.addObject();
+
+            // Build a unified timeline: real conversation messages + persisted action
+            // events (which always survive, even when MESSAGE_CONTENT strips embeds from
+            // history). Bot messages with no text are dropped — they are the dashboard and
+            // the live action embeds, which the stored events re-add cleanly.
+            List<Entry> entries = new java.util.ArrayList<>();
+            for (Message m : messages) {
+                String content = m.getContentDisplay();
+                if (m.getAuthor().isBot() && content.isBlank() && m.getAttachments().isEmpty()) {
+                    continue;
+                }
+                ObjectNode mn = JSON.createObjectNode();
                 mn.put("authorName", m.getMember() != null
                         ? m.getMember().getEffectiveName() : m.getAuthor().getName());
                 mn.put("avatarUrl", m.getAuthor().getEffectiveAvatarUrl());
                 mn.put("timestampMillis", m.getTimeCreated().toInstant().toEpochMilli());
-                mn.put("content", m.getContentDisplay());
+                mn.put("content", content);
                 mn.put("bot", m.getAuthor().isBot());
                 mn.put("edited", m.isEdited());
                 ArrayNode at = mn.putArray("attachments");
@@ -445,10 +459,33 @@ public final class TicketService {
                 for (MessageEmbed e : m.getEmbeds()) {
                     embeds.add(renderEmbed(e));
                 }
+                entries.add(new Entry(m.getTimeCreated().toInstant().toEpochMilli(), mn));
             }
+            for (TicketRepository.TicketEvent ev : ctx.database().tickets().listEvents(t.id())) {
+                ObjectNode mn = JSON.createObjectNode();
+                mn.put("authorName", botName);
+                mn.put("avatarUrl", botAvatar);
+                mn.put("timestampMillis", ev.createdAtMillis());
+                mn.put("content", "");
+                mn.put("bot", true);
+                mn.put("edited", false);
+                mn.putArray("attachments");
+                ObjectNode embed = JSON.createObjectNode();
+                embed.put("description", ev.text());
+                embed.put("color", accent);
+                mn.putArray("embeds").add(embed);
+                entries.add(new Entry(ev.createdAtMillis(), mn));
+            }
+            entries.sort(java.util.Comparator.comparingLong(Entry::millis));
+
+            ArrayNode arr = root.putArray("messages");
+            entries.forEach(e -> arr.add(e.node()));
             return root.toString();
         });
     }
+
+    /** A timeline item (a real message or a stored action event) keyed by timestamp. */
+    private record Entry(long millis, ObjectNode node) {}
 
     /** Maps a JDA embed to the viewer's embed shape. */
     private static ObjectNode renderEmbed(MessageEmbed e) {
@@ -544,8 +581,13 @@ public final class TicketService {
         event.reply(msg).setEphemeral(true).queue();
     }
 
-    /** Posts a public action notice as a classic embed (members see it + it lands in the transcript). */
-    private void announce(MessageChannel channel, String guildId, String text) {
+    /**
+     * Posts a public action notice as a classic embed (members see it) AND persists it as
+     * a ticket event so it always lands in the transcript — even with MESSAGE_CONTENT off,
+     * when the bot can't read embeds back from channel history.
+     */
+    private void announce(MessageChannel channel, String guildId, String ticketId, String text) {
+        ctx.database().tickets().addEvent(ticketId, text, System.currentTimeMillis());
         channel.sendMessageEmbeds(TicketView.actionEmbed(accent(guildId), text)).queue(ok -> {}, e -> {});
     }
 
