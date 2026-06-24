@@ -85,14 +85,18 @@ public final class EconomyRepository {
         }
     }
 
-    public List<FacTransaction> listTransactions(String guildId, String sinceIso) {
-        String sql = "SELECT * FROM fac_transactions WHERE guild_id = ? AND created_at >= ? "
-                + "ORDER BY created_at DESC";
+    /** Transactions for a guild within the last {@code days} (0 or less = all time). */
+    public List<FacTransaction> listTransactions(String guildId, int days) {
+        String sql = "SELECT * FROM fac_transactions WHERE guild_id = ?"
+                + (days > 0 ? " AND created_at >= datetime('now', ?)" : "")
+                + " ORDER BY created_at DESC";
         List<FacTransaction> out = new ArrayList<>();
         try (Connection c = sqlite.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, guildId);
-            ps.setString(2, sinceIso);
+            if (days > 0) {
+                ps.setString(2, "-" + days + " days");
+            }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     out.add(new FacTransaction(
