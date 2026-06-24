@@ -336,8 +336,11 @@ public final class MessageBuilderService {
         }
         event.deferReply(true).queue();
         channel.retrieveMessageById(loc[1]).queue(msg -> {
-            boolean webhookMsg = msg.isWebhookMessage();
+            // The bot's own messages (incl. interaction responses, which carry a webhook_id)
+            // are edited via JDA. Only a real channel-webhook message — author != the bot —
+            // is edited through the webhook API.
             boolean mine = event.getJDA().getSelfUser().getId().equals(msg.getAuthor().getId());
+            boolean webhookMsg = msg.isWebhookMessage() && !mine;
             if (!mine && !webhookMsg) {
                 event.getHook().sendMessage("Só posso editar mensagens enviadas por mim ou pelo meu webhook.")
                         .queue();
