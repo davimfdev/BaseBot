@@ -12,8 +12,11 @@ import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
 import dev.davimf.basebot.modules.facs.commands.FarmCommand;
 import dev.davimf.basebot.modules.facs.commands.PainelFinanceiroCommand;
 import dev.davimf.basebot.modules.facs.commands.ProduzirCommand;
+import dev.davimf.basebot.modules.facs.commands.RecrutamentoCommand;
 import dev.davimf.basebot.modules.facs.commands.RelatorioCommand;
 import dev.davimf.basebot.modules.facs.commands.SolicitarCargoCommand;
+import dev.davimf.basebot.modules.facs.recruit.RecruitComponentHandler;
+import dev.davimf.basebot.modules.facs.recruit.RecruitStatsRepository;
 import dev.davimf.basebot.modules.facs.economy.EconomyRepository;
 import dev.davimf.basebot.modules.facs.economy.RecipeRepository;
 import dev.davimf.basebot.modules.facs.economy.FarmComponentHandler;
@@ -85,8 +88,12 @@ public final class FacsModule implements BotModule {
         // Reports: /relatorio (financeiro|acoes) as embed (<=7d) or CSV (unlimited).
         registry.command(new RelatorioCommand(economy));
 
-        // TODO(Module 4): /painel-acoes + the Actions/Reservations priority queue,
-        // and the recruitment pipeline.
+        // Recruitment: /recrutamento painel -> apply modal -> manager Accept grants the
+        // entry role and credits the recruiter (+1 in recruiter_stats).
+        registry.command(new RecrutamentoCommand());
+        registry.component(new RecruitComponentHandler(new RecruitStatsRepository(ctx.database().sqlite())));
+
+        // TODO(Module 4): /painel-acoes + the Actions/Reservations priority queue.
     }
 
     @Override
