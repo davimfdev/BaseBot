@@ -87,17 +87,29 @@ public final class SetupView {
         return Panels.container(EmbedColor.resolve(cfg), kids.toArray(new ContainerChildComponent[0]));
     }
 
-    // --- Cargos (all role selects on one screen) -------------------------------
+    // --- Cargos (role selects, paginated to stay within component limits) ------
 
-    public static Container cargos(GuildConfig cfg) {
+    public static Container cargos(GuildConfig cfg, int pageIndex) {
+        var options = SetupRoleKeys.OPTIONS;
+        int total = Math.max(1, (options.size() + PER_PAGE - 1) / PER_PAGE);
+        int idx = Math.max(0, Math.min(pageIndex, total - 1));
+        int from = idx * PER_PAGE;
+        int to = Math.min(options.size(), from + PER_PAGE);
+
         List<ContainerChildComponent> kids = new ArrayList<>();
-        kids.add(Panels.text("## 👥 Cargos\nMapeie cada função a um cargo do servidor. Salva ao selecionar."));
-        for (var e : SetupRoleKeys.OPTIONS) {
+        kids.add(Panels.text("## 👥 Cargos  (" + (idx + 1) + "/" + total + ")\n"
+                + "Mapeie cada função a um cargo do servidor. Salva ao selecionar."));
+        for (var e : options.subList(from, to)) {
             kids.add(Panels.text("**" + e.getValue() + "**"));
             kids.add(ActionRow.of(roleSelect("setrole", e.getKey(),
                     "Selecionar cargo", cfg.role(e.getKey()))));
         }
-        kids.add(backRow("hub"));
+        kids.add(ActionRow.of(
+                Button.secondary(ComponentId.of(NS, "rolepage", String.valueOf(idx - 1)), "◀")
+                        .withDisabled(idx <= 0),
+                Button.secondary(ComponentId.of(NS, "rolepage", String.valueOf(idx + 1)), "▶")
+                        .withDisabled(idx >= total - 1),
+                Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
         return Panels.container(EmbedColor.resolve(cfg), kids.toArray(new ContainerChildComponent[0]));
     }
 

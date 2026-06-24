@@ -3,7 +3,9 @@ package dev.davimf.basebot.modules.facs;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
+import dev.davimf.basebot.modules.facs.commands.HierarquiaCommand;
 import dev.davimf.basebot.modules.facs.commands.PdCommand;
+import dev.davimf.basebot.modules.facs.hierarchy.HierarchyService;
 import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
 
 /**
@@ -24,15 +26,17 @@ public final class FacsModule implements BotModule {
 
     @Override
     public void register(ModuleRegistry registry, BotContext ctx) {
-        // /hierarquia auto-update: listens to role add/remove with a 5s debounce so a
-        // burst of role changes triggers only one embed refresh (BOTSPECS §1, §Module 4).
-        registry.listener(new HierarchyListener(ctx));
+        // /hierarquia: auto-updating chain-of-command panel + the role-change listener
+        // that refreshes it (5s debounce so a burst triggers one edit; BOTSPECS §1, §4).
+        HierarchyService hierarchy = new HierarchyService(ctx);
+        registry.command(new HierarquiaCommand(hierarchy));
+        registry.listener(new HierarchyListener(ctx, hierarchy));
 
         // Disciplinary: /pd removes a member + logs to PD and Punishments channels.
         registry.command(new PdCommand());
 
         // TODO(Module 4): /solicitar-cargo, /produzir, /painel-financeiro,
-        // /painel-acoes, /relatorio, /hierarquia, /punir, /punições, /farm, plus the
+        // /painel-acoes, /relatorio, /punir, /punições, /farm, plus the
         // Actions/Reservations priority queue and recruitment Set pipeline.
     }
 

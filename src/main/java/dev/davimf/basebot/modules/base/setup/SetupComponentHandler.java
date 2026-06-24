@@ -44,6 +44,7 @@ public final class SetupComponentHandler implements ComponentHandler {
             case "nav" -> edit(event, "tickets".equals(id.arg(0))
                     ? ticketsScreen(ctx, guildId) : hubScreen(ctx, guildId));
             case "logpage" -> edit(event, SetupView.logsPage(config(ctx, guildId), parseInt(id.arg(0))));
+            case "rolepage" -> edit(event, SetupView.cargos(config(ctx, guildId), parseInt(id.arg(0))));
             case "ticketnew" -> event.replyModal(SetupView.ticketModal("new", null)).queue();
             case "ticketedit" -> {
                 Optional<TicketCategory> cat = ctx.database().ticketCategories().find(id.arg(0));
@@ -76,7 +77,7 @@ public final class SetupComponentHandler implements ComponentHandler {
                 GuildConfig cfg = config(ctx, guildId);
                 Container screen = switch (event.getValues().get(0)) {
                     case "logs" -> SetupView.logsPage(cfg, 0);
-                    case "roles" -> SetupView.cargos(cfg);
+                    case "roles" -> SetupView.cargos(cfg, 0);
                     case "tickets" -> ticketsScreen(ctx, guildId);
                     case "bot" -> SetupView.bot(EmbedColor.resolve(cfg),
                             event.getJDA().getSelfUser().getName(), event.getJDA().getSelfUser().getId());
