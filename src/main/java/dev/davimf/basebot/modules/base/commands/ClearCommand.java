@@ -16,15 +16,24 @@ import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import java.util.List;
 
 /**
- * /clear (and alias /cl) — bulk-deletes recent messages, skipping any 14 days or older
- * (Discord cannot bulk-delete those). Registered twice under the two names.
+ * Message purge (BOTSPECS Module 1), skipping any message 14 days or older (Discord can't
+ * bulk-delete those). Two flavours, by name:
+ * <ul>
+ *   <li>{@code /clear} — deletes the last N messages from anyone (moderation).</li>
+ *   <li>{@code /cl} — deletes only the executor's own recent messages (self-cleanup).</li>
+ * </ul>
  */
 public final class ClearCommand implements SlashCommand {
 
-    private final String name;
+    /** How many recent messages to scan when filtering to the executor's own. */
+    private static final int SCAN_WINDOW = 100;
 
-    public ClearCommand(String name) {
+    private final String name;
+    private final boolean onlyOwn;
+
+    public ClearCommand(String name, boolean onlyOwn) {
         this.name = name;
+        this.onlyOwn = onlyOwn;
     }
 
     @Override
@@ -34,7 +43,10 @@ public final class ClearCommand implements SlashCommand {
 
     @Override
     public SlashCommandData data() {
-        return Commands.slash(name, "Apaga mensagens recentes do canal (até 14 dias).")
+        String desc = onlyOwn
+                ? "Apaga as suas próprias mensagens recentes (até 14 dias)."
+                : "Apaga mensagens recentes do canal (até 14 dias).";
+        return Commands.slash(name, desc)
                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MESSAGE_MANAGE))
                 .addOption(OptionType.INTEGER, "quantidade", "Quantas mensagens (1-100)", true);
     }
@@ -47,31 +59,32 @@ public final class ClearCommand implements SlashCommand {
         }
         long requested = event.getOption("quantidade", 0L, OptionMapping::getAsLong);
         int amount = (int) Math.max(1, Math.min(100, requested));
+        // When filtering to the executor, scan a wider window and keep up to `amount` of theirs.
+        int fetch = onlyOwn ? SCAN_WINDOW : amount;
+        String authorId = event.getUser().getId();
 
         event.deferReply(true).queue();
-        channel.getHistory().retrievePast(amount).queue(messages -> {
+        channel.getHistory().retrievePast(fetch).queue(messages -> {
             long now = System.currentTimeMillis();
-            MessagePurge.Partition p = MessagePurge.partitionByAge(
-                    messages.stream().map(m -> m.getTimeCreated().toInstant().toEpochMilli()).toList(),
-                    now);
-
             List<Message> deletable = messages.stream()
+                    .filter(m -> !onlyOwn || m.getAuthor().getId().equals(authorId))
                     .filter(m -> now - m.getTimeCreated().toInstant().toEpochMilli()
                             < MessagePurge.BULK_MAX_AGE_MILLIS)
+                    .limit(amount)
                     .toList();
 
-            int skipped = p.tooOld().size();
             if (deletable.isEmpty()) {
-                event.getHook().sendMessage("Nada para apagar (todas as mensagens têm 14+ dias). "
-                        + "Ignoradas: " + skipped).queue();
+                event.getHook().sendMessage(onlyOwn
+                        ? "Nenhuma mensagem sua (até 14 dias) encontrada para apagar."
+                        : "Nada para apagar (todas as mensagens têm 14+ dias).").queue();
                 return;
             }
             channel.purgeMessages(deletable);
             ctx.database().actionLogs().log(event.getGuild().getId(),
-                    event.getUser().getId(), channel.getId(), "CLEAR",
-                    "deleted=" + deletable.size() + " skipped=" + skipped);
+                    event.getUser().getId(), channel.getId(),
+                    onlyOwn ? "CLEAR_OWN" : "CLEAR", "deleted=" + deletable.size());
             event.getHook().sendMessage("Apagadas: " + deletable.size()
-                    + (skipped > 0 ? " | Ignoradas (14+ dias): " + skipped : "")).queue();
+                    + (onlyOwn ? " (somente suas mensagens)." : ".")).queue();
         }, err -> event.getHook().sendMessage("Falha ao buscar mensagens: " + err.getMessage()).queue());
     }
 }

@@ -75,9 +75,10 @@ public final class BaseModule implements BotModule {
         registry.command(new BanCommand());
         registry.command(new UnbanCommand());
 
-        // Message purging (BOTSPECS Module 1) — /cl is an alias of /clear.
-        registry.command(new ClearCommand("clear"));
-        registry.command(new ClearCommand("cl"));
+        // Message purging (BOTSPECS Module 1): /clear deletes anyone's messages,
+        // /cl deletes only the executor's own messages.
+        registry.command(new ClearCommand("clear", false));
+        registry.command(new ClearCommand("cl", true));
 
         // Role management (BOTSPECS Module 1) — hierarchy-validated.
         registry.command(new AddCargoCommand());

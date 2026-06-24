@@ -51,6 +51,12 @@ public final class CommandManager extends ListenerAdapter {
     public void onReady(ReadyEvent event) {
         JDA jda = event.getJDA();
 
+        // Commands are registered per-guild (instant). Wipe any leftover GLOBAL commands
+        // so they don't show up duplicated alongside the per-guild ones during testing.
+        jda.updateCommands().queue(
+                ok -> log.info("Cleared global commands (using per-guild registration)."),
+                err -> log.warn("Could not clear global commands: {}", err.getMessage()));
+
         if (context.config().discord().hasDevGuild()) {
             for (String id : context.config().discord().devGuildIds()) {
                 Guild guild = jda.getGuildById(id);
