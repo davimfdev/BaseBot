@@ -26,7 +26,8 @@ public final class PostgresMigrator {
     /** Ordered migration resources. Append new files here; never reorder. */
     public static final List<String> MIGRATIONS = List.of(
             "/db/postgres/001_guild_config.sql",
-            "/db/postgres/002_guild_settings.sql"
+            "/db/postgres/002_guild_settings.sql",
+            "/db/postgres/003_ticket_categories.sql"
     );
 
     private PostgresMigrator() {}

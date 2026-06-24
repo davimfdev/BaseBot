@@ -30,8 +30,10 @@ public final class SetupCommand implements SlashCommand {
             event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
             return;
         }
-        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
-        event.replyComponents(SetupView.hub(cfg))
+        String guildId = event.getGuild().getId();
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guildId);
+        int ticketCats = ctx.database().ticketCategories().count(guildId);
+        event.replyComponents(SetupView.hub(cfg, ticketCats))
                 .useComponentsV2()
                 .setEphemeral(true)
                 .queue();

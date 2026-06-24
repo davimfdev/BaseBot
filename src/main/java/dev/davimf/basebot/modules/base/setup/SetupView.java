@@ -3,16 +3,21 @@ package dev.davimf.basebot.modules.base.setup;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.database.model.TicketCategory;
 import dev.davimf.basebot.modules.base.setup.SetupLogTypes.LogType;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
+import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu.DefaultValue;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu.SelectTarget;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.components.textinput.TextInput;
+import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
+import net.dv8tion.jda.api.modals.Modal;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,15 +39,13 @@ public final class SetupView {
 
     // --- Hub -------------------------------------------------------------------
 
-    public static Container hub(GuildConfig cfg) {
+    public static Container hub(GuildConfig cfg, int ticketCategoryCount) {
         long logsSet = SetupLogTypes.ALL.stream().filter(t -> cfg.channel(t.key()) != null).count();
         String body = "## ⚙️ Configuração do Servidor\n"
                 + "Escolha uma seção para configurar. As alterações são salvas na hora.\n\n"
                 + "📋 **Logs configurados:** " + logsSet + "/" + SetupLogTypes.ALL.size() + "\n"
-                + "📂 **Categoria de tickets:** " + channelOrUnset(cfg.channel("tickets-category")) + "\n"
-                + "👥 **Cargos configurados:** " + cfg.roles().size() + "\n"
-                + "🛡️ **Staff de tickets:** " + cfg.staffRoleIds().size() + "\n"
-                + "📝 **Descrição de tickets:** " + (hasText(cfg.setting("ticket-description")) ? "Sim" : "Não");
+                + "🎫 **Categorias de ticket:** " + ticketCategoryCount + "\n"
+                + "👥 **Cargos configurados:** " + cfg.roles().size();
 
         StringSelectMenu menu = StringSelectMenu.create(ComponentId.of(NS, "section"))
                 .setPlaceholder("Escolha a seção")
@@ -98,31 +101,87 @@ public final class SetupView {
 
     // --- Tickets ---------------------------------------------------------------
 
-    public static Container tickets(GuildConfig cfg) {
-        EntitySelectMenu.Builder category = EntitySelectMenu
-                .create(ComponentId.of(NS, "setcategory"), SelectTarget.CHANNEL)
-                .setChannelTypes(ChannelType.CATEGORY)
-                .setPlaceholder("Categoria onde os tickets serão criados")
-                .setRequiredRange(1, 1);
-        if (cfg.channel("tickets-category") != null) {
-            category.setDefaultValues(DefaultValue.channel(cfg.channel("tickets-category")));
+    public static Container ticketsList(List<TicketCategory> categories) {
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## 🎫 Tickets\nSelecione uma categoria para editar ou remover, "
+                + "ou crie uma nova."));
+        if (categories.isEmpty()) {
+            kids.add(Panels.text("*Nenhuma categoria de ticket ainda.*"));
+        } else {
+            StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "ticketcat"))
+                    .setPlaceholder("Categorias existentes");
+            for (TicketCategory cat : categories) {
+                String label = (cat.emoji() != null && !cat.emoji().isBlank() ? cat.emoji() + " " : "")
+                        + cat.name();
+                menu.addOption(trim(label, 100), cat.id(),
+                        cat.description() == null ? null : trim(cat.description(), 100));
+            }
+            kids.add(ActionRow.of(menu.build()));
         }
-        EntitySelectMenu.Builder staff = EntitySelectMenu
-                .create(ComponentId.of(NS, "setstaff"), SelectTarget.ROLE)
-                .setPlaceholder("Cargos de staff com acesso aos tickets")
-                .setRequiredRange(1, 25);
-        if (!cfg.staffRoleIds().isEmpty()) {
-            staff.setDefaultValues(cfg.staffRoleIds().stream().map(DefaultValue::role).toList());
-        }
+        kids.add(ActionRow.of(
+                Button.success(ComponentId.of(NS, "ticketnew"), "➕ Nova categoria"),
+                Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
+        return Panels.container(Panels.BLURPLE, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    public static Container ticketDetail(TicketCategory cat) {
+        String roles = cat.staffRoleIds().isEmpty() ? "*nenhum*"
+                : String.join(" ", cat.staffRoleIds().stream().map(r -> "<@&" + r + ">").toList());
+        String body = "## 🎫 " + (cat.emoji() != null && !cat.emoji().isBlank() ? cat.emoji() + " " : "")
+                + cat.name() + "\n"
+                + (cat.description() == null || cat.description().isBlank()
+                        ? "" : cat.description() + "\n")
+                + "\n📂 **Categoria Discord:** <#" + cat.discordCategoryId() + ">\n"
+                + "🛡️ **Cargos que atendem:** " + roles;
         return Panels.container(Panels.BLURPLE,
-                Panels.text("## 🎫 Tickets\nConfigure a categoria, os cargos de staff e os textos do painel."),
-                Panels.text("**Categoria dos tickets**"),
-                ActionRow.of(category.build()),
-                Panels.text("**Cargos de staff**"),
-                ActionRow.of(staff.build()),
+                Panels.text(body),
                 ActionRow.of(
-                        Button.secondary(ComponentId.of(NS, "ticketinfo"), "Definir descrição/emoji"),
-                        Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
+                        Button.primary(ComponentId.of(NS, "ticketedit", cat.id()), "✏️ Editar"),
+                        Button.danger(ComponentId.of(NS, "ticketdel", cat.id()), "🗑️ Remover"),
+                        Button.secondary(ComponentId.of(NS, "nav", "tickets"), "◀ Voltar")));
+    }
+
+    /** The create/edit form. {@code existing} is null for a new category. */
+    public static Modal ticketModal(String id, TicketCategory existing) {
+        TextInput nome = TextInput.create("nome", TextInputStyle.SHORT)
+                .setPlaceholder("Ex: Suporte").setRequired(true).setMaxLength(80)
+                .setValue(existing == null ? null : existing.name()).build();
+        TextInput emoji = TextInput.create("emoji", TextInputStyle.SHORT)
+                .setPlaceholder("Ex: 🛠️ (opcional)").setRequired(false).setMaxLength(8)
+                .setValue(existing == null ? null : existing.emoji()).build();
+        TextInput descricao = TextInput.create("descricao", TextInputStyle.PARAGRAPH)
+                .setPlaceholder("Descrição curta no painel (opcional)").setRequired(false).setMaxLength(200)
+                .setValue(existing == null ? null : existing.description()).build();
+
+        EntitySelectMenu.Builder categoria = EntitySelectMenu
+                .create("categoria", SelectTarget.CHANNEL)
+                .setChannelTypes(ChannelType.CATEGORY)
+                .setPlaceholder("Categoria Discord destino")
+                .setRequiredRange(1, 1);
+        if (existing != null && existing.discordCategoryId() != null) {
+            categoria.setDefaultValues(DefaultValue.channel(existing.discordCategoryId()));
+        }
+        EntitySelectMenu.Builder cargos = EntitySelectMenu
+                .create("cargos", SelectTarget.ROLE)
+                .setPlaceholder("Cargos que podem atender")
+                .setRequiredRange(1, 20);
+        if (existing != null && !existing.staffRoleIds().isEmpty()) {
+            cargos.setDefaultValues(existing.staffRoleIds().stream().map(DefaultValue::role).toList());
+        }
+
+        return Modal.create(ComponentId.of(NS, "ticketform", id),
+                        existing == null ? "Nova categoria de ticket" : "Editar categoria")
+                .addComponents(
+                        Label.of("Nome", nome),
+                        Label.of("Emoji", emoji),
+                        Label.of("Descrição", descricao),
+                        Label.of("Categoria Discord", categoria.build()),
+                        Label.of("Cargos que atendem", cargos.build()))
+                .build();
+    }
+
+    private static String trim(String s, int max) {
+        return s.length() > max ? s.substring(0, max) : s;
     }
 
     // --- Bot -------------------------------------------------------------------
@@ -165,13 +224,5 @@ public final class SetupView {
 
     private static ActionRow backRow(String navTarget) {
         return ActionRow.of(Button.secondary(ComponentId.of(NS, "nav", navTarget), "◀ Voltar"));
-    }
-
-    private static boolean hasText(String s) {
-        return s != null && !s.isBlank();
-    }
-
-    private static String channelOrUnset(String channelId) {
-        return (channelId == null || channelId.isBlank()) ? "*Não definido*" : "<#" + channelId + ">";
     }
 }
