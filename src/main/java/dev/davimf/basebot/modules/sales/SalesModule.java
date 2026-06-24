@@ -3,6 +3,10 @@ package dev.davimf.basebot.modules.sales;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
+import dev.davimf.basebot.modules.sales.budget.BudgetCommand;
+import dev.davimf.basebot.modules.sales.budget.BudgetComponentHandler;
+import dev.davimf.basebot.modules.sales.budget.BudgetRepository;
+import dev.davimf.basebot.modules.sales.budget.BudgetService;
 import dev.davimf.basebot.modules.sales.catalog.CatalogRepository;
 import dev.davimf.basebot.modules.sales.catalog.TabelaCommand;
 import dev.davimf.basebot.modules.sales.catalog.TabelaComponentHandler;
@@ -10,14 +14,19 @@ import dev.davimf.basebot.modules.sales.pix.PixCommand;
 import dev.davimf.basebot.modules.sales.pix.PixComponentHandler;
 import dev.davimf.basebot.modules.sales.pix.PixKeyRepository;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Module 3 — Sales / Vendas (BOTSPECS §Module 3).
  *
- * <p>Pix payments ({@code /pix} + ZXing BR Code/QR generation), Budgets
- * ({@code /orçamento} with 24h auto-cancel via the scheduler) and the product catalog
- * ({@code /tabela} with paginated embeds). Scaffolded; commands are TODOs.
+ * <p>Pix payments ({@code /pix} + ZXing BR Code/QR generation), the product catalog
+ * ({@code /tabela}, paginated) and budgets ({@code /orçamento} — interactive builder,
+ * client approval that auto-dispatches the Pix charge, and a 24h auto-cancel sweep on
+ * the scheduler).
  */
 public final class SalesModule implements BotModule {
+
+    private BudgetService budgetService;
 
     @Override
     public String name() {
@@ -35,12 +44,19 @@ public final class SalesModule implements BotModule {
         registry.command(new TabelaCommand(catalog));
         registry.component(new TabelaComponentHandler(catalog));
 
-        // TODO(Module 3): /orçamento (selector + approval embed + auto-dispatch Pix).
-        // Budget expiry uses ctx.scheduler() to auto-cancel rows past `expires_at`.
+        // Budgets / Orçamentos — interactive builder, client approval, Pix auto-dispatch.
+        BudgetRepository budgets = new BudgetRepository(ctx.database().sqlite());
+        this.budgetService = new BudgetService(ctx, budgets, catalog, pixKeys);
+        registry.command(new BudgetCommand(budgetService));
+        registry.component(new BudgetComponentHandler(budgetService));
     }
 
     @Override
     public void onReady(BotContext ctx) {
-        // TODO: schedule the 24h budget auto-cancel sweep here (ctx.scheduler().repeating(...)).
+        // 24h budget auto-cancel: sweep every 10 minutes (BOTSPECS §3 scheduler).
+        if (budgetService != null) {
+            ctx.scheduler().repeating(() -> budgetService.sweepExpired(ctx.jda()),
+                    1, 10, TimeUnit.MINUTES);
+        }
     }
 }

@@ -2,8 +2,6 @@ package dev.davimf.basebot.modules.sales.pix;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
-import dev.davimf.basebot.core.component.ComponentId;
-import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.PixKey;
 import dev.davimf.basebot.util.EmbedColor;
@@ -14,14 +12,7 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.components.buttons.Button;
-import net.dv8tion.jda.api.components.container.Container;
-import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
-import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
-import net.dv8tion.jda.api.utils.FileUpload;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 
 /**
@@ -116,31 +107,12 @@ public final class PixCommand implements SlashCommand {
         PixKey key = maybe.get();
 
         Double valor = event.getOption("valor", OptionMapping::getAsDouble);
-        PixPayload.Builder builder = PixPayload.builder()
-                .key(key.keyValue())
-                .merchantName(key.merchantName())
-                .merchantCity(key.merchantCity());
-        if (valor != null && valor > 0) {
-            builder.amount(BigDecimal.valueOf(valor));
-        }
-        String brCode = builder.build().toBrCode();
-        byte[] qrPng = PixQrCode.pngBytes(brCode, 360);
-        FileUpload qr = FileUpload.fromData(qrPng, "pix.png");
+        long cents = (valor != null && valor > 0) ? Math.round(valor * 100) : 0;
+        PixDispatch.Rendered pix = PixDispatch.render(key, cents, accent, event.getUser().getId());
 
-        String ownerId = event.getUser().getId();
-        String text = "## Cobrança Pix\n**Pix Copia e Cola:**\n```" + brCode + "```"
-                + ((valor != null && valor > 0) ? "\n**Valor:** R$ " + String.format("%.2f", valor) : "");
-        Button confirm = Button.success(
-                ComponentId.of("pix", "confirmar", ownerId), "Confirmar Pagamento");
-
-        Container container = Panels.container(accent,
-                Panels.text(text),
-                MediaGallery.of(MediaGalleryItem.fromUrl("attachment://pix.png")),
-                ActionRow.of(confirm));
-
-        event.replyComponents(container)
+        event.replyComponents(pix.container())
                 .useComponentsV2()
-                .addFiles(qr)
+                .addFiles(pix.file())
                 .queue();
     }
 }
