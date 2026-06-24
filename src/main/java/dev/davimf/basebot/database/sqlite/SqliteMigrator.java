@@ -41,7 +41,8 @@ public final class SqliteMigrator {
             "/db/sqlite/008_economy.sql",
             "/db/sqlite/009_farm.sql",
             "/db/sqlite/010_recipes.sql",
-            "/db/sqlite/011_fix_budgets.sql"
+            "/db/sqlite/011_fix_budgets.sql",
+            "/db/sqlite/012_actions.sql"
     );
 
     private final SqliteManager sqlite;

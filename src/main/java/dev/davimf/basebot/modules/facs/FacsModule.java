@@ -3,7 +3,11 @@ package dev.davimf.basebot.modules.facs;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.modules.BotModule;
 import dev.davimf.basebot.modules.ModuleRegistry;
+import dev.davimf.basebot.modules.facs.actions.ActionComponentHandler;
+import dev.davimf.basebot.modules.facs.actions.ActionRepository;
+import dev.davimf.basebot.modules.facs.actions.ActionService;
 import dev.davimf.basebot.modules.facs.commands.HierarquiaCommand;
+import dev.davimf.basebot.modules.facs.commands.PainelAcoesCommand;
 import dev.davimf.basebot.modules.facs.commands.PdCommand;
 import dev.davimf.basebot.modules.facs.commands.PunicoesCommand;
 import dev.davimf.basebot.modules.facs.commands.PunirCommand;
@@ -93,7 +97,11 @@ public final class FacsModule implements BotModule {
         registry.command(new RecrutamentoCommand());
         registry.component(new RecruitComponentHandler(new RecruitStatsRepository(ctx.database().sqlite())));
 
-        // TODO(Module 4): /painel-acoes + the Actions/Reservations priority queue.
+        // Actions/Reservations: /painel-acoes with the Elite-priority queue, Alinhamento
+        // pings, backfill and Vitória/Derrota controls.
+        ActionService actions = new ActionService(ctx, new ActionRepository(ctx.database().sqlite()));
+        registry.command(new PainelAcoesCommand());
+        registry.component(new ActionComponentHandler(actions));
     }
 
     @Override
