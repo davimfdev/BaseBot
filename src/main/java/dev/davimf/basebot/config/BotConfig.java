@@ -18,6 +18,17 @@ public record BotConfig(
         public boolean hasDevGuild() {
             return devGuildId != null && !devGuildId.isBlank();
         }
+
+        /** Dev guild ids (comma-separated in config) commands are restricted to; empty in prod. */
+        public java.util.List<String> devGuildIds() {
+            if (!hasDevGuild()) {
+                return java.util.List.of();
+            }
+            return java.util.Arrays.stream(devGuildId.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+        }
     }
 
     /**
