@@ -3,6 +3,7 @@ package dev.davimf.basebot.modules.base.listacargo;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
+import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Paginator;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -32,7 +33,8 @@ public final class ListaCargoComponentHandler implements ComponentHandler {
         List<Member> members = event.getGuild().getMembersWithRoles(role);
         int pages = Paginator.pageCount(members.size(), ListaCargoView.PAGE_SIZE);
         int page = Math.max(0, Math.min(requested, pages - 1));
-        event.editComponents(ListaCargoView.container(role, members, page))
+        int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(event.getGuild().getId()));
+        event.editComponents(ListaCargoView.container(accent, role, members, page))
                 .useComponentsV2()
                 .setAllowedMentions(java.util.Collections.emptyList()) // don't ping listed members
                 .queue();

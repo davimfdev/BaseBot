@@ -19,7 +19,7 @@ public final class ListaCargoView {
 
     private ListaCargoView() {}
 
-    public static Container container(Role role, List<Member> members, int pageIndex) {
+    public static Container container(int accent, Role role, List<Member> members, int pageIndex) {
         int pages = Paginator.pageCount(members.size(), PAGE_SIZE);
         List<Member> slice = Paginator.page(members, pageIndex, PAGE_SIZE);
 
@@ -34,8 +34,8 @@ public final class ListaCargoView {
         }
         body.append("\n-# Página ").append(pageIndex + 1).append('/').append(pages);
 
-        int accent = role.getColorRaw() == 0 ? Panels.BLURPLE : role.getColorRaw();
-        return Panels.container(accent,
+        int color = role.getColorRaw() == 0 ? accent : role.getColorRaw();
+        return Panels.container(color,
                 Panels.text(body.toString()),
                 navRow(role.getId(), pageIndex, pages));
     }
