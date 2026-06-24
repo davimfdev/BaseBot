@@ -37,7 +37,8 @@ public final class SqliteMigrator {
             "/db/sqlite/004_pix_keys_per_user.sql",
             "/db/sqlite/005_catalog.sql",
             "/db/sqlite/006_budgets.sql",
-            "/db/sqlite/007_punishments.sql"
+            "/db/sqlite/007_punishments.sql",
+            "/db/sqlite/008_economy.sql"
     );
 
     private final SqliteManager sqlite;
