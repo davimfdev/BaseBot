@@ -11,6 +11,8 @@ import dev.davimf.basebot.modules.base.commands.BotNameCommand;
 import dev.davimf.basebot.modules.base.commands.BotNickCommand;
 import dev.davimf.basebot.modules.base.commands.ClearCommand;
 import dev.davimf.basebot.modules.base.commands.DisconnectCommand;
+import dev.davimf.basebot.modules.base.commands.EditEmbedCommand;
+import dev.davimf.basebot.modules.base.commands.EmbedCommand;
 import dev.davimf.basebot.modules.base.commands.KickCommand;
 import dev.davimf.basebot.modules.base.commands.ListaCargoCommand;
 import dev.davimf.basebot.modules.base.commands.LockCommand;
@@ -24,6 +26,8 @@ import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.commands.VoiceMoveCommand;
+import dev.davimf.basebot.modules.base.embed.EmbedComponentHandler;
+import dev.davimf.basebot.modules.base.embed.EmbedService;
 import dev.davimf.basebot.modules.base.listacargo.ListaCargoComponentHandler;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
@@ -90,11 +94,17 @@ public final class BaseModule implements BotModule {
         registry.command(new SetupCommand());
         registry.component(new SetupComponentHandler());
 
+        // Embeds (BOTSPECS Module 1) — /embed + /editembed via a managed webhook
+        // (per-message name/avatar impersonation; edits preserve existing select menus).
+        EmbedService embedService = new EmbedService(ctx);
+        registry.command(new EmbedCommand());
+        registry.command(new EditEmbedCommand());
+        registry.component(new EmbedComponentHandler(embedService));
+
         // General logging: command executions, message deletes/edits, joins/leaves,
         // voice traffic, bans, kicks (BOTSPECS §General Logging).
         registry.listener(new GeneralLoggingListener(ctx));
 
-        // Remaining Module 1 gaps (not yet built): /embed, /editembed, /formulario, and
-        // channel-facing log embeds in GeneralLoggingListener (currently SQLite-only).
+        // Remaining Module 1 gap (not yet built): /formulario.
     }
 }
