@@ -26,8 +26,11 @@ import dev.davimf.basebot.modules.base.commands.PingCommand;
 import dev.davimf.basebot.modules.base.commands.SetupCommand;
 import dev.davimf.basebot.modules.base.commands.UnbanCommand;
 import dev.davimf.basebot.modules.base.commands.VoiceMoveCommand;
+import dev.davimf.basebot.modules.base.commands.FormularioCommand;
 import dev.davimf.basebot.modules.base.embed.EmbedComponentHandler;
 import dev.davimf.basebot.modules.base.embed.EmbedService;
+import dev.davimf.basebot.modules.base.forms.FormComponentHandler;
+import dev.davimf.basebot.modules.base.forms.FormRepository;
 import dev.davimf.basebot.modules.base.listacargo.ListaCargoComponentHandler;
 import dev.davimf.basebot.modules.base.listeners.GeneralLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
@@ -101,10 +104,14 @@ public final class BaseModule implements BotModule {
         registry.command(new EditEmbedCommand());
         registry.component(new EmbedComponentHandler(embedService));
 
+        // Configurable forms (BOTSPECS Module 1) — /formulario dispatches a modal whose
+        // answers are posted to #log-formularios.
+        FormRepository forms = new FormRepository(ctx.database().sqlite());
+        registry.command(new FormularioCommand(forms));
+        registry.component(new FormComponentHandler(forms));
+
         // General logging: command executions, message deletes/edits, joins/leaves,
         // voice traffic, bans, kicks (BOTSPECS §General Logging).
         registry.listener(new GeneralLoggingListener(ctx));
-
-        // Remaining Module 1 gap (not yet built): /formulario.
     }
 }
