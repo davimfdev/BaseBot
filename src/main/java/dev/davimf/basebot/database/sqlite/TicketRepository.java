@@ -25,8 +25,8 @@ public final class TicketRepository {
         String sql = """
                 INSERT INTO active_tickets
                     (id, guild_id, text_channel_id, voice_channel_id,
-                     creator_id, assigned_staff_id, suffix, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     creator_id, assigned_staff_id, suffix, status, reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         try (Connection c = sqlite.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -38,6 +38,7 @@ public final class TicketRepository {
             ps.setString(6, t.assignedStaffId());
             ps.setString(7, t.suffix());
             ps.setString(8, t.status() == null ? ActiveTicket.OPEN : t.status());
+            ps.setString(9, t.reason());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RepositoryException("create ticket " + t.id(), e);
@@ -102,7 +103,8 @@ public final class TicketRepository {
                 rs.getString("creator_id"),
                 rs.getString("assigned_staff_id"),
                 rs.getString("suffix"),
-                rs.getString("status")
+                rs.getString("status"),
+                rs.getString("reason")
         );
     }
 }

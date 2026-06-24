@@ -43,7 +43,8 @@ public final class SqliteMigrator {
             "/db/sqlite/010_recipes.sql",
             "/db/sqlite/011_fix_budgets.sql",
             "/db/sqlite/012_actions.sql",
-            "/db/sqlite/013_forms.sql"
+            "/db/sqlite/013_forms.sql",
+            "/db/sqlite/014_ticket_reason.sql"
     );
 
     private final SqliteManager sqlite;

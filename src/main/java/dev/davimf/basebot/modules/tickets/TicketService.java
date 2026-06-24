@@ -13,19 +13,22 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.PermissionOverride;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
-import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.requests.restaction.ChannelAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -63,12 +66,13 @@ public final class TicketService {
     // --- Creation --------------------------------------------------------------
 
     /**
-     * Creation flow (BOTSPECS Module 2): create a private text channel under the
-     * category's Discord parent, granting access to the creator + staff roles only,
-     * save it to SQLite, and post the dashboard whose first message pings creator + staff.
-     * The triggering select interaction must already be deferred (ephemeral).
+     * Creation flow (BOTSPECS Module 2): triggered by the open-reason modal. Creates a
+     * private text channel under the category's Discord parent (creator + staff only),
+     * stores the ticket + the member's reason, and posts the dashboard whose first
+     * message pings creator + staff and shows the reason. The modal must already be
+     * deferred (ephemeral).
      */
-    public void openTicket(StringSelectInteractionEvent event, TicketCategory cat) {
+    public void openTicket(ModalInteractionEvent event, TicketCategory cat, String reason) {
         Guild guild = event.getGuild();
         Member creator = event.getMember();
         if (guild == null || creator == null) {
@@ -99,7 +103,7 @@ public final class TicketService {
         action.reason("Ticket " + cat.name() + " por " + creator.getUser().getName()).queue(channel -> {
             String ticketId = newId();
             ctx.database().tickets().create(new ActiveTicket(ticketId, guild.getId(), channel.getId(),
-                    null, creator.getId(), null, cat.name(), ActiveTicket.OPEN));
+                    null, creator.getId(), null, cat.name(), ActiveTicket.OPEN, reason));
             ctx.database().actionLogs().log(guild.getId(), creator.getId(), channel.getId(),
                     "TICKET_OPEN", cat.name());
 
@@ -108,8 +112,7 @@ public final class TicketService {
             String emoji = (cat.emoji() != null && !cat.emoji().isBlank()) ? cat.emoji() + " " : "";
             String header = "## " + emoji + cat.name() + "\n"
                     + creator.getAsMention() + (staffMentions.isBlank() ? "" : " " + staffMentions) + "\n\n"
-                    + (cat.description() == null || cat.description().isBlank()
-                            ? "Descreva seu pedido e a equipe irá atendê-lo." : cat.description());
+                    + "**📝 Motivo:** " + reason;
             // V2 text mentions DO ping — intended here (creator + staff).
             channel.sendMessageComponents(TicketView.dashboard(accent(guild.getId()), ticketId, header))
                     .useComponentsV2().queue();
@@ -136,10 +139,12 @@ public final class TicketService {
         ctx.database().tickets().assignStaff(ticketId, event.getUser().getId());
         ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                 "TICKET_ASSIGN", ticketId);
-        // Visually update the dashboard with the staff member (BOTSPECS Module 2).
+        // Reveal the full action set + show who is handling it (BOTSPECS Module 2).
         event.editComponents(TicketView.dashboard(accent(t.guildId()), ticketId,
                         headerFor(t), event.getUser().getId()))
                 .useComponentsV2().queue();
+        announce(event.getChannel(), t.guildId(),
+                "🙋 " + event.getUser().getAsMention() + " assumiu o atendimento.");
     }
 
     /** "Criar Call": open a private voice channel mirroring the ticket's access. */
@@ -178,11 +183,13 @@ public final class TicketService {
             }
         }
 
-        event.deferReply().queue();
+        event.deferReply(true).queue();
         action.reason("Call do ticket " + ticketId).queue(vc -> {
             ctx.database().tickets().setVoiceChannel(ticketId, vc.getId());
             ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                     "TICKET_CALL", vc.getId());
+            announce(event.getChannel(), t.guildId(),
+                    "🔊 Call criada por " + event.getUser().getAsMention() + ": " + vc.getAsMention());
             event.getHook().sendMessage("🔊 Call criada: " + vc.getAsMention()).queue();
         }, err -> event.getHook().sendMessage("Falha ao criar a call: " + err.getMessage()).queue());
     }
@@ -207,6 +214,8 @@ public final class TicketService {
                 .queue(ok -> {
                     ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                             "TICKET_NOTIFY", ticketId);
+                    announce(event.getChannel(), t.guildId(),
+                            "🔔 <@" + t.creatorId() + "> foi notificado por " + event.getUser().getAsMention() + ".");
                     event.getHook().sendMessage("🔔 O autor foi notificado por DM.").queue();
                 }, err -> event.getHook().sendMessage(
                         "Não foi possível enviar DM ao autor (DMs fechadas?).").queue());
@@ -247,6 +256,8 @@ public final class TicketService {
                 .queue(ok -> {
                     ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), userId,
                             "TICKET_MEMBER_ADD", ticketId);
+                    announce(event.getChannel(), t.guildId(), "👤 " + member.getAsMention()
+                            + " foi adicionado ao ticket por " + event.getUser().getAsMention() + ".");
                     event.getHook().sendMessage("Adicionado " + member.getAsMention() + " ao ticket.").queue();
                 }, err -> event.getHook().sendMessage("Falha ao adicionar: " + err.getMessage()).queue()),
                 err -> event.getHook().sendMessage("Não foi possível encontrar esse membro.").queue());
@@ -284,7 +295,11 @@ public final class TicketService {
                 "TICKET_RENAME", suffix);
         event.deferReply(true).queue();
         text.getManager().setName(suffix).reason("Ticket renomeado").queue(
-                ok -> event.getHook().sendMessage("Ticket renomeado para `" + suffix + "`.").queue(),
+                ok -> {
+                    announce(event.getChannel(), t.guildId(), "✏️ Ticket renomeado para `" + suffix
+                            + "` por " + event.getUser().getAsMention() + ".");
+                    event.getHook().sendMessage("Ticket renomeado para `" + suffix + "`.").queue();
+                },
                 err -> event.getHook().sendMessage("Falha ao renomear: " + err.getMessage()).queue());
     }
 
@@ -335,11 +350,15 @@ public final class TicketService {
 
         ctx.database().tickets().setStatus(ticketId, ActiveTicket.CLOSING);
         String closerId = event.getUser().getId();
+        String closerName = event.getUser().getEffectiveName();
         event.reply("🔒 Fechando o ticket e gerando o transcript…").queue();
 
         String guildName = guild.getName();
         String channelName = channel.getName();
-        renderTranscript(channel, t, guildName, reason)
+        guild.retrieveMemberById(t.creatorId()).submit()
+                .handle((member, ex) -> member == null ? null : member.getEffectiveName())
+                .thenCompose(openerName -> renderTranscript(channel, t, reason,
+                        openerName == null ? "Usuário" : openerName, closerName))
                 .thenApplyAsync(json -> buildTranscriptLink(t, guildName, channelName, json),
                         ctx.scheduler().executor())
                 .whenComplete((result, err) -> {
@@ -388,36 +407,86 @@ public final class TicketService {
         log.info("Ticket {} closed; transcript at {}", t.id(), result.transcriptUrl());
     }
 
-    /** Pulls up to {@link #TRANSCRIPT_LIMIT} messages and renders them to a JSON string. */
+    /**
+     * Pulls up to {@link #TRANSCRIPT_LIMIT} messages and renders them to the JSON shape
+     * the davimf.dev transcript viewer expects ({@code categoryLabel/openerName/openedAt/
+     * closedByName/closedAt/closeReason/messages[]} with per-message {@code embeds}).
+     */
     private CompletableFuture<String> renderTranscript(TextChannel channel, ActiveTicket t,
-                                                       String guildName, String reason) {
+                                                       String closeReason, String openerName,
+                                                       String closerName) {
         return channel.getIterableHistory().takeAsync(TRANSCRIPT_LIMIT).thenApply(messages -> {
             ObjectNode root = JSON.createObjectNode();
-            root.put("ticketId", t.id());
-            root.put("guildId", t.guildId());
-            root.put("guildName", guildName);
-            root.put("channelName", channel.getName());
-            root.put("category", t.suffix());
-            root.put("creatorId", t.creatorId());
-            root.put("assignedStaffId", t.assignedStaffId());
-            root.put("closeReason", reason);
-            root.put("closedAt", java.time.Instant.now().toString());
+            root.put("categoryLabel", t.suffix());
+            root.put("openerName", openerName);
+            root.put("openedAt", fmt(channel.getTimeCreated()));
+            root.put("closedByName", closerName);
+            root.put("closedAt", fmt(OffsetDateTime.now()));
+            if (closeReason == null || closeReason.isBlank()) {
+                root.putNull("closeReason");
+            } else {
+                root.put("closeReason", closeReason);
+            }
             ArrayNode arr = root.putArray("messages");
             // takeAsync returns newest-first; render oldest-first for a readable transcript.
             for (int i = messages.size() - 1; i >= 0; i--) {
                 Message m = messages.get(i);
                 ObjectNode mn = arr.addObject();
-                mn.put("id", m.getId());
-                mn.put("authorId", m.getAuthor().getId());
-                mn.put("authorName", m.getAuthor().getName());
-                mn.put("bot", m.getAuthor().isBot());
-                mn.put("timestamp", m.getTimeCreated().toString());
+                mn.put("authorName", m.getMember() != null
+                        ? m.getMember().getEffectiveName() : m.getAuthor().getName());
+                mn.put("avatarUrl", m.getAuthor().getEffectiveAvatarUrl());
+                mn.put("timestampMillis", m.getTimeCreated().toInstant().toEpochMilli());
                 mn.put("content", m.getContentDisplay());
+                mn.put("bot", m.getAuthor().isBot());
+                mn.put("edited", m.isEdited());
                 ArrayNode at = mn.putArray("attachments");
-                m.getAttachments().forEach(a -> at.add(a.getUrl()));
+                m.getAttachments().forEach(a -> at.add(a.getFileName()));
+                ArrayNode embeds = mn.putArray("embeds");
+                for (MessageEmbed e : m.getEmbeds()) {
+                    embeds.add(renderEmbed(e));
+                }
             }
             return root.toString();
         });
+    }
+
+    /** Maps a JDA embed to the viewer's embed shape. */
+    private static ObjectNode renderEmbed(MessageEmbed e) {
+        ObjectNode en = JSON.createObjectNode();
+        if (e.getAuthor() != null && e.getAuthor().getName() != null) {
+            en.put("authorName", e.getAuthor().getName());
+        }
+        if (e.getTitle() != null) {
+            en.put("title", e.getTitle());
+        }
+        if (e.getDescription() != null) {
+            en.put("description", e.getDescription());
+        }
+        en.put("color", e.getColorRaw());
+        ArrayNode fields = en.putArray("fields");
+        for (MessageEmbed.Field f : e.getFields()) {
+            ObjectNode fn = fields.addObject();
+            fn.put("name", f.getName());
+            fn.put("value", f.getValue());
+            fn.put("inline", f.isInline());
+        }
+        if (e.getFooter() != null && e.getFooter().getText() != null) {
+            en.put("footer", e.getFooter().getText());
+        }
+        if (e.getThumbnail() != null) {
+            en.put("thumbnailUrl", e.getThumbnail().getUrl());
+        }
+        if (e.getImage() != null) {
+            en.put("imageUrl", e.getImage().getUrl());
+        }
+        return en;
+    }
+
+    private static final DateTimeFormatter TS_FMT =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    private static String fmt(OffsetDateTime when) {
+        return when.format(TS_FMT);
     }
 
     /**
@@ -473,6 +542,11 @@ public final class TicketService {
 
     private static void ephemeral(ModalInteractionEvent event, String msg) {
         event.reply(msg).setEphemeral(true).queue();
+    }
+
+    /** Posts a public action notice as a classic embed (members see it + it lands in the transcript). */
+    private void announce(MessageChannel channel, String guildId, String text) {
+        channel.sendMessageEmbeds(TicketView.actionEmbed(accent(guildId), text)).queue(ok -> {}, e -> {});
     }
 
     private int accent(String guildId) {
