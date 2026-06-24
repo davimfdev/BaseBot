@@ -9,9 +9,13 @@ import dev.davimf.basebot.modules.facs.commands.PunicoesCommand;
 import dev.davimf.basebot.modules.facs.commands.PunirCommand;
 import dev.davimf.basebot.modules.facs.hierarchy.HierarchyService;
 import dev.davimf.basebot.modules.facs.listeners.HierarchyListener;
+import dev.davimf.basebot.modules.facs.commands.FarmCommand;
 import dev.davimf.basebot.modules.facs.commands.PainelFinanceiroCommand;
 import dev.davimf.basebot.modules.facs.commands.SolicitarCargoCommand;
 import dev.davimf.basebot.modules.facs.economy.EconomyRepository;
+import dev.davimf.basebot.modules.facs.economy.FarmComponentHandler;
+import dev.davimf.basebot.modules.facs.economy.FarmRepository;
+import dev.davimf.basebot.modules.facs.economy.FarmService;
 import dev.davimf.basebot.modules.facs.economy.FinanceComponentHandler;
 import dev.davimf.basebot.modules.facs.economy.FinanceService;
 import dev.davimf.basebot.modules.facs.punish.PunishComponentHandler;
@@ -67,7 +71,12 @@ public final class FacsModule implements BotModule {
         registry.command(new PainelFinanceiroCommand(finance));
         registry.component(new FinanceComponentHandler(finance));
 
-        // TODO(Module 4): /produzir, /painel-acoes, /relatorio, /farm, plus the
+        // Farm: /farm submits materials; managers approve -> stock + treasury payout.
+        FarmService farm = new FarmService(ctx, economy, new FarmRepository(ctx.database().sqlite()));
+        registry.command(new FarmCommand(farm));
+        registry.component(new FarmComponentHandler(farm));
+
+        // TODO(Module 4): /produzir, /painel-acoes, /relatorio, plus the
         // Actions/Reservations priority queue and recruitment pipeline.
     }
 
