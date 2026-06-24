@@ -97,8 +97,9 @@ The project builds, tests, and packages (`./gradlew test shadowJar` is green).
 
 - **Module 1 — Base & Utility:** moderation, role management (hierarchy-validated), voice
   moderation, channel lock/unlock, `/addemoji`, `/listacargo`, bot profile, the `/setup`
-  hub (logs/roles/tickets/bot + per-guild embed color) and SQLite action logging. Gaps:
-  `/embed`, `/editembed`, `/formulario`, and channel-facing log embeds.
+  hub (logs/roles/tickets/bot + per-guild embed color), `/embed` + `/editembed` (webhook
+  impersonation), `/formulario` (configurable forms), and full event logging (SQLite +
+  per-type channel embeds).
 - **Module 2 — Tickets:** multi-category setup, `/ticket painel`, creation flow, the full
   dashboard (Assumir/Criar Call/Membro/Notificar/Renomear/Fechar) and the closure pipeline
   (render → AES-encrypt → POST to davimf.dev → closure embed + DM → delete channels).
