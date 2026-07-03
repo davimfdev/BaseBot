@@ -1,3 +1,25 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.sqlite
+// 
+// Class: SqliteMigrator
+// 
+// Constructors:
+//   - `Constructor` : `public SqliteMigrator(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(SqliteMigrator.class)`
+//   - `Method` : `private static final List<String> MIGRATIONS = List. of(, , , , , , , , , , , , , , , , , , , ,)`
+//   - `Method` : `private boolean alreadyApplied(Connection c, String resource)`
+//   - `Method` : `private static List<String> splitStatements(String script)`
+//   - `Method` : `private static String stripInlineComment(String line)`
+//   - `Method` : `private String readResource(String resource)`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.sqlite;
 
 import org.slf4j.Logger;
@@ -48,7 +70,25 @@ public final class SqliteMigrator {
             "/db/sqlite/015_ticket_events.sql",
             "/db/sqlite/016_ticket_emoji.sql",
             "/db/sqlite/017_message_drafts.sql",
-            "/db/sqlite/018_timed_mutes.sql"
+            "/db/sqlite/018_timed_mutes.sql",
+            "/db/sqlite/019_action_types.sql",
+            "/db/sqlite/020_actions_detail.sql",
+            "/db/sqlite/021_actions_schedule.sql",
+            "/db/sqlite/022_infractions.sql",
+            "/db/sqlite/023_message_archive.sql",
+            "/db/sqlite/024_message_archive_vault.sql",
+            "/db/sqlite/025_self_roles.sql",
+            "/db/sqlite/026_pix_keys_multi.sql",
+            "/db/sqlite/027_leveling.sql",
+            "/db/sqlite/028_voice_sessions.sql",
+            "/db/sqlite/029_economy.sql",
+            "/db/sqlite/030_giveaways.sql",
+            "/db/sqlite/031_social.sql",
+            "/db/sqlite/032_quiz.sql",
+            "/db/sqlite/033_reminders.sql",
+            "/db/sqlite/034_shop.sql",
+            "/db/sqlite/035_equipment.sql",
+            "/db/sqlite/036_shop_stock.sql"
     );
 
     private final SqliteManager sqlite;
@@ -125,9 +165,12 @@ public final class SqliteMigrator {
     private static List<String> splitStatements(String script) {
         List<String> out = new ArrayList<>();
         StringBuilder cur = new StringBuilder();
-        for (String line : script.split("\n")) {
+        for (String raw : script.split("\n")) {
+            // Strip line/inline comments first so a trailing "...; -- note" still ends in ';'
+            // (otherwise the statement boundary is missed and statements get merged).
+            String line = stripInlineComment(raw);
             String trimmed = line.strip();
-            if (trimmed.startsWith("--") || trimmed.isEmpty()) {
+            if (trimmed.isEmpty()) {
                 continue;
             }
             cur.append(line).append('\n');
@@ -140,6 +183,13 @@ public final class SqliteMigrator {
             out.add(cur.toString());
         }
         return out;
+    }
+
+    /** Removes a {@code --} line comment (full-line or trailing). Safe for our DDL (no
+     *  string literals contain {@code --}). */
+    private static String stripInlineComment(String line) {
+        int i = line.indexOf("--");
+        return i >= 0 ? line.substring(0, i) : line;
     }
 
     private String readResource(String resource) {
