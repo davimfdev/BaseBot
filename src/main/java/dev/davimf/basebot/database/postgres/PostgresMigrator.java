@@ -1,3 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.postgres
+// 
+// Class: PostgresMigrator
+// 
+// Constructors:
+//   - `Constructor` : `private PostgresMigrator()`
+// 
+// Methods:
+//   - `Method` : `public static final List<String> MIGRATIONS = List. of(, ,)`
+//   - `Method` : `public static List<String> migrate(Connection c)`
+//   - `Method` : `private static boolean isApplied(Connection c, String resource)`
+//   - `Method` : `private static String readResource(String resource)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.postgres;
 
 import java.io.IOException;
@@ -27,7 +44,8 @@ public final class PostgresMigrator {
     public static final List<String> MIGRATIONS = List.of(
             "/db/postgres/001_guild_config.sql",
             "/db/postgres/002_guild_settings.sql",
-            "/db/postgres/003_ticket_categories.sql"
+            "/db/postgres/003_ticket_categories.sql",
+            "/db/postgres/004_config_tables.sql"
     );
 
     private PostgresMigrator() {}
