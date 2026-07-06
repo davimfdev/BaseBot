@@ -1,9 +1,22 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: BotIconCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.ratelimit.ProfileRateLimiter;
 import dev.davimf.basebot.util.ImageMedia;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Icon;
 import net.dv8tion.jda.api.entities.Message;
@@ -42,15 +55,15 @@ public final class BotIconCommand implements SlashCommand {
         Message.Attachment att = event.getOption("imagem", OptionMapping::getAsAttachment);
         String link = event.getOption("link", OptionMapping::getAsString);
         if ((att == null) == (link == null)) {
-            event.reply("Forneça **uma** imagem: um anexo OU um link.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Forneça **uma** imagem: um anexo OU um link.");
             return;
         }
 
         ProfileRateLimiter.Decision d = ctx.profileRateLimiter().check("icon", System.currentTimeMillis());
         if (!d.allowed()) {
             long mins = (d.retryAfterMillis() + 59_999) / 60_000;
-            event.reply("Limite de 2 alterações por hora atingido. Tente novamente em ~" + mins + " min.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Limite de 2 alterações por hora atingido. Tente novamente em ~" + mins + " min.");
             return;
         }
 
@@ -72,18 +85,18 @@ public final class BotIconCommand implements SlashCommand {
                         ctx.database().actionLogs().log(guildId, event.getUser().getId(), null,
                                 "BOT_ICON", fetched.fileName());
                         fetched.erase();
-                        event.getHook().sendMessage("Avatar global atualizado. "
-                                + "(Afeta todos os servidores; limite do Discord: 2x por hora.)").queue();
+                        Replies.hook(event, ctx, "Avatar global atualizado. "
+                                + "(Afeta todos os servidores; limite do Discord: 2x por hora.)");
                     },
                     err -> {
                         fetched.erase();
-                        event.getHook().sendMessage("Falha ao atualizar o avatar: " + err.getMessage()).queue();
+                        Replies.hook(event, ctx, "Falha ao atualizar o avatar: " + err.getMessage());
                     });
         } catch (IOException e) {
             if (image != null) {
                 image.erase();
             }
-            event.getHook().sendMessage(e.getMessage()).queue();
+            Replies.hook(event, ctx, e.getMessage());
         }
     }
 }

@@ -1,3 +1,22 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: PixCommand
+// 
+// Constructors:
+//   - `Constructor` : `public PixCommand(PixKeyRepository keys)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// 
+// Fields:
+//   - `Field` : `private static final String SELLER_ROLE_KEY`
+//   - `Field` : `private final PixKeyRepository keys`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 import dev.davimf.basebot.core.BotContext;
@@ -5,6 +24,7 @@ import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.PixKey;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -59,49 +79,49 @@ public final class PixCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null || event.getMember() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
         String sellerRoleId = cfg.role(SELLER_ROLE_KEY);
         if (sellerRoleId == null || sellerRoleId.isBlank()) {
-            event.reply("Cargo de vendedor não configurado. Defina em /setup → Cargos → Vendedor (Pix).")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Cargo de vendedor não configurado. Defina em /setup → Cargos → Vendedor (Pix).");
             return;
         }
         // The seller role only gates access; each seller's Pix key is stored per person.
         boolean isSeller = event.getMember().getRoles().stream()
                 .anyMatch(r -> r.getId().equals(sellerRoleId));
         if (!isSeller) {
-            event.reply("Apenas membros com o cargo de vendedor (<@&" + sellerRoleId + ">) podem usar o /pix.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Apenas membros com o cargo de vendedor (<@&" + sellerRoleId + ">) podem usar o /pix.");
             return;
         }
         String sub = event.getSubcommandName();
         if ("registrar".equals(sub)) {
-            registrar(event);
+            registrar(event, ctx);
         } else if ("gerar".equals(sub)) {
             gerar(event, EmbedColor.resolve(cfg));
         } else {
-            event.reply("Subcomando inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Subcomando inválido.");
         }
     }
 
-    private void registrar(SlashCommandInteractionEvent event) {
+    private void registrar(SlashCommandInteractionEvent event, BotContext ctx) {
         String tipo = event.getOption("tipo", OptionMapping::getAsString);
         String chave = event.getOption("chave", OptionMapping::getAsString);
         String nome = event.getOption("nome", OptionMapping::getAsString);
         String cidade = event.getOption("cidade", OptionMapping::getAsString);
 
         keys.upsert(new PixKey(event.getGuild().getId(), event.getUser().getId(), tipo, chave, nome, cidade));
-        event.reply("Sua chave Pix foi registrada.").setEphemeral(true).queue();
+        Replies.ephemeral(event, ctx, "Sua chave Pix foi registrada.");
     }
 
     private void gerar(SlashCommandInteractionEvent event, int accent) {
         Optional<PixKey> maybe = keys.findByUser(event.getGuild().getId(), event.getUser().getId());
         if (maybe.isEmpty()) {
-            event.reply("Você ainda não registrou sua chave Pix. Use /pix registrar primeiro.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, accent,
+                    "Você ainda não registrou sua chave Pix. Use /pix registrar primeiro.");
             return;
         }
         PixKey key = maybe.get();

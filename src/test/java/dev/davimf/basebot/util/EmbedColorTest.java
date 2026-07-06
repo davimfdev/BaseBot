@@ -1,3 +1,11 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.util
+// 
+// Class: EmbedColorTest
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.util;
 
 import dev.davimf.basebot.database.model.GuildConfig;

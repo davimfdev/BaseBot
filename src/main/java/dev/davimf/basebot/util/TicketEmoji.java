@@ -1,3 +1,17 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.util
+// 
+// Class: TicketEmoji
+// 
+// Constructors:
+//   - `Constructor` : `private TicketEmoji()`
+// 
+// Methods:
+//   - `Method` : `public static String channelSafe(String raw)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.util;
 
 /**

@@ -1,3 +1,30 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.sqlite
+// 
+// Class: ActionLogRepository
+// 
+// Constructors:
+//   - `Constructor` : `public ActionLogRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public List<Entry> listSince(String guildId, int days)`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// 
+// Record: Entry
+// 
+// Record Components:
+//   - Record Component : public final String guildId
+//   - Record Component : public final String actorId
+//   - Record Component : public final String targetId
+//   - Record Component : public final String action
+//   - Record Component : public final String detail
+//   - Record Component : public final String createdAt
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.sqlite;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;

@@ -1,3 +1,61 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.config
+// 
+// Record: BotConfig
+// 
+// Record Components:
+//   - Record Component : public final Discord discord
+//   - Record Component : public final Postgres postgres
+//   - Record Component : public final Sqlite sqlite
+//   - Record Component : public final Tickets tickets
+//   - Record Component : public final RateLimit rateLimit
+// 
+// Record: Discord
+// 
+// Record Components:
+//   - Record Component : public final String token
+//   - Record Component : public final String devGuildId
+// 
+// Methods:
+//   - `Method` : `public boolean hasDevGuild()`
+//   - `Method` : `public java.util.List<String> devGuildIds()`
+// 
+// Record: Postgres
+// 
+// Record Components:
+//   - Record Component : public final String url
+//   - Record Component : public final String username
+//   - Record Component : public final String password
+//   - Record Component : public final int maxPoolSize
+//   - Record Component : public final String schema
+// 
+// Record: Sqlite
+// 
+// Record Components:
+//   - Record Component : public final String path
+// 
+// Record: Tickets
+// 
+// Record Components:
+//   - Record Component : public final String ingestUrl
+//   - Record Component : public final String ingestSecret
+//   - Record Component : public final String viewBaseUrl
+//   - Record Component : public final int pbkdf2Iterations
+//   - Record Component : public final String source
+// 
+// Methods:
+//   - `Method` : `public String viewUrl(String ticketId)`
+// 
+// Record: RateLimit
+// 
+// Record Components:
+//   - Record Component : public final long embedDebounceMillis
+//   - Record Component : public final int ghostPingBatchSize
+//   - Record Component : public final int ghostPingBatchIntervalSeconds
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.config;
 
 /**
@@ -14,9 +72,14 @@ public record BotConfig(
         RateLimit rateLimit
 ) {
 
-    public record Discord(String token, String devGuildId) {
+    public record Discord(String token, String devGuildId, String vaultGuildId) {
         public boolean hasDevGuild() {
             return devGuildId != null && !devGuildId.isBlank();
+        }
+
+        /** True when a central attachment-vault guild is configured. */
+        public boolean hasVault() {
+            return vaultGuildId != null && !vaultGuildId.isBlank();
         }
 
         /** Dev guild ids (comma-separated in config) commands are restricted to; empty in prod. */

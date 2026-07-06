@@ -1,3 +1,18 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.util
+// 
+// Class: Money
+// 
+// Constructors:
+//   - `Constructor` : `private Money()`
+// 
+// Methods:
+//   - `Method` : `public static OptionalLong parse(String input)`
+//   - `Method` : `public static String format(long cents)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.util;
 
 import java.util.OptionalLong;

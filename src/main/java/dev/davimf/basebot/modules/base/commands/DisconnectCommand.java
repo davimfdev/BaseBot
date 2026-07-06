@@ -1,8 +1,21 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: DisconnectCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.moderation.Moderation;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
@@ -31,29 +44,29 @@ public final class DisconnectCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null || event.getMember() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         Member target = event.getOption("usuario", OptionMapping::getAsMember);
         if (target == null) {
-            event.reply("Membro inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Membro inválido.");
             return;
         }
         if (!Moderation.canModerate(event.getMember(), target, event.getGuild().getSelfMember())) {
-            event.reply("Hierarquia insuficiente.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Hierarquia insuficiente.");
             return;
         }
         GuildVoiceState vs = target.getVoiceState();
         if (vs == null || !vs.inAudioChannel()) {
-            event.reply("Esse membro não está em um canal de voz.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Esse membro não está em um canal de voz.");
             return;
         }
         event.getGuild().kickVoiceMember(target).queue(
                 ok -> {
                     ctx.database().actionLogs().log(event.getGuild().getId(),
                             event.getUser().getId(), target.getId(), "VOICE_DISCONNECT", null);
-                    event.reply(target.getUser().getAsTag() + " foi desconectado.").queue();
+                    Replies.reply(event, ctx, target.getUser().getAsTag() + " foi desconectado.");
                 },
-                err -> event.reply("Falha: " + err.getMessage()).setEphemeral(true).queue());
+                err -> Replies.ephemeral(event, ctx, "Falha: " + err.getMessage()));
     }
 }

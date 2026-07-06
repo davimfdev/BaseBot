@@ -1,9 +1,31 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.core.command
+// 
+// Class: CommandManager
+// 
+// Constructors:
+//   - `Constructor` : `public CommandManager(BotContext context)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(CommandManager.class)`
+//   - `Method` : `public CommandManager register(SlashCommand command)`
+//   - `Method` : `public int size()`
+// 
+// Fields:
+//   - `Field` : `private final Map<String, SlashCommand> commands`
+//   - `Field` : `private final BotContext context`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.core.command;
 
 import dev.davimf.basebot.core.BotContext;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -98,7 +120,7 @@ public final class CommandManager extends ListenerAdapter {
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         SlashCommand command = commands.get(event.getName());
         if (command == null) {
-            event.reply("Comando não reconhecido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, context, "Comando não reconhecido.");
             return;
         }
         try {
@@ -109,12 +131,24 @@ public final class CommandManager extends ListenerAdapter {
         }
     }
 
+    @Override
+    public void onCommandAutoCompleteInteraction(CommandAutoCompleteInteractionEvent event) {
+        SlashCommand command = commands.get(event.getName());
+        if (command instanceof AutocompleteCommand ac) {
+            try {
+                ac.onAutocomplete(event, context);
+            } catch (Exception e) {
+                log.error("Autocomplete for /{} failed", event.getName(), e);
+            }
+        }
+    }
+
     private void respondError(SlashCommandInteractionEvent event) {
         String msg = "Ocorreu um erro ao executar este comando.";
         if (event.isAcknowledged()) {
-            event.getHook().sendMessage(msg).setEphemeral(true).queue();
+            Replies.hookEphemeral(event, context, msg);
         } else {
-            event.reply(msg).setEphemeral(true).queue();
+            Replies.ephemeral(event, context, msg);
         }
     }
 }

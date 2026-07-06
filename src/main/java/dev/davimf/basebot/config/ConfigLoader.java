@@ -1,3 +1,27 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.config
+// 
+// Class: ConfigLoader
+// 
+// Constructors:
+//   - `Constructor` : `private ConfigLoader()`
+// 
+// Methods:
+//   - `Method` : `public static BotConfig load()`
+//   - `Method` : `public static BotConfig load(Path file)`
+//   - `Method` : `private static JsonNode readYamlOrEmpty(Path file)`
+//   - `Method` : `private static String str(JsonNode node, String field, String def)`
+//   - `Method` : `private static int intVal(JsonNode node, String field, int def)`
+//   - `Method` : `private static long longVal(JsonNode node, String field, long def)`
+//   - `Method` : `private static String env(DotEnv dotenv, String key, String fallback)`
+//   - `Method` : `private static int envInt(DotEnv dotenv, String key, int fallback)`
+//   - `Method` : `private static long envLong(DotEnv dotenv, String key, long fallback)`
+//   - `Method` : `private static <T> T parseEnv(DotEnv dotenv, String key, T fallback, Function<String, T> parser)`
+//   - `Method` : `private static String require(DotEnv dotenv, String envKey, String yamlValue)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.config;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -43,12 +67,13 @@ public final class ConfigLoader {
         return new BotConfig(
                 new BotConfig.Discord(
                         require(dotenv, "BOT_TOKEN", str(discord, "token", null)),
-                        env(dotenv, "DEV_GUILD_ID", str(discord, "devGuildId", null))
+                        env(dotenv, "DEV_GUILD_ID", str(discord, "devGuildId", null)),
+                        env(dotenv, "VAULT_GUILD_ID", str(discord, "vaultGuildId", null))
                 ),
                 new BotConfig.Postgres(
                         env(dotenv, "POSTGRES_URL", str(postgres, "url", "jdbc:postgresql://localhost:5432/basebot")),
-                        env(dotenv, "POSTGRES_USER", str(postgres, "username", "basebot")),
-                        env(dotenv, "POSTGRES_PASSWORD", str(postgres, "password", "")),
+                        str(postgres, "username", null),
+                        str(postgres, "password", null),
                         envInt(dotenv, "POSTGRES_MAX_POOL", intVal(postgres, "maxPoolSize", 5)),
                         env(dotenv, "POSTGRES_SCHEMA", str(postgres, "schema", "public"))
                 ),

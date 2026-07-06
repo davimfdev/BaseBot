@@ -1,3 +1,31 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.model
+// 
+// Record: Punishment
+// 
+// Record Components:
+//   - Record Component : public final String id
+//   - Record Component : public final String guildId
+//   - Record Component : public final String userId
+//   - Record Component : public final String type
+//   - Record Component : public final int level
+//   - Record Component : public final String reason
+//   - Record Component : public final String appliedBy
+//   - Record Component : public final String createdAt
+//   - Record Component : public final String expiresAt
+//   - Record Component : public final boolean active
+// 
+// Methods:
+//   - `Method` : `public String label()`
+// 
+// Fields:
+//   - `Field` : `public static final String BLACKLIST`
+//   - `Field` : `public static final String DEMOTION`
+//   - `Field` : `public static final String ADV`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.model;
 
 /** A disciplinary record (BOTSPECS Module 4). ADV uses {@code level} + {@code expiresAt}. */

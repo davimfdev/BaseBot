@@ -1,3 +1,14 @@
+# [OUTLINE START]
+# Top-Level Config Keys:
+# - discord
+# - postgres
+# - sqlite
+# - tickets
+# - ratelimit
+# [OUTLINE END]
+
+
+
 # ---------------------------------------------------------------------------
 # BaseBot configuration template.
 # Copy to `config.yml` and fill in real values, OR provide everything via

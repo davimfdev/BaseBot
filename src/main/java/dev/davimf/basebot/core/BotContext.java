@@ -1,3 +1,33 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.core
+// 
+// Class: BotContext
+// 
+// Constructors:
+//   - `Constructor` : `public BotContext(BotConfig config, DatabaseManager database, TaskScheduler scheduler)`
+// 
+// Methods:
+//   - `Method` : `public BotConfig config()`
+//   - `Method` : `public DatabaseManager database()`
+//   - `Method` : `public TaskScheduler scheduler()`
+//   - `Method` : `public ProfileRateLimiter profileRateLimiter()`
+//   - `Method` : `public Debouncer embedDebouncer()`
+//   - `Method` : `public TicketCrypto ticketCrypto()`
+//   - `Method` : `public TicketIngestClient ticketIngest()`
+//   - `Method` : `public JDA jda()`
+// 
+// Fields:
+//   - `Field` : `private final BotConfig config`
+//   - `Field` : `private final DatabaseManager database`
+//   - `Field` : `private final TaskScheduler scheduler`
+//   - `Field` : `private final Debouncer embedDebouncer`
+//   - `Field` : `private final TicketCrypto ticketCrypto`
+//   - `Field` : `private final TicketIngestClient ticketIngest`
+//   - `Field` : `private volatile JDA jda`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.core;
 
 import dev.davimf.basebot.config.BotConfig;
@@ -27,6 +57,7 @@ public final class BotContext {
     private final ProfileRateLimiter profileRateLimiter = new ProfileRateLimiter(2, 3_600_000L);
 
     private volatile JDA jda;
+    private volatile java.util.Set<String> activeModules = java.util.Set.of();
 
     public BotContext(BotConfig config,
                       DatabaseManager database,
@@ -76,5 +107,15 @@ public final class BotContext {
     /** Set exactly once after the gateway is built. */
     public void setJda(JDA jda) {
         this.jda = jda;
+    }
+
+    /** Nomes dos módulos ligados neste bot (futuro: por plano do cliente). */
+    public java.util.Set<String> activeModules() {
+        return activeModules;
+    }
+
+    /** Definido uma vez no bootstrap, a partir da lista de módulos registrados. */
+    public void setActiveModules(java.util.Set<String> activeModules) {
+        this.activeModules = java.util.Set.copyOf(activeModules);
     }
 }

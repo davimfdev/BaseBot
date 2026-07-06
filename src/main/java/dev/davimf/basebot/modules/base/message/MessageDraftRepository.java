@@ -1,3 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.message
+// 
+// Class: MessageDraftRepository
+// 
+// Constructors:
+//   - `Constructor` : `public MessageDraftRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public Optional<String> find(String userId)`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.message;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;

@@ -1,4 +1,26 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.recruit
+// 
+// Class: RecruitView
+// 
+// Constructors:
+//   - `Constructor` : `private RecruitView()`
+// 
+// Methods:
+//   - `Method` : `public static Container panel(int accent, String description)`
+//   - `Method` : `public static Modal form()`
+//   - `Method` : `public static Container request(int accent, String applicantId, String recruiterId, String idJogo, String nome, String telefone)`
+//   - `Method` : `public static Container resolved(int accent, String applicantId, String recruiterId, String statusLine)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.recruit;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
@@ -21,12 +43,16 @@ public final class RecruitView {
 
     /** Static public panel with the apply button. */
     public static Container panel(int accent, String description) {
-        String body = "## 📝 Recrutamento\n"
-                + (description == null || description.isBlank()
-                        ? "Clique abaixo para solicitar sua entrada na facção." : description);
+        String intro = description == null || description.isBlank()
+                ? "Clique no botão abaixo para solicitar sua entrada na facção. "
+                        + "Preencha o formulário e aguarde a análise da gerência."
+                : description;
         return Panels.container(accent,
-                Panels.text(body),
-                ActionRow.of(Button.success(ComponentId.of(NS, "open"), "Solicitar Entrada")));
+                Panels.text("## " + Emojis.of(Emojis.NOTE, "📝") + " Recrutamento"),
+                Panels.divider(),
+                Panels.text("> " + intro),
+                ActionRow.of(Button.success(ComponentId.of(NS, "open"), "Solicitar entrada")
+                        .withEmoji(Emojis.button(Emojis.EDIT))));
     }
 
     /** The applicant form. */
@@ -51,22 +77,28 @@ public final class RecruitView {
     /** The review request posted to the private channel with accept/reject buttons. */
     public static Container request(int accent, String applicantId, String recruiterId,
                                     String idJogo, String nome, String telefone) {
-        String body = "## 📝 Solicitação de entrada\n"
-                + "**Candidato:** <@" + applicantId + ">\n"
-                + "**ID no jogo:** " + idJogo + "\n"
-                + "**Nome:** " + nome + "\n"
-                + "**Telefone:** " + telefone + "\n"
-                + "**Recrutador:** <@" + recruiterId + ">";
+        String body = "" + Emojis.of(Emojis.MEMBER, "👤") + " **Candidato** · <@" + applicantId + ">\n"
+                + "" + Emojis.of(Emojis.GAME, "🎮") + " **ID no jogo** · `" + idJogo + "`\n"
+                + "" + Emojis.of(Emojis.NICKNAME, "📛") + " **Nome** · `" + nome + "`\n"
+                + "" + Emojis.of(Emojis.CALL, "📞") + " **Telefone** · `" + telefone + "`\n"
+                + "" + Emojis.of(Emojis.HANDSHAKE, "🤝") + " **Recrutador** · <@" + recruiterId + ">";
         return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.NOTE, "📝") + " Solicitação de entrada"),
+                Panels.divider(),
                 Panels.text(body),
+                Panels.divider(),
                 ActionRow.of(
-                        Button.success(ComponentId.of(NS, "accept", applicantId, recruiterId), "✅ Aceitar"),
-                        Button.danger(ComponentId.of(NS, "reject", applicantId, recruiterId), "❌ Recusar")));
+                        Button.success(ComponentId.of(NS, "accept", applicantId, recruiterId), "Aceitar").withEmoji(Emojis.button(Emojis.CHECK_YES)),
+                        Button.danger(ComponentId.of(NS, "reject", applicantId, recruiterId), "Recusar").withEmoji(Emojis.button(Emojis.CHECK_NO))));
     }
 
     public static Container resolved(int accent, String applicantId, String recruiterId, String statusLine) {
-        return Panels.container(accent, Panels.text("## 📝 Solicitação de entrada\n"
-                + "**Candidato:** <@" + applicantId + ">\n"
-                + "**Recrutador:** <@" + recruiterId + ">\n" + statusLine));
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.NOTE, "📝") + " Solicitação de entrada"),
+                Panels.divider(),
+                Panels.text("" + Emojis.of(Emojis.MEMBER, "👤") + " **Candidato** · <@" + applicantId + ">\n"
+                        + "" + Emojis.of(Emojis.HANDSHAKE, "🤝") + " **Recrutador** · <@" + recruiterId + ">"),
+                Panels.divider(),
+                Panels.text(statusLine));
     }
 }

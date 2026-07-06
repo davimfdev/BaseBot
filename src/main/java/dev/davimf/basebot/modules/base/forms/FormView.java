@@ -1,4 +1,25 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.forms
+// 
+// Class: FormView
+// 
+// Constructors:
+//   - `Constructor` : `private FormView()`
+// 
+// Methods:
+//   - `Method` : `public static Container panel(int accent, Form form)`
+//   - `Method` : `public static Modal modal(Form form)`
+//   - `Method` : `private static String trim(String s, int max)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.forms;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
@@ -21,8 +42,11 @@ public final class FormView {
     /** Public panel with the fill button. */
     public static Container panel(int accent, Form form) {
         return Panels.container(accent,
-                Panels.text("## 📋 " + form.title() + "\nClique abaixo para preencher."),
-                ActionRow.of(Button.primary(ComponentId.of(NS, "fill", form.id()), "Preencher")));
+                Panels.text("## " + Emojis.of(Emojis.LIST, "📋") + " " + form.title()),
+                Panels.divider(),
+                Panels.text("> Clique no botão abaixo para preencher este formulário."),
+                ActionRow.of(Button.primary(ComponentId.of(NS, "fill", form.id()), "Preencher")
+                        .withEmoji(Emojis.button(Emojis.EDIT))));
     }
 
     /** The form modal built from the stored questions (≤5). */

@@ -1,8 +1,29 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: ClearCommand
+// 
+// Constructors:
+//   - `Constructor` : `public ClearCommand(String name, boolean onlyOwn)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// 
+// Fields:
+//   - `Field` : `private static final int SCAN_WINDOW`
+//   - `Field` : `private final String name`
+//   - `Field` : `private final boolean onlyOwn`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.moderation.MessagePurge;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -56,7 +77,7 @@ public final class ClearCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null || !(event.getChannel() instanceof TextChannel channel)) {
-            event.reply("Use este comando em um canal de texto do servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um canal de texto do servidor.");
             return;
         }
         // /cl: scan the last 100 and delete ALL the executor's. /clear: the last N from anyone.
@@ -76,17 +97,17 @@ public final class ClearCommand implements SlashCommand {
                     .toList();
 
             if (deletable.isEmpty()) {
-                event.getHook().sendMessage(onlyOwn
+                Replies.hook(event, ctx, onlyOwn
                         ? "Nenhuma mensagem sua (até 14 dias) encontrada para apagar."
-                        : "Nada para apagar (todas as mensagens têm 14+ dias).").queue();
+                        : "Nada para apagar (todas as mensagens têm 14+ dias).");
                 return;
             }
             channel.purgeMessages(deletable);
             ctx.database().actionLogs().log(event.getGuild().getId(),
                     event.getUser().getId(), channel.getId(),
                     onlyOwn ? "CLEAR_OWN" : "CLEAR", "deleted=" + deletable.size());
-            event.getHook().sendMessage("Apagadas: " + deletable.size()
-                    + (onlyOwn ? " (somente suas mensagens)." : ".")).queue();
-        }, err -> event.getHook().sendMessage("Falha ao buscar mensagens: " + err.getMessage()).queue());
+            Replies.hook(event, ctx, "Apagadas: " + deletable.size()
+                    + (onlyOwn ? " (somente suas mensagens)." : "."));
+        }, err -> Replies.hook(event, ctx, "Falha ao buscar mensagens: " + err.getMessage()));
     }
 }

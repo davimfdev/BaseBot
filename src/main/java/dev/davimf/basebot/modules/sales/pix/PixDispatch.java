@@ -1,14 +1,36 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: PixDispatch
+// 
+// Constructors:
+//   - `Constructor` : `private PixDispatch()`
+// 
+// Methods:
+//   - `Method` : `public static Rendered render(PixKey key, long amountCents, int accent, String ownerId)`
+// 
+// Record: Rendered
+// 
+// Record Components:
+//   - Record Component : public final Container container
+//   - Record Component : public final FileUpload file
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.PixKey;
+import dev.davimf.basebot.util.Emojis;
 import dev.davimf.basebot.util.Money;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
 import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.math.BigDecimal;
@@ -42,12 +64,16 @@ public final class PixDispatch {
         String brCode = builder.build().toBrCode();
         FileUpload qr = FileUpload.fromData(PixQrCode.pngBytes(brCode, 360), "pix.png");
 
-        String text = "## Cobrança Pix\n**Pix Copia e Cola:**\n```" + brCode + "```"
-                + (amountCents > 0 ? "\n**Valor:** " + Money.format(amountCents) : "");
+        String intro = "> Use o **Pix Copia e Cola** abaixo ou leia o QR Code para efetuar o pagamento."
+                + (amountCents > 0 ? "\n" + Emojis.of(Emojis.CASH, "💵") + " **Valor** · `" + Money.format(amountCents) + "`" : "");
         Container container = Panels.container(accent,
-                Panels.text(text),
+                Panels.text("## " + Emojis.of(Emojis.GEM, "💠") + " Cobrança Pix"),
+                Panels.divider(),
+                Panels.text(intro),
+                Panels.text("```" + brCode + "```"),
                 MediaGallery.of(MediaGalleryItem.fromUrl("attachment://pix.png")),
-                ActionRow.of(Button.success(ComponentId.of("pix", "confirmar", ownerId), "Confirmar Pagamento")));
+                ActionRow.of(Button.success(ComponentId.of("pix", "confirmar", ownerId), "Confirmar pagamento")
+                        .withEmoji(Emojis.button(Emojis.CHECK_YES))));
         return new Rendered(container, qr);
     }
 }

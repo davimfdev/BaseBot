@@ -1,3 +1,26 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.postgres
+// 
+// Class: JdbcGuildConfigRepository
+// 
+// Constructors:
+//   - `Constructor` : `public JdbcGuildConfigRepository(PostgresPool pool)`
+// 
+// Methods:
+//   - `Method` : `public Optional<GuildConfig> find(String guildId)`
+//   - `Method` : `private GuildConfig map(ResultSet rs)`
+//   - `Method` : `private static String write(Object value)`
+//   - `Method` : `private static <T> T read(String json, TypeReference<T> type, T fallback)`
+// 
+// Fields:
+//   - `Field` : `private static final TypeReference<Map<String, String>> STR_MAP`
+//   - `Field` : `private static final TypeReference<Map<String, Boolean>> BOOL_MAP`
+//   - `Field` : `private static final TypeReference<List<String>> STR_LIST`
+//   - `Field` : `private final PostgresPool pool`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.postgres;
 
 import com.fasterxml.jackson.core.type.TypeReference;

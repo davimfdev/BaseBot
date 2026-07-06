@@ -1,3 +1,13 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - forms
+-- - form_questions
+-- Created Indices:
+-- - idx_form_questions
+-- [OUTLINE END]
+
+
+
 -- Configurable forms (BOTSPECS Module 1 — /formulario). A form has up to 5 questions
 -- (Discord modal limit); submissions are routed to the #log-formularios channel.
 CREATE TABLE IF NOT EXISTS forms (

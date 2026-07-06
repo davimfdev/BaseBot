@@ -1,4 +1,35 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.budget
+// 
+// Class: BudgetService
+// 
+// Constructors:
+//   - `Constructor` : `public BudgetService(BotContext ctx, BudgetRepository budgets, CatalogRepository catalog, PixKeyRepository pixKeys)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(BudgetService.class)`
+//   - `Method` : `private static final Duration TTL = Duration. ofHours(24)`
+//   - `Method` : `public BudgetRepository repository()`
+//   - `Method` : `public Container builderView(Budget budget)`
+//   - `Method` : `private Budget guardClient(ButtonInteractionEvent event, String budgetId)`
+//   - `Method` : `private Container builderViewOrEmpty(Budget b)`
+//   - `Method` : `private int accent(String guildId)`
+//   - `Method` : `private static String guildOf(ButtonInteractionEvent event)`
+//   - `Method` : `private static int parseQuantity(String s)`
+//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
+// 
+// Fields:
+//   - `Field` : `private final BotContext ctx`
+//   - `Field` : `private final BudgetRepository budgets`
+//   - `Field` : `private final CatalogRepository catalog`
+//   - `Field` : `private final PixKeyRepository pixKeys`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.budget;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.Budget;
@@ -9,9 +40,12 @@ import dev.davimf.basebot.database.model.PixKey;
 import dev.davimf.basebot.modules.sales.catalog.CatalogRepository;
 import dev.davimf.basebot.modules.sales.pix.PixDispatch;
 import dev.davimf.basebot.modules.sales.pix.PixKeyRepository;
+import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -23,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,7 +111,7 @@ public final class BudgetService {
     public void pickProduct(StringSelectInteractionEvent event, String budgetId, String productId) {
         CatalogProduct p = catalog.findProduct(productId).orElse(null);
         if (p == null) {
-            event.reply("Esse produto não existe mais.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Esse produto não existe mais.");
             return;
         }
         event.replyModal(BudgetView.quantityModal(budgetId, productId, p.name())).queue();
@@ -86,12 +121,12 @@ public final class BudgetService {
         Budget b = budgets.find(budgetId).orElse(null);
         CatalogProduct p = catalog.findProduct(productId).orElse(null);
         if (b == null || p == null) {
-            event.reply("Orçamento ou produto indisponível.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Orçamento ou produto indisponível.");
             return;
         }
         int qty = parseQuantity(value(event, "qtd"));
         if (qty <= 0) {
-            event.reply("Quantidade inválida.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Quantidade inválida.");
             return;
         }
         budgets.addItem(budgetId, p.name(), p.priceCents(), qty);
@@ -105,7 +140,7 @@ public final class BudgetService {
     public void cancel(ButtonInteractionEvent event, String budgetId) {
         budgets.find(budgetId).ifPresent(b -> budgets.setStatus(budgetId, Budget.CANCELLED));
         event.editComponents(BudgetView.resolved(accent(guildOf(event)), "", "",
-                List.of(), "❌ Orçamento cancelado.")).useComponentsV2().queue();
+                List.of(), Emojis.of(Emojis.CHECK_NO, "❌") + " Orçamento cancelado.")).useComponentsV2().queue();
     }
 
     // --- send + approval -------------------------------------------------------
@@ -113,19 +148,19 @@ public final class BudgetService {
     public void send(ButtonInteractionEvent event, String budgetId) {
         Budget b = budgets.find(budgetId).orElse(null);
         if (b == null || event.getGuild() == null) {
-            event.reply("Orçamento não encontrado.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Orçamento não encontrado.");
             return;
         }
         List<BudgetItem> items = budgets.listItems(budgetId);
         if (items.isEmpty()) {
-            event.reply("Adicione ao menos um item antes de enviar.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Adicione ao menos um item antes de enviar.");
             return;
         }
         int accent = accent(b.guildId());
         Container approval = BudgetView.approval(accent, budgetId, b.sellerId(), b.clientId(), items);
         // Ack + collapse the ephemeral builder, then post the public approval embed.
         event.editComponents(BudgetView.resolved(accent, b.sellerId(), b.clientId(), items,
-                "📨 Orçamento enviado ao cliente.")).useComponentsV2().queue();
+                "" + Emojis.of(Emojis.DM, "📨") + " Orçamento enviado ao cliente.")).useComponentsV2().queue();
         event.getChannel().sendMessageComponents(approval).useComponentsV2().queue(msg -> {
             budgets.markSent(budgetId, msg.getChannelId(), msg.getId(),
                     Instant.now().plus(TTL).toString());
@@ -146,11 +181,12 @@ public final class BudgetService {
 
         int accent = accent(b.guildId());
         event.editComponents(BudgetView.resolved(accent, b.sellerId(), b.clientId(), items,
-                "✅ Aprovado por <@" + b.clientId() + ">.")).useComponentsV2().queue();
+                "" + Emojis.of(Emojis.CHECK_YES, "✅") + " Aprovado por <@" + b.clientId() + ">.")).useComponentsV2().queue();
 
         if (key.isEmpty()) {
-            event.getChannel().sendMessage("⚠️ <@" + b.sellerId()
-                    + "> registre sua chave com `/pix registrar` para enviar a cobrança.").queue();
+            event.getChannel().sendMessageComponents(Panels.container(accent, Panels.text("" + Emojis.of(Emojis.WARN, "⚠️") + " <@" + b.sellerId()
+                            + "> registre sua chave com `/pix registrar` para enviar a cobrança.")))
+                    .useComponentsV2().setAllowedMentions(EnumSet.of(Message.MentionType.USER)).queue();
             return;
         }
         PixDispatch.Rendered pix = PixDispatch.render(key.get(), BudgetView.total(items), accent, b.sellerId());
@@ -167,8 +203,10 @@ public final class BudgetService {
         budgets.setStatus(budgetId, Budget.REJECTED);
         ctx.database().actionLogs().log(b.guildId(), b.sellerId(), b.clientId(), "BUDGET_REJECTED", budgetId);
         event.editComponents(BudgetView.resolved(accent(b.guildId()), b.sellerId(), b.clientId(), items,
-                "❌ Recusado por <@" + b.clientId() + ">.")).useComponentsV2().queue();
-        event.getChannel().sendMessage("<@" + b.sellerId() + "> seu orçamento foi recusado pelo cliente.").queue();
+                "" + Emojis.of(Emojis.CHECK_NO, "❌") + " Recusado por <@" + b.clientId() + ">.")).useComponentsV2().queue();
+        event.getChannel().sendMessageComponents(Panels.container(accent(b.guildId()),
+                        Panels.text("<@" + b.sellerId() + "> seu orçamento foi recusado pelo cliente.")))
+                .useComponentsV2().setAllowedMentions(EnumSet.of(Message.MentionType.USER)).queue();
     }
 
     // --- scheduler sweep -------------------------------------------------------
@@ -186,13 +224,15 @@ public final class BudgetService {
             if (channel == null) {
                 continue;
             }
-            channel.sendMessage("⏳ Orçamento de <@" + b.sellerId() + "> para <@" + b.clientId()
-                    + "> expirou após 24h sem resposta.").queue();
+            channel.sendMessageComponents(Panels.container(accent(b.guildId()),
+                            Panels.text("" + Emojis.of(Emojis.HOURGLASS, "⏳") + " Orçamento de <@" + b.sellerId() + "> para <@" + b.clientId()
+                                    + "> expirou após 24h sem resposta.")))
+                    .useComponentsV2().setAllowedMentions(EnumSet.of(Message.MentionType.USER)).queue();
             if (b.messageId() != null) {
                 List<BudgetItem> items = budgets.listItems(b.id());
                 channel.retrieveMessageById(b.messageId()).flatMap(m ->
                                 m.editMessageComponents(BudgetView.resolved(accent(b.guildId()),
-                                        b.sellerId(), b.clientId(), items, "⏳ Expirado.")).useComponentsV2())
+                                        b.sellerId(), b.clientId(), items, Emojis.of(Emojis.HOURGLASS, "⌛") + " Expirado.")).useComponentsV2())
                         .queue(ok -> {}, err -> log.debug("Could not edit expired budget message: {}",
                                 err.getMessage()));
             }
@@ -207,16 +247,16 @@ public final class BudgetService {
     private Budget guardClient(ButtonInteractionEvent event, String budgetId) {
         Budget b = budgets.find(budgetId).orElse(null);
         if (b == null) {
-            event.reply("Orçamento não encontrado.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Orçamento não encontrado.");
             return null;
         }
         if (!event.getUser().getId().equals(b.clientId())) {
-            event.reply("Apenas o cliente <@" + b.clientId() + "> pode responder a este orçamento.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Apenas o cliente <@" + b.clientId() + "> pode responder a este orçamento.");
             return null;
         }
         if (!Budget.PENDING.equals(b.status())) {
-            event.reply("Este orçamento já foi respondido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Este orçamento já foi respondido.");
             return null;
         }
         return b;

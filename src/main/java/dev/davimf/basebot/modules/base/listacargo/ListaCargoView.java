@@ -1,4 +1,25 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.listacargo
+// 
+// Class: ListaCargoView
+// 
+// Constructors:
+//   - `Constructor` : `private ListaCargoView()`
+// 
+// Methods:
+//   - `Method` : `public static Container container(int accent, Role role, List<Member> members, int pageIndex)`
+//   - `Method` : `public static ActionRow navRow(String roleId, int pageIndex, int pageCount)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+//   - `Field` : `public static final int PAGE_SIZE`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.listacargo;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
@@ -23,19 +44,22 @@ public final class ListaCargoView {
         int pages = Paginator.pageCount(members.size(), PAGE_SIZE);
         List<Member> slice = Paginator.page(members, pageIndex, PAGE_SIZE);
 
-        StringBuilder body = new StringBuilder("## Membros de " + role.getName()
-                + " (" + members.size() + ")\n");
+        StringBuilder body = new StringBuilder();
         if (slice.isEmpty()) {
-            body.append("*Nenhum membro com este cargo.*");
+            body.append("-# *Nenhum membro com este cargo.*");
         } else {
-            for (Member m : slice) {
-                body.append("• ").append(m.getAsMention()).append('\n');
+            int start = pageIndex * PAGE_SIZE;
+            for (int i = 0; i < slice.size(); i++) {
+                body.append(start + i + 1).append(". ").append(slice.get(i).getAsMention()).append('\n');
             }
+            body.append("\n-# Página ").append(pageIndex + 1).append('/').append(pages);
         }
-        body.append("\n-# Página ").append(pageIndex + 1).append('/').append(pages);
 
-        int color = role.getColorRaw() == 0 ? accent : role.getColorRaw();
+        // Tint with the role's own colour, falling back to the guild accent when it has none.
+        int color = role.getColors().isDefault() ? accent : role.getColors().getPrimaryRaw();
         return Panels.container(color,
+                Panels.text("## " + Emojis.of(Emojis.MEMBERS, "👥") + " " + role.getName() + " `" + members.size() + "`"),
+                Panels.divider(),
                 Panels.text(body.toString()),
                 navRow(role.getId(), pageIndex, pages));
     }

@@ -1,3 +1,34 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.crypto
+// 
+// Class: TicketCrypto
+// 
+// Constructors:
+//   - `Constructor` : `public TicketCrypto(int iterations)`
+// 
+// Methods:
+//   - `Method` : `public Result encrypt(String plaintext)`
+//   - `Method` : `public Result encrypt(String plaintext, String password)`
+//   - `Method` : `private static byte[] pbkdf2(String password, byte[] salt, int iterations)`
+//   - `Method` : `private static byte[] randomBytes(int n)`
+//   - `Method` : `public static String generatePassword()`
+// 
+// Fields:
+//   - `Field` : `private static final int KEY_BITS`
+//   - `Field` : `private static final int SALT_BYTES`
+//   - `Field` : `private static final int IV_BYTES`
+//   - `Field` : `private static final int TAG_BITS`
+//   - `Field` : `private final int iterations`
+// 
+// Record: Result
+// 
+// Record Components:
+//   - Record Component : public final String password
+//   - Record Component : public final EncryptedBundle bundle
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.crypto;
 
 import javax.crypto.Cipher;
