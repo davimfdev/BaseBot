@@ -1,3 +1,25 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.budget
+// 
+// Class: BudgetRepository
+// 
+// Constructors:
+//   - `Constructor` : `public BudgetRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public String createDraft(String guildId, String sellerId, String clientId)`
+//   - `Method` : `public List<BudgetItem> listItems(String budgetId)`
+//   - `Method` : `public Optional<Budget> find(String id)`
+//   - `Method` : `public List<Budget> listPendingExpired(String nowIso)`
+//   - `Method` : `private static Budget map(ResultSet rs)`
+//   - `Method` : `private static String newId()`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.budget;
 
 import dev.davimf.basebot.database.model.Budget;

@@ -1,3 +1,10 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - pix_keys
+-- [OUTLINE END]
+
+
+
 -- Pix keys are per person (per user), not per role. Recreate pix_keys keyed by user_id.
 -- The seller "vendedor" role (guild_config) only gates WHO may register/use Pix.
 DROP TABLE IF EXISTS pix_keys;

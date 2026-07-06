@@ -1,9 +1,31 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.hierarchy
+// 
+// Class: HierarchyService
+// 
+// Constructors:
+//   - `Constructor` : `public HierarchyService(BotContext ctx)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(HierarchyService.class)`
+// 
+// Fields:
+//   - `Field` : `package-private static final String CHANNEL_KEY`
+//   - `Field` : `package-private static final String MESSAGE_KEY`
+//   - `Field` : `private final BotContext ctx`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.hierarchy;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.base.setup.GuildConfigEdits;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -34,7 +56,7 @@ public final class HierarchyService {
     public void publish(SlashCommandInteractionEvent event) {
         Guild guild = event.getGuild();
         if (guild == null || !(event.getChannel() instanceof TextChannel channel)) {
-            event.reply("Use este comando em um canal de texto.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um canal de texto.");
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guild.getId());
@@ -49,8 +71,8 @@ public final class HierarchyService {
                     ctx.database().guildConfig().save(updated);
                     ctx.database().actionLogs().log(guild.getId(), event.getUser().getId(),
                             channel.getId(), "HIERARCHY_PUBLISH", msg.getId());
-                    event.getHook().sendMessage("🏛️ Painel de hierarquia publicado neste canal.").queue();
-                }, err -> event.getHook().sendMessage("Falha ao publicar: " + err.getMessage()).queue());
+                    Replies.hook(event, ctx, Emojis.of(Emojis.SERVER, "🏛️") + " Painel de hierarquia publicado neste canal.");
+                }, err -> Replies.hook(event, ctx, "Falha ao publicar: " + err.getMessage()));
     }
 
     /** Rebuilds and edits the stored panel message. No-op if none was published. */

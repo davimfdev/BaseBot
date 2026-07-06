@@ -1,3 +1,18 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs
+// 
+// Class: FacsModule
+// 
+// Methods:
+//   - `Method` : `public String name()`
+// 
+// Fields:
+//   - `Field` : `private PunishService punishService`
+//   - `Field` : `private ActionService actionService`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs;
 
 import dev.davimf.basebot.core.BotContext;
@@ -48,6 +63,7 @@ import java.util.concurrent.TimeUnit;
 public final class FacsModule implements BotModule {
 
     private PunishService punishService;
+    private ActionService actionService;
 
     @Override
     public String name() {
@@ -84,7 +100,7 @@ public final class FacsModule implements BotModule {
 
         // Farm: /farm submits materials; managers approve -> stock + treasury payout.
         FarmService farm = new FarmService(ctx, economy, new FarmRepository(ctx.database().sqlite()));
-        registry.command(new FarmCommand(farm));
+        registry.command(new FarmCommand());
         registry.component(new FarmComponentHandler(farm));
 
         // Production: /produzir defines recipes + crafts products from stock.
@@ -100,9 +116,10 @@ public final class FacsModule implements BotModule {
 
         // Actions/Reservations: /painel-acoes with the Elite-priority queue, Alinhamento
         // pings, backfill and Vitória/Derrota controls.
-        ActionService actions = new ActionService(ctx, new ActionRepository(ctx.database().sqlite()));
-        registry.command(new PainelAcoesCommand());
-        registry.component(new ActionComponentHandler(actions));
+        this.actionService = new ActionService(ctx,
+                new ActionRepository(ctx.database().sqlite()), economy);
+        registry.command(new PainelAcoesCommand(actionService));
+        registry.component(new ActionComponentHandler(actionService));
     }
 
     @Override
@@ -110,6 +127,10 @@ public final class FacsModule implements BotModule {
         // 20-day ADV expiry: sweep once on boot, then hourly (BOTSPECS §4).
         if (punishService != null) {
             ctx.scheduler().repeating(punishService::sweepExpiredAdvs, 0, 1, TimeUnit.HOURS);
+        }
+        // Scheduled actions: reveal Vitória/Derrota once their time arrives (every minute).
+        if (actionService != null) {
+            ctx.scheduler().repeating(actionService::sweepDueActions, 1, 1, TimeUnit.MINUTES);
         }
     }
 }

@@ -1,8 +1,26 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.tickets
+// 
+// Class: TicketComponentHandler
+// 
+// Constructors:
+//   - `Constructor` : `public TicketComponentHandler(TicketService service)`
+// 
+// Methods:
+//   - `Method` : `public String namespace()`
+// 
+// Fields:
+//   - `Field` : `private final TicketService service`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.tickets;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
@@ -37,7 +55,7 @@ public final class TicketComponentHandler implements ComponentHandler {
         }
         String categoryId = event.getValues().get(0);
         if (ctx.database().ticketCategories().find(categoryId).isEmpty()) {
-            event.reply("Essa categoria não existe mais.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Essa categoria não existe mais.");
             return;
         }
         event.replyModal(TicketView.openReasonModal(categoryId)).queue();
@@ -53,7 +71,7 @@ public final class TicketComponentHandler implements ComponentHandler {
             case "membro"    -> service.promptAddMember(event, ticketId);
             case "notificar" -> service.notifyCreator(event, ticketId);
             case "renomear"  -> service.promptRename(event, ticketId);
-            default          -> event.reply("Ação de ticket desconhecida.").setEphemeral(true).queue();
+            default          -> Replies.ephemeral(event, ctx, "Ação de ticket desconhecida.");
         }
     }
 
@@ -84,6 +102,6 @@ public final class TicketComponentHandler implements ComponentHandler {
         event.deferReply(true).queue();
         ctx.database().ticketCategories().find(categoryId).ifPresentOrElse(
                 cat -> service.openTicket(event, cat, reason),
-                () -> event.getHook().sendMessage("Essa categoria não existe mais.").queue());
+                () -> Replies.hook(event, ctx, "Essa categoria não existe mais."));
     }
 }

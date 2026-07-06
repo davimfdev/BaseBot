@@ -1,6 +1,28 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.core.component
+// 
+// Class: ComponentRouter
+// 
+// Constructors:
+//   - `Constructor` : `public ComponentRouter(BotContext context)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(ComponentRouter.class)`
+//   - `Method` : `public ComponentRouter register(ComponentHandler handler)`
+// 
+// Fields:
+//   - `Field` : `private final Map<String, ComponentHandler> handlers`
+//   - `Field` : `private final BotContext context`
+// 
+// Interface: Invoker
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.core.component;
 
 import dev.davimf.basebot.core.BotContext;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
@@ -70,7 +92,7 @@ public final class ComponentRouter extends ListenerAdapter {
         } catch (Exception e) {
             log.error("Component handler '{}' failed for id {}", id.namespace(), rawId, e);
             if (!event.isAcknowledged()) {
-                event.reply("Ocorreu um erro ao processar esta interação.").setEphemeral(true).queue();
+                Replies.ephemeral(event, context, "Ocorreu um erro ao processar esta interação.");
             }
         }
     }

@@ -1,3 +1,30 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.sqlite
+// 
+// Class: TicketRepository
+// 
+// Constructors:
+//   - `Constructor` : `public TicketRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public Optional<ActiveTicket> findByTextChannel(String textChannelId)`
+//   - `Method` : `public Optional<ActiveTicket> findById(String id)`
+//   - `Method` : `public java.util.List<TicketEvent> listEvents(String ticketId)`
+//   - `Method` : `private Optional<ActiveTicket> queryOne(String column, String value)`
+//   - `Method` : `private ActiveTicket map(ResultSet rs)`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// 
+// Record: TicketEvent
+// 
+// Record Components:
+//   - Record Component : public final String text
+//   - Record Component : public final long createdAtMillis
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.sqlite;
 
 import dev.davimf.basebot.database.model.ActiveTicket;

@@ -1,3 +1,9 @@
+<!-- [OUTLINE START]
+Markdown Document: BaseBot
+[OUTLINE END] -->
+
+
+
 # BaseBot
 
 Multi-module Discord bot ecosystem (JDA), rebuilt per `BOTSPECS.MD`. Guild-scoped

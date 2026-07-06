@@ -1,3 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: PixKeyRepository
+// 
+// Constructors:
+//   - `Constructor` : `public PixKeyRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public Optional<PixKey> findByUser(String guildId, String userId)`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 import dev.davimf.basebot.database.model.PixKey;

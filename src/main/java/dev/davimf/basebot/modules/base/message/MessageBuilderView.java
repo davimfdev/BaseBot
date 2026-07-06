@@ -1,4 +1,45 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.message
+// 
+// Class: MessageBuilderView
+// 
+// Constructors:
+//   - `Constructor` : `private MessageBuilderView()`
+// 
+// Methods:
+//   - `Method` : `public static final List<Field> FIELDS = List. of(new Field(, , , false,)`
+//   - `Method` : `public static Field field(String id)`
+//   - `Method` : `public static Container panel(ObjectNode state)`
+//   - `Method` : `public static Container blockPanel(ObjectNode state, int index)`
+//   - `Method` : `public static Container buttonPanel(ObjectNode state, int blockIndex, int btnIndex)`
+//   - `Method` : `public static Modal inputModal(String customId, String title, String labelText, String placeholder, String current)`
+//   - `Method` : `public static Modal fieldModal(Field f, String current)`
+//   - `Method` : `public static Modal colorModal(String current)`
+//   - `Method` : `public static Modal textBlockModal(String customId, String current)`
+//   - `Method` : `public static Modal buttonModal(String customId)`
+//   - `Method` : `public static Modal textModal(String action, String title, String labelText, String placeholder, String current)`
+//   - `Method` : `private static Button fieldButton(String id)`
+//   - `Method` : `private static int builderAccent(ObjectNode state)`
+//   - `Method` : `private static String trim(String s, int max)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+// 
+// Record: Field
+// 
+// Record Components:
+//   - Record Component : public final String id
+//   - Record Component : public final String label
+//   - Record Component : public final String stateKey
+//   - Record Component : public final boolean paragraph
+//   - Record Component : public final String placeholder
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.message;
+
+import dev.davimf.basebot.util.Emojis;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -146,7 +187,7 @@ public final class MessageBuilderView {
             }
         }
         kids.add(ActionRow.of(
-                Button.primary(ComponentId.of(NS, "bedit", String.valueOf(index)), "➕ Botão de link"),
+                Button.primary(ComponentId.of(NS, "bedit", String.valueOf(index)), "Botão de link").withEmoji(Emojis.button(Emojis.PLUS)),
                 Button.danger(ComponentId.of(NS, "bdel", String.valueOf(index)), "Remover bloco"),
                 Button.secondary(ComponentId.of(NS, "bup", String.valueOf(index)), "↑")
                         .withDisabled(index == 0),
@@ -165,13 +206,13 @@ public final class MessageBuilderView {
         List<Button> edit = new ArrayList<>();
         if (interaction) {
             edit.add(Button.secondary(ComponentId.of(NS, "btype", String.valueOf(blockIndex),
-                    String.valueOf(btnIndex)), "🎨 Tipo: " + MessageState.str(btn, "style")));
+                    String.valueOf(btnIndex)), "Tipo: " + MessageState.str(btn, "style")).withEmoji(Emojis.button(Emojis.PALETTE)));
         }
         edit.add(Button.secondary(ComponentId.of(NS, "btlabel", String.valueOf(blockIndex),
-                String.valueOf(btnIndex)), "✏️ Título"));
+                String.valueOf(btnIndex)), "Título").withEmoji(Emojis.button(Emojis.EDIT)));
         if (!interaction) {
             edit.add(Button.secondary(ComponentId.of(NS, "blink", String.valueOf(blockIndex),
-                    String.valueOf(btnIndex)), "🔗 Link"));
+                    String.valueOf(btnIndex)), "Link").withEmoji(Emojis.button(Emojis.LINK)));
         }
         return Panels.container(builderAccent(state),
                 Panels.text("## Botão " + (btnIndex + 1) + "\n" + MessageState.describeButton(btn)

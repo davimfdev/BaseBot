@@ -1,3 +1,22 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - active_tickets
+-- - action_logs
+-- - warnings
+-- - budgets
+-- - stock
+-- - recruiter_stats
+-- Created Indices:
+-- - idx_active_tickets_guild
+-- - idx_active_tickets_channel
+-- - idx_action_logs_guild
+-- - idx_warnings_expiry
+-- - idx_warnings_user
+-- - idx_budgets_expiry
+-- [OUTLINE END]
+
+
+
 -- BaseBot local SQLite schema (fast transactions / local state).
 -- Forward-only. Append new migrations as new files; never edit this one after release.
 

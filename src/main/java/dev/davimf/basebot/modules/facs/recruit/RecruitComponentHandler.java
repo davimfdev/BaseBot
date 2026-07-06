@@ -1,12 +1,35 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.recruit
+// 
+// Class: RecruitComponentHandler
+// 
+// Constructors:
+//   - `Constructor` : `public RecruitComponentHandler(RecruitStatsRepository stats)`
+// 
+// Methods:
+//   - `Method` : `public String namespace()`
+//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
+// 
+// Fields:
+//   - `Field` : `private static final String ENTRY_ROLE_KEY`
+//   - `Field` : `private static final String REVIEW_CHANNEL_KEY`
+//   - `Field` : `private final RecruitStatsRepository stats`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.recruit;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.facs.FacsLog;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
 import dev.davimf.basebot.util.EmbedColor;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
@@ -60,15 +83,15 @@ public final class RecruitComponentHandler implements ComponentHandler {
         String channelId = cfg.channel(REVIEW_CHANNEL_KEY);
         TextChannel review = channelId == null ? null : event.getGuild().getTextChannelById(channelId);
         if (review == null) {
-            event.reply("Canal de análise (Solicitações de Set) não configurado em /setup → Logs.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Canal de análise (Solicitações de Set) não configurado em /setup → Logs.");
             return;
         }
         ModalMapping rec = event.getValue("recrutador");
         Mentions mentions = rec == null ? null : rec.getAsMentions();
         User recruiter = mentions == null || mentions.getUsers().isEmpty() ? null : mentions.getUsers().get(0);
         if (recruiter == null) {
-            event.reply("Selecione um recrutador válido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Selecione um recrutador válido.");
             return;
         }
         review.sendMessageComponents(RecruitView.request(EmbedColor.resolve(cfg),
@@ -76,13 +99,14 @@ public final class RecruitComponentHandler implements ComponentHandler {
                         value(event, "idjogo"), value(event, "nome"), value(event, "telefone")))
                 .useComponentsV2()
                 .setAllowedMentions(List.of())
-                .queue(msg -> event.reply("📝 Solicitação enviada para análise.").setEphemeral(true).queue(),
-                        err -> event.reply("Falha ao enviar: " + err.getMessage()).setEphemeral(true).queue());
+                .queue(msg -> Replies.ephemeral(event, ctx, Emojis.of(Emojis.NOTE, "📝") + " Solicitação enviada para análise."),
+                        err -> Replies.ephemeral(event, ctx, "Falha ao enviar: " + err.getMessage()));
     }
 
     private void accept(ButtonInteractionEvent event, BotContext ctx, String applicantId, String recruiterId) {
-        if (event.getMember() == null || !event.getMember().hasPermission(Permission.MANAGE_ROLES)) {
-            event.reply("Apenas a gerência pode aceitar solicitações.").setEphemeral(true).queue();
+        GuildConfig gcfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), gcfg, ManagerPermissions.Capability.RECRUTAMENTO)) {
+            Replies.ephemeral(event, ctx, "Apenas a gerência de **Recrutamento** pode aceitar solicitações.");
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
@@ -90,38 +114,37 @@ public final class RecruitComponentHandler implements ComponentHandler {
         String roleId = cfg.role(ENTRY_ROLE_KEY);
         Role role = roleId == null ? null : event.getGuild().getRoleById(roleId);
         if (role == null) {
-            event.reply("Cargo de entrada (Membro) não configurado em /setup → Cargos.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Cargo de entrada (Membro) não configurado em /setup → Cargos.");
             return;
         }
         if (!event.getGuild().getSelfMember().canInteract(role)) {
-            event.reply("Não posso atribuir o cargo de Membro (acima do meu cargo).")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Não posso atribuir o cargo de Membro (acima do meu cargo).");
             return;
         }
         event.getGuild().retrieveMemberById(applicantId).queue(member ->
                 event.getGuild().addRoleToMember(member, role).reason("Recrutamento aprovado").queue(ok -> {
                     int total = stats.increment(event.getGuild().getId(), recruiterId);
                     event.editComponents(RecruitView.resolved(accent, applicantId, recruiterId,
-                            "✅ Aceito por <@" + event.getUser().getId() + ">.")).useComponentsV2().queue();
+                            "" + Emojis.of(Emojis.CHECK_YES, "✅") + " Aceito por <@" + event.getUser().getId() + ">.")).useComponentsV2().queue();
                     ctx.database().actionLogs().log(event.getGuild().getId(), event.getUser().getId(),
                             applicantId, "RECRUIT_ACCEPT", recruiterId);
                     FacsLog.post(ctx, event.getGuild().getId(), "log-hierarquia",
-                            "## 📝 Recrutamento aceito\n<@" + applicantId + "> entrou na facção · recrutador <@"
-                                    + recruiterId + "> (" + total + " recrutas).");
-                }, err -> event.reply("Falha ao atribuir o cargo: " + err.getMessage())
-                        .setEphemeral(true).queue()),
-                err -> event.reply("Não foi possível encontrar o candidato.").setEphemeral(true).queue());
+                            "## " + Emojis.of(Emojis.NOTE, "📝") + " Recrutamento aceito\n---\n"
+                                    + "" + Emojis.of(Emojis.MEMBER, "👤") + " **Novo membro** · <@" + applicantId + ">\n---\n"
+                                    + "" + Emojis.of(Emojis.HANDSHAKE, "🤝") + " **Recrutador** · <@" + recruiterId + "> · `" + total + "` recrutas");
+                }, err -> Replies.ephemeral(event, ctx, "Falha ao atribuir o cargo: " + err.getMessage())),
+                err -> Replies.ephemeral(event, ctx, "Não foi possível encontrar o candidato."));
     }
 
     private void reject(ButtonInteractionEvent event, BotContext ctx, String applicantId, String recruiterId) {
-        if (event.getMember() == null || !event.getMember().hasPermission(Permission.MANAGE_ROLES)) {
-            event.reply("Apenas a gerência pode recusar solicitações.").setEphemeral(true).queue();
+        GuildConfig gcfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), gcfg, ManagerPermissions.Capability.RECRUTAMENTO)) {
+            Replies.ephemeral(event, ctx, "Apenas a gerência de **Recrutamento** pode recusar solicitações.");
             return;
         }
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(event.getGuild().getId()));
         event.editComponents(RecruitView.resolved(accent, applicantId, recruiterId,
-                "❌ Recusado por <@" + event.getUser().getId() + ">.")).useComponentsV2().queue();
+                "" + Emojis.of(Emojis.CHECK_NO, "❌") + " Recusado por <@" + event.getUser().getId() + ">.")).useComponentsV2().queue();
         ctx.database().actionLogs().log(event.getGuild().getId(), event.getUser().getId(),
                 applicantId, "RECRUIT_REJECT", recruiterId);
     }

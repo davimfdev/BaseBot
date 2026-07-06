@@ -1,12 +1,32 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.commands
+// 
+// Class: PunicoesCommand
+// 
+// Constructors:
+//   - `Constructor` : `public PunicoesCommand(PunishService service)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// 
+// Fields:
+//   - `Field` : `private final PunishService service`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
+import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions.Capability;
 import dev.davimf.basebot.modules.facs.punish.PunishService;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -29,14 +49,18 @@ public final class PunicoesCommand implements SlashCommand {
     @Override
     public SlashCommandData data() {
         return Commands.slash("punições", "Histórico de punições de um membro.")
-                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MODERATE_MEMBERS))
                 .addOption(OptionType.USER, "usuario", "Membro", true);
     }
 
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
+            return;
+        }
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), cfg, Capability.PUNICOES)) {
+            Replies.ephemeral(event, ctx, "Você não tem permissão de **Punições** para ver o histórico.");
             return;
         }
         Member target = event.getOption("usuario", OptionMapping::getAsMember);

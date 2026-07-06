@@ -1,3 +1,24 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.util
+// 
+// Class: Durations
+// 
+// Constructors:
+//   - `Constructor` : `private Durations()`
+// 
+// Methods:
+//   - `Method` : `private static final Pattern TOKEN = Pattern. compile()`
+//   - `Method` : `private static final Pattern WHOLE = Pattern. compile()`
+//   - `Method` : `public static OptionalLong parse(String input)`
+//   - `Method` : `public static String format(long millis)`
+//   - `Method` : `private static long unitMillis(char unit)`
+// 
+// Fields:
+//   - `Field` : `public static final long MAX_MILLIS`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.util;
 
 import java.util.OptionalLong;

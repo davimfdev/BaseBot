@@ -1,12 +1,28 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.commands
+// 
+// Class: RecrutamentoCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.commands;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
+import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions.Capability;
 import dev.davimf.basebot.modules.facs.recruit.RecruitView;
 import dev.davimf.basebot.util.EmbedColor;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -24,7 +40,6 @@ public final class RecrutamentoCommand implements SlashCommand {
     @Override
     public SlashCommandData data() {
         return Commands.slash("recrutamento", "Recrutamento da facção.")
-                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_ROLES))
                 .addSubcommands(new SubcommandData("painel", "Publica o painel de solicitação de entrada.")
                         .addOption(OptionType.STRING, "descricao", "Texto do painel (opcional)", false));
     }
@@ -32,7 +47,12 @@ public final class RecrutamentoCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
+            return;
+        }
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), cfg, Capability.RECRUTAMENTO)) {
+            Replies.ephemeral(event, ctx, "Você não tem permissão de **Recrutamento** para publicar o painel.");
             return;
         }
         String description = event.getOption("descricao", OptionMapping::getAsString);
@@ -40,7 +60,7 @@ public final class RecrutamentoCommand implements SlashCommand {
         // Post as a normal channel message (not an interaction response) so it can be
         // cleanly edited later via /mensagem editar; confirm to the user ephemerally.
         event.getChannel().sendMessageComponents(RecruitView.panel(accent, description)).useComponentsV2().queue(
-                msg -> event.reply("📝 Painel de recrutamento publicado.").setEphemeral(true).queue(),
-                err -> event.reply("Falha ao publicar: " + err.getMessage()).setEphemeral(true).queue());
+                msg -> Replies.ephemeral(event, ctx, Emojis.of(Emojis.NOTE, "📝") + " Painel de recrutamento publicado."),
+                err -> Replies.ephemeral(event, ctx, "Falha ao publicar: " + err.getMessage()));
     }
 }

@@ -1,3 +1,10 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - guild_config
+-- [OUTLINE END]
+
+
+
 -- BaseBot Postgres schema for Guild Configuration (source of truth).
 --
 -- Run manually against the Postgres/Neon database. The bot reads/writes this via

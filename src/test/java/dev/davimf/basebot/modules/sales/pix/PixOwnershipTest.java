@@ -1,3 +1,11 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: PixOwnershipTest
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 import org.junit.jupiter.api.Test;

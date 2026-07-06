@@ -1,3 +1,41 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.util
+// 
+// Class: ImageMedia
+// 
+// Constructors:
+//   - `Constructor` : `private ImageMedia()`
+// 
+// Methods:
+//   - `Method` : `private static final Set<String> ALLOWED_CONTENT_TYPES = Set. of(, , , ,)`
+//   - `Method` : `private static final HttpClient HTTP = HttpClient. newBuilder()`
+//   - `Method` : `public static Image fromBytes(byte[] bytes, String fileName)`
+//   - `Method` : `public static boolean isAllowedContentType(String contentType)`
+//   - `Method` : `public static String fileName(String sourceUrl, String contentType)`
+//   - `Method` : `private static String extensionFor(String contentType)`
+//   - `Method` : `public static Image fromAttachment(Message.Attachment attachment)`
+//   - `Method` : `public static Image fromUrl(String url)`
+//   - `Method` : `private static byte[] readCapped(InputStream in)`
+// 
+// Fields:
+//   - `Field` : `public static final long MAX_BYTES`
+// 
+// Class: Image
+// 
+// Constructors:
+//   - `Constructor` : `private Image(byte[] bytes, String fileName)`
+// 
+// Methods:
+//   - `Method` : `public byte[] bytes()`
+//   - `Method` : `public String fileName()`
+// 
+// Fields:
+//   - `Field` : `private byte[] bytes`
+//   - `Field` : `private final String fileName`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.util;
 
 import net.dv8tion.jda.api.entities.Message;

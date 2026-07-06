@@ -1,3 +1,11 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.commands
+// 
+// Class: CommandDataValidationTest
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.commands;
 
 import dev.davimf.basebot.core.command.SlashCommand;
@@ -27,7 +35,7 @@ class CommandDataValidationTest {
         List<SlashCommand> commands = List.of(
                 new ProduzirCommand(null, null),
                 new RelatorioCommand(null),
-                new FarmCommand(null),
+                new FarmCommand(),
                 new PunirCommand(null),
                 new FormularioCommand(null),
                 new BudgetCommand(null),

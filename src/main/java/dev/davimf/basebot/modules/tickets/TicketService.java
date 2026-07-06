@@ -1,15 +1,64 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.tickets
+// 
+// Class: TicketService
+// 
+// Constructors:
+//   - `Constructor` : `public TicketService(BotContext ctx)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(TicketService.class)`
+//   - `Method` : `private CompletableFuture<String> renderTranscript(TextChannel channel, ActiveTicket t, String closeReason, String openerName, String closerName)`
+//   - `Method` : `private static ObjectNode renderEmbed(MessageEmbed e)`
+//   - `Method` : `private static final DateTimeFormatter TS_FMT = DateTimeFormatter. ofPattern()`
+//   - `Method` : `private static String fmt(OffsetDateTime when)`
+//   - `Method` : `public ClosureResult buildTranscriptLink(ActiveTicket ticket, String guildName, String channelName, String transcriptJson)`
+//   - `Method` : `private ActiveTicket lookup(ButtonInteractionEvent event, String ticketId)`
+//   - `Method` : `private static boolean isCreator(ButtonInteractionEvent event, ActiveTicket t)`
+//   - `Method` : `private static String headerFor(ActiveTicket t)`
+//   - `Method` : `private static String codeBlockSafe(String s)`
+//   - `Method` : `private int accent(String guildId)`
+//   - `Method` : `private GuildConfig config(String guildId)`
+//   - `Method` : `private String ticketLogChannelId(String guildId)`
+//   - `Method` : `private static String rootMessage(Throwable err)`
+//   - `Method` : `private static String newId()`
+// 
+// Fields:
+//   - `Field` : `private static final int TRANSCRIPT_LIMIT`
+//   - `Field` : `private static final String TICKET_LOG_KEY`
+//   - `Field` : `private final BotContext ctx`
+// 
+// Record: Entry
+// 
+// Record Components:
+//   - Record Component : public final long millis
+//   - Record Component : public final ObjectNode node
+// 
+// Record: ClosureResult
+// 
+// Record Components:
+//   - Record Component : public final String password
+//   - Record Component : public final String transcriptUrl
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.tickets;
+
+import dev.davimf.basebot.util.Emojis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.davimf.basebot.core.BotContext;
+import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.crypto.TicketCrypto;
 import dev.davimf.basebot.database.sqlite.TicketRepository;
 import dev.davimf.basebot.database.model.ActiveTicket;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.TicketCategory;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -77,13 +126,13 @@ public final class TicketService {
         Guild guild = event.getGuild();
         Member creator = event.getMember();
         if (guild == null || creator == null) {
-            event.getHook().sendMessage("Não foi possível abrir o ticket.").queue();
+            Replies.hook(event, ctx, "Não foi possível abrir o ticket.");
             return;
         }
         Category parent = guild.getCategoryById(cat.discordCategoryId());
         if (parent == null) {
-            event.getHook().sendMessage("A categoria do Discord configurada não existe mais. "
-                    + "Avise um administrador.").queue();
+            Replies.hook(event, ctx, "A categoria do Discord configurada não existe mais. "
+                    + "Avise um administrador.");
             return;
         }
 
@@ -106,7 +155,7 @@ public final class TicketService {
             ctx.database().tickets().create(new ActiveTicket(ticketId, guild.getId(), channel.getId(),
                     null, creator.getId(), null, cat.name(), ActiveTicket.OPEN, reason, cat.emoji()));
             ctx.database().tickets().addEvent(ticketId,
-                    "📝 Ticket aberto por " + creator.getAsMention() + " · Motivo: " + reason,
+                    "" + Emojis.of(Emojis.NOTE, "📝") + " Ticket aberto por " + creator.getAsMention() + " · Motivo: " + reason,
                     System.currentTimeMillis());
             ctx.database().actionLogs().log(guild.getId(), creator.getId(), channel.getId(),
                     "TICKET_OPEN", cat.name());
@@ -115,13 +164,15 @@ public final class TicketService {
                     .map(r -> "<@&" + r + ">").collect(Collectors.joining(" "));
             String emoji = (cat.emoji() != null && !cat.emoji().isBlank()) ? cat.emoji() + " " : "";
             String header = "## " + emoji + cat.name() + "\n"
-                    + creator.getAsMention() + (staffMentions.isBlank() ? "" : " " + staffMentions)
-                    + "\n\n**📝 Motivo:**\n```\n" + codeBlockSafe(reason) + "\n```";
+                    + "> Atendimento aberto por " + creator.getAsMention()
+                    + (staffMentions.isBlank() ? "" : " · " + staffMentions) + "\n"
+                    + "" + Emojis.of(Emojis.CLOCK, "🕒") + " Aberto <t:" + (System.currentTimeMillis() / 1000) + ":R>\n\n"
+                    + "" + Emojis.of(Emojis.NOTE, "📝") + " **Motivo**\n```\n" + codeBlockSafe(reason) + "\n```";
             // V2 text mentions DO ping — intended here (creator + staff).
             channel.sendMessageComponents(TicketView.dashboard(accent(guild.getId()), ticketId, header))
                     .useComponentsV2().queue();
-            event.getHook().sendMessage("Ticket criado: " + channel.getAsMention()).queue();
-        }, err -> event.getHook().sendMessage("Falha ao criar o ticket: " + err.getMessage()).queue());
+            Replies.hook(event, ctx, "Ticket criado: " + channel.getAsMention());
+        }, err -> Replies.hook(event, ctx, "Falha ao criar o ticket: " + err.getMessage()));
     }
 
     // --- Dashboard actions -----------------------------------------------------
@@ -147,7 +198,7 @@ public final class TicketService {
         event.editComponents(TicketView.dashboard(accent(t.guildId()), ticketId,
                         headerFor(t), event.getUser().getId()))
                 .useComponentsV2().queue();
-        // Rename: <category emoji or 🔒>・<staff who assumed>.
+        // Rename: <category emoji or " + Emojis.of(Emojis.LOCK, "🔒") + ">・<staff who assumed>.
         TextChannel channel = event.getGuild().getTextChannelById(t.textChannelId());
         if (channel != null) {
             channel.getManager()
@@ -155,7 +206,7 @@ public final class TicketService {
                     .reason("Ticket assumido").queue(ok -> {}, e -> {});
         }
         announce(event.getChannel(), t.guildId(), ticketId,
-                "🙋 " + event.getUser().getAsMention() + " assumiu o atendimento.");
+                "" + Emojis.of(Emojis.RECRUIT, "🙋") + " " + event.getUser().getAsMention() + " assumiu o atendimento.");
     }
 
     /** "Criar Call": open a private voice channel mirroring the ticket's access. */
@@ -200,9 +251,9 @@ public final class TicketService {
             ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                     "TICKET_CALL", vc.getId());
             announce(event.getChannel(), t.guildId(), ticketId,
-                    "🔊 Call criada por " + event.getUser().getAsMention() + ": " + vc.getAsMention());
-            event.getHook().sendMessage("🔊 Call criada: " + vc.getAsMention()).queue();
-        }, err -> event.getHook().sendMessage("Falha ao criar a call: " + err.getMessage()).queue());
+                    "" + Emojis.of(Emojis.VOLUME, "🔊") + " Call criada por " + event.getUser().getAsMention() + ": " + vc.getAsMention());
+            Replies.hook(event, ctx, "" + Emojis.of(Emojis.VOLUME, "🔊") + " Call criada: " + vc.getAsMention());
+        }, err -> Replies.hook(event, ctx, "Falha ao criar a call: " + err.getMessage()));
     }
 
     /** "Notificar": DM the ticket creator with a jump-to-channel button (BOTSPECS Module 2). */
@@ -226,10 +277,10 @@ public final class TicketService {
                     ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
                             "TICKET_NOTIFY", ticketId);
                     announce(event.getChannel(), t.guildId(), ticketId,
-                            "🔔 <@" + t.creatorId() + "> foi notificado por " + event.getUser().getAsMention() + ".");
-                    event.getHook().sendMessage("🔔 O autor foi notificado por DM.").queue();
-                }, err -> event.getHook().sendMessage(
-                        "Não foi possível enviar DM ao autor (DMs fechadas?).").queue());
+                            "" + Emojis.of(Emojis.BELL, "🔔") + " <@" + t.creatorId() + "> foi notificado por " + event.getUser().getAsMention() + ".");
+                    Replies.hook(event, ctx, Emojis.of(Emojis.BELL, "🔔") + " O autor foi notificado por DM.");
+                }, err -> Replies.hook(event, ctx,
+                        "Não foi possível enviar DM ao autor (DMs fechadas?)."));
     }
 
     /** "Membro": prompt a staff member to pick a user to add to the ticket. */
@@ -267,11 +318,11 @@ public final class TicketService {
                 .queue(ok -> {
                     ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), userId,
                             "TICKET_MEMBER_ADD", ticketId);
-                    announce(event.getChannel(), t.guildId(), ticketId, "👤 " + member.getAsMention()
+                    announce(event.getChannel(), t.guildId(), ticketId, "" + Emojis.of(Emojis.MEMBER, "👤") + " " + member.getAsMention()
                             + " foi adicionado ao ticket por " + event.getUser().getAsMention() + ".");
-                    event.getHook().sendMessage("Adicionado " + member.getAsMention() + " ao ticket.").queue();
-                }, err -> event.getHook().sendMessage("Falha ao adicionar: " + err.getMessage()).queue()),
-                err -> event.getHook().sendMessage("Não foi possível encontrar esse membro.").queue());
+                    Replies.hook(event, ctx, "Adicionado " + member.getAsMention() + " ao ticket.");
+                }, err -> Replies.hook(event, ctx, "Falha ao adicionar: " + err.getMessage())),
+                err -> Replies.hook(event, ctx, "Não foi possível encontrar esse membro."));
     }
 
     /** "Renomear": open a modal to rename the ticket channel. */
@@ -304,7 +355,7 @@ public final class TicketService {
             ephemeral(event, "O canal do ticket não existe mais.");
             return;
         }
-        // Keep the category emoji prefix: <category emoji or 🔒>・<new name>.
+        // Keep the category emoji prefix: <category emoji or " + Emojis.of(Emojis.LOCK, "🔒") + ">・<new name>.
         String channelName = TicketChannelName.renamed(t.emoji(), raw);
         ctx.database().tickets().rename(ticketId, raw);
         ctx.database().actionLogs().log(t.guildId(), event.getUser().getId(), t.creatorId(),
@@ -312,11 +363,11 @@ public final class TicketService {
         event.deferReply(true).queue();
         text.getManager().setName(channelName).reason("Ticket renomeado").queue(
                 ok -> {
-                    announce(event.getChannel(), t.guildId(), ticketId, "✏️ Ticket renomeado para `" + raw
+                    announce(event.getChannel(), t.guildId(), ticketId, "" + Emojis.of(Emojis.EDIT, "✏️") + " Ticket renomeado para `" + raw
                             + "` por " + event.getUser().getAsMention() + ".");
-                    event.getHook().sendMessage("Ticket renomeado para `" + channelName + "`.").queue();
+                    Replies.hook(event, ctx, "Ticket renomeado para `" + channelName + "`.");
                 },
-                err -> event.getHook().sendMessage("Falha ao renomear: " + err.getMessage()).queue());
+                err -> Replies.hook(event, ctx, "Falha ao renomear: " + err.getMessage()));
     }
 
     // --- Closure & transcript --------------------------------------------------
@@ -367,7 +418,7 @@ public final class TicketService {
         ctx.database().tickets().setStatus(ticketId, ActiveTicket.CLOSING);
         String closerId = event.getUser().getId();
         String closerName = event.getUser().getEffectiveName();
-        event.reply("🔒 Fechando o ticket e gerando o transcript…").queue();
+        Replies.reply(event, ctx, Emojis.of(Emojis.LOCK, "🔒") + " Fechando o ticket e gerando o transcript…");
 
         String guildName = guild.getName();
         String channelName = channel.getName();
@@ -381,8 +432,10 @@ public final class TicketService {
                     if (err != null) {
                         log.error("Transcript pipeline failed for ticket {}", ticketId, err);
                         ctx.database().tickets().setStatus(ticketId, ActiveTicket.OPEN);
-                        channel.sendMessage("⚠️ Falha ao gerar/enviar o transcript: "
-                                + rootMessage(err) + "\nO ticket **não** foi fechado.").queue();
+                        channel.sendMessageComponents(Panels.container(accent(t.guildId()),
+                                        Panels.text("" + Emojis.of(Emojis.WARN, "⚠️") + " Falha ao gerar/enviar o transcript: "
+                                                + rootMessage(err) + "\nO ticket **não** foi fechado.")))
+                                .useComponentsV2().queue();
                         return;
                     }
                     deliverClosure(guild, t, channel, channelName, closerId, reason, result);
@@ -580,7 +633,7 @@ public final class TicketService {
     private static String headerFor(ActiveTicket t) {
         String emoji = (t.emoji() != null && !t.emoji().isBlank()) ? t.emoji() + " " : "";
         return "## " + emoji + t.suffix() + "\n<@" + t.creatorId() + ">"
-                + "\n\n**📝 Motivo:**\n```\n" + codeBlockSafe(t.reason()) + "\n```";
+                + "\n\n**" + Emojis.of(Emojis.NOTE, "📝") + " Motivo:**\n```\n" + codeBlockSafe(t.reason()) + "\n```";
     }
 
     /** Neutralises triple backticks so a reason can't break out of the code block. */
@@ -588,26 +641,27 @@ public final class TicketService {
         return s == null ? "" : s.replace("```", "`​``");
     }
 
-    private static void ephemeral(ButtonInteractionEvent event, String msg) {
-        event.reply(msg).setEphemeral(true).queue();
+    private void ephemeral(ButtonInteractionEvent event, String msg) {
+        Replies.ephemeral(event, ctx, msg);
     }
 
-    private static void ephemeral(EntitySelectInteractionEvent event, String msg) {
-        event.reply(msg).setEphemeral(true).queue();
+    private void ephemeral(EntitySelectInteractionEvent event, String msg) {
+        Replies.ephemeral(event, ctx, msg);
     }
 
-    private static void ephemeral(ModalInteractionEvent event, String msg) {
-        event.reply(msg).setEphemeral(true).queue();
+    private void ephemeral(ModalInteractionEvent event, String msg) {
+        Replies.ephemeral(event, ctx, msg);
     }
 
     /**
-     * Posts a public action notice as a classic embed (members see it) AND persists it as
-     * a ticket event so it always lands in the transcript — even with MESSAGE_CONTENT off,
-     * when the bot can't read embeds back from channel history.
+     * Posts a public action notice as a Components V2 container (members see it) AND persists
+     * it as a ticket event so it always lands in the transcript — even with MESSAGE_CONTENT
+     * off, when the bot can't read messages back from channel history. Mentions are suppressed.
      */
     private void announce(MessageChannel channel, String guildId, String ticketId, String text) {
         ctx.database().tickets().addEvent(ticketId, text, System.currentTimeMillis());
-        channel.sendMessageEmbeds(TicketView.actionEmbed(accent(guildId), text)).queue(ok -> {}, e -> {});
+        channel.sendMessageComponents(Panels.container(accent(guildId), Panels.text(text)))
+                .useComponentsV2().setAllowedMentions(List.of()).queue(ok -> {}, e -> {});
     }
 
     private int accent(String guildId) {

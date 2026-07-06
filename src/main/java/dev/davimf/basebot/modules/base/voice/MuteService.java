@@ -1,3 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.voice
+// 
+// Class: MuteService
+// 
+// Constructors:
+//   - `Constructor` : `public MuteService(BotContext ctx)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(MuteService.class)`
+// 
+// Fields:
+//   - `Field` : `private final BotContext ctx`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.voice;
 
 import dev.davimf.basebot.core.BotContext;

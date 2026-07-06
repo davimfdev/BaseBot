@@ -1,3 +1,35 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database
+// 
+// Class: DatabaseManager
+// 
+// Constructors:
+//   - `Constructor` : `public DatabaseManager(BotConfig config)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(DatabaseManager.class)`
+//   - `Method` : `public GuildConfigRepository guildConfig()`
+//   - `Method` : `public TicketRepository tickets()`
+//   - `Method` : `public ActionLogRepository actionLogs()`
+//   - `Method` : `public MuteRepository mutes()`
+//   - `Method` : `public TicketCategoryRepository ticketCategories()`
+//   - `Method` : `public ActionTypeRepository actionTypes()`
+//   - `Method` : `public PostgresPool postgres()`
+//   - `Method` : `public SqliteManager sqlite()`
+// 
+// Fields:
+//   - `Field` : `private final PostgresPool postgres`
+//   - `Field` : `private final SqliteManager sqlite`
+//   - `Field` : `private final GuildConfigRepository guildConfig`
+//   - `Field` : `private final TicketRepository tickets`
+//   - `Field` : `private final ActionLogRepository actionLogs`
+//   - `Field` : `private final MuteRepository mutes`
+//   - `Field` : `private final TicketCategoryRepository ticketCategories`
+//   - `Field` : `private final ActionTypeRepository actionTypes`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database;
 
 import dev.davimf.basebot.config.BotConfig;
@@ -5,6 +37,8 @@ import dev.davimf.basebot.database.postgres.GuildConfigRepository;
 import dev.davimf.basebot.database.postgres.JdbcGuildConfigRepository;
 import dev.davimf.basebot.database.postgres.PostgresPool;
 import dev.davimf.basebot.database.sqlite.ActionLogRepository;
+import dev.davimf.basebot.database.sqlite.ActionTypeRepository;
+import dev.davimf.basebot.database.sqlite.MessageArchiveRepository;
 import dev.davimf.basebot.database.sqlite.SqliteManager;
 import dev.davimf.basebot.database.sqlite.SqliteMigrator;
 import dev.davimf.basebot.database.sqlite.TicketRepository;
@@ -34,6 +68,8 @@ public final class DatabaseManager implements AutoCloseable {
     private final ActionLogRepository actionLogs;
     private final MuteRepository mutes;
     private final TicketCategoryRepository ticketCategories;
+    private final ActionTypeRepository actionTypes;
+    private final MessageArchiveRepository messageArchive;
 
     public DatabaseManager(BotConfig config) {
         log.info("Initializing databases...");
@@ -49,6 +85,8 @@ public final class DatabaseManager implements AutoCloseable {
         this.actionLogs = new ActionLogRepository(sqlite);
         this.mutes = new MuteRepository(sqlite);
         this.ticketCategories = new TicketCategoryRepository(postgres);
+        this.actionTypes = new ActionTypeRepository(sqlite);
+        this.messageArchive = new MessageArchiveRepository(sqlite);
         log.info("Databases ready.");
     }
 
@@ -70,6 +108,14 @@ public final class DatabaseManager implements AutoCloseable {
 
     public TicketCategoryRepository ticketCategories() {
         return ticketCategories;
+    }
+
+    public ActionTypeRepository actionTypes() {
+        return actionTypes;
+    }
+
+    public MessageArchiveRepository messageArchive() {
+        return messageArchive;
     }
 
     public PostgresPool postgres() {

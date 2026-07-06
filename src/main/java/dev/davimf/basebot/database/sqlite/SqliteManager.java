@@ -1,3 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.sqlite
+// 
+// Class: SqliteManager
+// 
+// Constructors:
+//   - `Constructor` : `public SqliteManager(BotConfig.Sqlite cfg)`
+// 
+// Methods:
+//   - `Method` : `public Connection getConnection()`
+// 
+// Fields:
+//   - `Field` : `private final HikariDataSource dataSource`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.sqlite;
 
 import com.zaxxer.hikari.HikariConfig;

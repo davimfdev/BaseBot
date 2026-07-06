@@ -1,3 +1,18 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.moderation
+// 
+// Class: RoleHierarchy
+// 
+// Constructors:
+//   - `Constructor` : `private RoleHierarchy()`
+// 
+// Methods:
+//   - `Method` : `public static boolean actorOutranks(int actorTop, int targetTop, boolean actorIsOwner)`
+//   - `Method` : `public static boolean canModerate(int actorTop, int targetTop, boolean actorIsOwner, int botTop)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.moderation;
 
 /**

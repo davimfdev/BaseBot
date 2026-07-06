@@ -1,3 +1,47 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: PixPayload
+// 
+// Constructors:
+//   - `Constructor` : `private PixPayload(Builder b)`
+// 
+// Methods:
+//   - `Method` : `public static Builder builder()`
+//   - `Method` : `package-private static String emv(String id, String value)`
+//   - `Method` : `public String toBrCode()`
+//   - `Method` : `private static String clip(String s, int max)`
+// 
+// Fields:
+//   - `Field` : `private final String key`
+//   - `Field` : `private final String merchantName`
+//   - `Field` : `private final String merchantCity`
+//   - `Field` : `private final BigDecimal amount`
+//   - `Field` : `private final String txid`
+//   - `Field` : `private final String description`
+// 
+// Class: Builder
+// 
+// Methods:
+//   - `Method` : `public Builder key(String v)`
+//   - `Method` : `public Builder merchantName(String v)`
+//   - `Method` : `public Builder merchantCity(String v)`
+//   - `Method` : `public Builder amount(BigDecimal v)`
+//   - `Method` : `public Builder txid(String v)`
+//   - `Method` : `public Builder description(String v)`
+//   - `Method` : `public PixPayload build()`
+// 
+// Fields:
+//   - `Field` : `private String key`
+//   - `Field` : `private String merchantName`
+//   - `Field` : `private String merchantCity`
+//   - `Field` : `private BigDecimal amount`
+//   - `Field` : `private String txid`
+//   - `Field` : `private String description`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 import java.math.BigDecimal;

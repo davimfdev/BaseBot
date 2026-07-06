@@ -1,4 +1,31 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.tickets
+// 
+// Class: TicketChannelName
+// 
+// Constructors:
+//   - `Constructor` : `private TicketChannelName()`
+// 
+// Methods:
+//   - `Method` : `public static String opened(String creatorName)`
+//   - `Method` : `public static String assumed(String categoryEmoji, String staffName)`
+//   - `Method` : `public static String renamed(String categoryEmoji, String newName)`
+//   - `Method` : `private static String prefix(String emoji)`
+//   - `Method` : `private static String clamp(String name)`
+//   - `Method` : `package-private static String slug(String s)`
+// 
+// Fields:
+//   - `Field` : `public static final String OPEN_LOCK`
+//   - `Field` : `public static final String CLOSED_LOCK`
+//   - `Field` : `public static final String SEP`
+//   - `Field` : `private static final int MAX`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.tickets;
+
+import dev.davimf.basebot.util.Emojis;
 
 import java.util.Locale;
 
@@ -6,17 +33,17 @@ import java.util.Locale;
  * Builds ticket channel names (BOTSPECS Module 2). The scheme encodes the ticket's state
  * in the prefix emoji + a katakana middle dot separator:
  * <ul>
- *   <li>open: {@code 🔓・<creator>}</li>
- *   <li>assumed: {@code <category emoji or 🔒>・<staff>}</li>
- *   <li>renamed: {@code <category emoji or 🔒>・<new name>}</li>
+ *   <li>open: {@code " + Emojis.of(Emojis.UNLOCK, "🔓") + "・<creator>}</li>
+ *   <li>assumed: {@code <category emoji or " + Emojis.of(Emojis.LOCK, "🔒") + ">・<staff>}</li>
+ *   <li>renamed: {@code <category emoji or " + Emojis.of(Emojis.LOCK, "🔒") + ">・<new name>}</li>
  * </ul>
  */
 public final class TicketChannelName {
 
     /** Open padlock used while the ticket is unassigned. */
-    public static final String OPEN_LOCK = "🔓";
+    public static final String OPEN_LOCK = "" + Emojis.of(Emojis.UNLOCK, "🔓") + "";
     /** Closed padlock used once assumed/renamed when the category has no emoji. */
-    public static final String CLOSED_LOCK = "🔒";
+    public static final String CLOSED_LOCK = "" + Emojis.of(Emojis.LOCK, "🔒") + "";
     /** Katakana middle dot separator between the prefix and the name. */
     public static final String SEP = "・";
 
@@ -24,17 +51,17 @@ public final class TicketChannelName {
 
     private TicketChannelName() {}
 
-    /** {@code 🔓・<creator>} — the freshly opened, unassigned ticket. */
+    /** {@code " + Emojis.of(Emojis.UNLOCK, "🔓") + "・<creator>} — the freshly opened, unassigned ticket. */
     public static String opened(String creatorName) {
         return clamp(OPEN_LOCK + SEP + slug(creatorName));
     }
 
-    /** {@code <category emoji or 🔒>・<staff>} — once a staff member assumes it. */
+    /** {@code <category emoji or " + Emojis.of(Emojis.LOCK, "🔒") + ">・<staff>} — once a staff member assumes it. */
     public static String assumed(String categoryEmoji, String staffName) {
         return clamp(prefix(categoryEmoji) + SEP + slug(staffName));
     }
 
-    /** {@code <category emoji or 🔒>・<name>} — keeps the category emoji on rename. */
+    /** {@code <category emoji or " + Emojis.of(Emojis.LOCK, "🔒") + ">・<name>} — keeps the category emoji on rename. */
     public static String renamed(String categoryEmoji, String newName) {
         return clamp(prefix(categoryEmoji) + SEP + slug(newName));
     }

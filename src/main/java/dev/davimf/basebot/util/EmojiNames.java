@@ -1,3 +1,18 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.util
+// 
+// Class: EmojiNames
+// 
+// Constructors:
+//   - `Constructor` : `private EmojiNames()`
+// 
+// Methods:
+//   - `Method` : `public static boolean isValid(String name)`
+//   - `Method` : `public static String sanitize(String raw)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.util;
 
 /** Discord custom-emoji name rules: 2-32 chars of letters, digits and underscores. */

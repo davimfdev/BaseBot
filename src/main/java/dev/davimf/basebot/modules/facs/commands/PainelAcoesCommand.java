@@ -1,16 +1,42 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.commands
+// 
+// Class: PainelAcoesCommand
+// 
+// Constructors:
+//   - `Constructor` : `public PainelAcoesCommand(ActionService service)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// 
+// Fields:
+//   - `Field` : `private final ActionService service`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
-import dev.davimf.basebot.modules.facs.actions.ActionView;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.facs.actions.ActionService;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions.Capability;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 
-/** /painel-acoes — opens the new-action modal that spawns an action panel (BOTSPECS Module 4). */
+/** /painel-acoes — posts the action management panel (Registrar/Editar) (BOTSPECS Module 4). */
 public final class PainelAcoesCommand implements SlashCommand {
+
+    private final ActionService service;
+
+    public PainelAcoesCommand(ActionService service) {
+        this.service = service;
+    }
 
     @Override
     public String name() {
@@ -19,16 +45,20 @@ public final class PainelAcoesCommand implements SlashCommand {
 
     @Override
     public SlashCommandData data() {
-        return Commands.slash("painel-acoes", "Cria uma ação com lista de presença e reservas.")
-                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER));
+        return Commands.slash("painel-acoes", "Envia o painel de ações (registrar e editar ações).");
     }
 
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
-        if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+        if (event.getGuild() == null || event.getMember() == null) {
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
-        event.replyModal(ActionView.createModal()).queue();
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), cfg, Capability.ACOES)) {
+            Replies.ephemeral(event, ctx, "Você não tem permissão de **Ações** para usar este painel.");
+            return;
+        }
+        service.postManagementPanel(event);
     }
 }

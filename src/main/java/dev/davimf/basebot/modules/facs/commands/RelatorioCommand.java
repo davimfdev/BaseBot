@@ -1,16 +1,41 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.commands
+// 
+// Class: RelatorioCommand
+// 
+// Constructors:
+//   - `Constructor` : `public RelatorioCommand(EconomyRepository economy)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+//   - `Method` : `private static String csv(String value)`
+// 
+// Fields:
+//   - `Field` : `private static final int EMBED_MAX_DAYS`
+//   - `Field` : `private static final int EMBED_ROWS`
+//   - `Field` : `private final EconomyRepository economy`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.commands;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.FacTransaction;
 import dev.davimf.basebot.database.sqlite.ActionLogRepository;
+import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.facs.economy.EconomyRepository;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions.Capability;
 import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Money;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -44,7 +69,6 @@ public final class RelatorioCommand implements SlashCommand {
     @Override
     public SlashCommandData data() {
         return Commands.slash("relatorio", "Relatórios financeiros e de ações.")
-                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER))
                 .addOptions(new OptionData(OptionType.STRING, "tipo", "O que reportar", true)
                         .addChoice("Financeiro", "financeiro").addChoice("Ações", "acoes"))
                 .addOptions(new OptionData(OptionType.STRING, "formato", "Como entregar", true)
@@ -56,7 +80,12 @@ public final class RelatorioCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
+            return;
+        }
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), cfg, Capability.FINANCEIRO)) {
+            Replies.ephemeral(event, ctx, "Você não tem permissão **Financeiro** para gerar relatórios.");
             return;
         }
         String guildId = event.getGuild().getId();
@@ -91,7 +120,7 @@ public final class RelatorioCommand implements SlashCommand {
         }
         long credits = txs.stream().filter(t -> t.amountCents() > 0).mapToLong(FacTransaction::amountCents).sum();
         long debits = txs.stream().filter(t -> t.amountCents() < 0).mapToLong(FacTransaction::amountCents).sum();
-        StringBuilder body = new StringBuilder("## 📊 Relatório Financeiro (").append(dias).append("d)\n")
+        StringBuilder body = new StringBuilder("## " + Emojis.of(Emojis.STATS, "📊") + " Relatório Financeiro (").append(dias).append("d)\n")
                 .append("**Saldo atual:** ").append(Money.format(economy.getBalance(guildId))).append('\n')
                 .append("**Entradas:** ").append(Money.format(credits)).append('\n')
                 .append("**Saídas:** ").append(Money.format(debits)).append('\n')
@@ -118,7 +147,7 @@ public final class RelatorioCommand implements SlashCommand {
             replyCsv(event, "relatorio-acoes.csv", sb.toString());
             return;
         }
-        StringBuilder body = new StringBuilder("## 📊 Relatório de Ações (").append(dias).append("d)\n")
+        StringBuilder body = new StringBuilder("## " + Emojis.of(Emojis.STATS, "📊") + " Relatório de Ações (").append(dias).append("d)\n")
                 .append("**Registros:** ").append(rows.size());
         int shown = Math.min(EMBED_ROWS, rows.size());
         for (int i = 0; i < shown; i++) {

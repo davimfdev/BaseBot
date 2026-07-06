@@ -1,9 +1,29 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.budget
+// 
+// Class: BudgetCommand
+// 
+// Constructors:
+//   - `Constructor` : `public BudgetCommand(BudgetService service)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// 
+// Fields:
+//   - `Field` : `private static final String SELLER_ROLE_KEY`
+//   - `Field` : `private final BudgetService service`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.budget;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.Budget;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -41,26 +61,26 @@ public final class BudgetCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null || event.getMember() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
         String sellerRoleId = cfg.role(SELLER_ROLE_KEY);
         if (sellerRoleId == null || sellerRoleId.isBlank()) {
-            event.reply("Cargo de vendedor não configurado. Defina em /setup → Cargos → Vendedor (Pix).")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Cargo de vendedor não configurado. Defina em /setup → Cargos → Vendedor (Pix).");
             return;
         }
         Member member = event.getMember();
         boolean isSeller = member.getRoles().stream().anyMatch(r -> r.getId().equals(sellerRoleId));
         if (!isSeller) {
-            event.reply("Apenas vendedores (<@&" + sellerRoleId + ">) podem criar orçamentos.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Apenas vendedores (<@&" + sellerRoleId + ">) podem criar orçamentos.");
             return;
         }
         Member client = event.getOption("cliente", OptionMapping::getAsMember);
         if (client == null || client.getUser().isBot()) {
-            event.reply("Selecione um cliente válido (não-bot).").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Selecione um cliente válido (não-bot).");
             return;
         }
 

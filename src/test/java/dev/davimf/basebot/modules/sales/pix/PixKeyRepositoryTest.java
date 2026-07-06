@@ -1,3 +1,15 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: PixKeyRepositoryTest
+// 
+// Fields:
+//   - `Field` : `private SqliteManager sqlite`
+//   - `Field` : `private PixKeyRepository repo`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 import dev.davimf.basebot.config.BotConfig;

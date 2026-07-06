@@ -1,3 +1,11 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.budget
+// 
+// Class: BudgetSchemaMigrationTest
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.budget;
 
 import dev.davimf.basebot.config.BotConfig;

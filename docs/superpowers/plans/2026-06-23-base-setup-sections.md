@@ -1,3 +1,9 @@
+<!-- [OUTLINE START]
+Markdown Document: Base Module — `/setup` Remaining Sections (Cargos, Tickets, Bot)
+[OUTLINE END] -->
+
+
+
 # Base Module — `/setup` Remaining Sections (Cargos, Tickets, Bot)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

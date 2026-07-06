@@ -1,3 +1,27 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot
+// 
+// Class: BotApplication
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(BotApplication.class)`
+//   - `Method` : `private final List<BotModule> modules = List. of(new BaseModule()`
+// 
+// Fields:
+//   - `Field` : `private static final class ReadinessCoordinator extends ListenerAdapter`
+// 
+// Class: ReadinessCoordinator
+// 
+// Constructors:
+//   - `Constructor` : `package-private ReadinessCoordinator(BotContext context, List<BotModule> modules)`
+// 
+// Fields:
+//   - `Field` : `private final BotContext context`
+//   - `Field` : `private final List<BotModule> modules`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot;
 
 import dev.davimf.basebot.config.BotConfig;
@@ -18,8 +42,6 @@ import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.utils.ChunkingFilter;
-import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,18 +85,25 @@ public final class BotApplication {
             module.register(registry, context);
         }
         log.info("{} commands across {} modules.", commandManager.size(), modules.size());
+        context.setActiveModules(modules.stream()
+                .map(BotModule::name)
+                .collect(java.util.stream.Collectors.toSet()));
 
         JDA jda = JDABuilder.createDefault(config.discord().token())
                 .enableIntents(
-                        GatewayIntent.GUILD_MEMBERS,        // role events / hierarchy (privileged)
-                        GatewayIntent.GUILD_MODERATION,     // bans/kicks logging
+                        GatewayIntent.GUILD_MEMBERS,         // membros: apelido/nome/cargos/timeout (privilegiado)
+                        GatewayIntent.GUILD_MODERATION,      // bans/kicks logging
                         GatewayIntent.GUILD_MESSAGES,
-                        GatewayIntent.MESSAGE_CONTENT,       // transcripts / embed builder (privileged)
+                        GatewayIntent.MESSAGE_CONTENT,       // arquivo de mensagens (privilegiado)
                         GatewayIntent.GUILD_VOICE_STATES,    // voice moderation + traffic logging
-                        GatewayIntent.GUILD_EXPRESSIONS,     // /addemoji
+                        GatewayIntent.GUILD_EXPRESSIONS,     // emojis/stickers + /addemoji
+                        GatewayIntent.GUILD_INVITES,         // log de convites
+                        GatewayIntent.SCHEDULED_EVENTS,      // log de eventos agendados
+                        GatewayIntent.AUTO_MODERATION_CONFIGURATION, // sync das regras de AutoMod
+                        GatewayIntent.AUTO_MODERATION_EXECUTION,     // eventos de bloqueio do AutoMod
                         GatewayIntent.DIRECT_MESSAGES)
-                .setMemberCachePolicy(MemberCachePolicy.ALL)
-                .setChunkingFilter(ChunkingFilter.ALL)
+                // .setMemberCachePolicy(MemberCachePolicy.ALL)
+                // .setChunkingFilter(ChunkingFilter.ALL)
                 .enableCache(CacheFlag.VOICE_STATE)
                 .addEventListeners(commandManager, componentRouter)
                 .addEventListeners(registry.eventListeners().toArray())
