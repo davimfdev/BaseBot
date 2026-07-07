@@ -109,6 +109,11 @@ Expected: FALHA de compilação (classe `VerificationLockdown` não existe).
 
 - [ ] **Step 3: Implementar `VerificationLockdown` (helpers + apply/revert)**
 
+**Ordem segura do `apply`:** primeiro concede `VIEW_CHANNEL` ao cargo `membro`; **só depois** nega
+`VIEW_CHANNEL` para `@everyone`. Assim, se o grant falhar, o deny nem acontece e o canal permanece
+aberto — nunca fica escondido sem o override que devolve visibilidade aos membros. No `revert`, a
+ordem inversa é a segura: reabre `@everyone` primeiro, depois limpa o allow redundante do `membro`.
+
 Crie `VerificationLockdown.java`:
 
 ```java
@@ -199,8 +204,10 @@ public final class VerificationLockdown {
                 continue;
             }
             try {
-                pc.upsertPermissionOverride(everyone).deny(Permission.VIEW_CHANNEL).complete();
+                // Ordem segura: concede ao membro ANTES de negar @everyone. Se o grant falhar, o
+                // deny nem acontece e o canal continua aberto (nunca fica escondido sem escape).
                 pc.upsertPermissionOverride(membro).grant(Permission.VIEW_CHANNEL).complete();
+                pc.upsertPermissionOverride(everyone).deny(Permission.VIEW_CHANNEL).complete();
                 changed++;
             } catch (RuntimeException e) {
                 skipped++;
@@ -237,8 +244,15 @@ public final class VerificationLockdown {
                 continue;
             }
             try {
+                // Ordem segura: reabre @everyone primeiro; o allow do membro é só redundante.
                 pc.upsertPermissionOverride(everyone).clear(Permission.VIEW_CHANNEL).complete();
-                pc.upsertPermissionOverride(membro).clear(Permission.VIEW_CHANNEL).complete();
+                // Best-effort: se limpar o allow do membro falhar, o canal já está reaberto — o
+                // override redundante não afeta a visibilidade; conta como changed do mesmo jeito.
+                try {
+                    pc.upsertPermissionOverride(membro).clear(Permission.VIEW_CHANNEL).complete();
+                } catch (RuntimeException ignored) {
+                    // deixa o allow redundante; canal já reaberto
+                }
                 changed++;
             } catch (RuntimeException e) {
                 skipped++;
@@ -381,11 +395,11 @@ Perto de `publishVerify` (ou de `runVerificationLockdown` na mesma região de he
             dev.davimf.basebot.modules.base.security.VerificationLockdown.Summary s = nowOn
                     ? dev.davimf.basebot.modules.base.security.VerificationLockdown.apply(ctx, guild)
                     : dev.davimf.basebot.modules.base.security.VerificationLockdown.revert(ctx, guild);
-            if (!s.memberRoleMissing()) {
-                ctx.database().actionLogs().log(guild.getId(), userId, null,
-                        nowOn ? "VERIFY_LOCKDOWN" : "VERIFY_UNLOCK",
-                        s.changed() + " alterados / " + s.skipped() + " pulados");
-            }
+            ctx.database().actionLogs().log(guild.getId(), userId, null,
+                    nowOn ? "VERIFY_LOCKDOWN" : "VERIFY_UNLOCK",
+                    s.memberRoleMissing()
+                            ? "cargo membro ausente — nada alterado"
+                            : s.changed() + " alterados / " + s.skipped() + " pulados");
         });
     }
 
@@ -406,11 +420,11 @@ Perto de `publishVerify` (ou de `runVerificationLockdown` na mesma região de he
                     ? "Configure o cargo **membro** primeiro — nada foi alterado."
                     : (hide ? "Escondidos" : "Reabertos") + " `" + s.changed() + "` canais · `"
                             + s.skipped() + "` pulados.";
-            if (!s.memberRoleMissing()) {
-                ctx.database().actionLogs().log(guildId, userId, null,
-                        hide ? "VERIFY_LOCKDOWN" : "VERIFY_UNLOCK",
-                        s.changed() + " alterados / " + s.skipped() + " pulados");
-            }
+            ctx.database().actionLogs().log(guildId, userId, null,
+                    hide ? "VERIFY_LOCKDOWN" : "VERIFY_UNLOCK",
+                    s.memberRoleMissing()
+                            ? "cargo membro ausente — nada alterado"
+                            : s.changed() + " alterados / " + s.skipped() + " pulados");
             event.getHook().sendMessageComponents(
                             Panels.container(EmbedColor.resolve(refreshed), Panels.text(msg)))
                     .useComponentsV2().setEphemeral(true).queue(ok -> {}, err -> {});
