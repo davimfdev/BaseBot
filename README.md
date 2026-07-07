@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # BaseBot
 
 Multi-module Discord bot ecosystem (JDA), rebuilt per `BOTSPECS.MD`. Guild-scoped
