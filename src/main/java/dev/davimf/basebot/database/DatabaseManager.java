@@ -33,15 +33,19 @@
 package dev.davimf.basebot.database;
 
 import dev.davimf.basebot.config.BotConfig;
+import dev.davimf.basebot.database.postgres.CachingGuildConfigRepository;
 import dev.davimf.basebot.database.postgres.GuildConfigRepository;
 import dev.davimf.basebot.database.postgres.JdbcGuildConfigRepository;
 import dev.davimf.basebot.database.postgres.PostgresPool;
 import dev.davimf.basebot.database.sqlite.ActionLogRepository;
-import dev.davimf.basebot.database.sqlite.ActionTypeRepository;
+import dev.davimf.basebot.database.postgres.ActionTypeRepository;
 import dev.davimf.basebot.database.sqlite.MessageArchiveRepository;
+import dev.davimf.basebot.database.sqlite.LocalInstanceRepository;
 import dev.davimf.basebot.database.sqlite.SqliteManager;
 import dev.davimf.basebot.database.sqlite.SqliteMigrator;
 import dev.davimf.basebot.database.sqlite.TicketRepository;
+import dev.davimf.basebot.database.postgres.VerificationQuestionRepository;
+import dev.davimf.basebot.modules.base.security.VerificationRepository;
 import dev.davimf.basebot.modules.base.voice.MuteRepository;
 import dev.davimf.basebot.modules.tickets.TicketCategoryRepository;
 import org.slf4j.Logger;
@@ -70,6 +74,8 @@ public final class DatabaseManager implements AutoCloseable {
     private final TicketCategoryRepository ticketCategories;
     private final ActionTypeRepository actionTypes;
     private final MessageArchiveRepository messageArchive;
+    private final VerificationRepository verification;
+    private final VerificationQuestionRepository verificationQuestions;
 
     public DatabaseManager(BotConfig config) {
         log.info("Initializing databases...");
@@ -80,13 +86,19 @@ public final class DatabaseManager implements AutoCloseable {
         // with the dashboard, so it is applied manually (see resources/db/postgres).
         new SqliteMigrator(sqlite).migrate();
 
-        this.guildConfig = new JdbcGuildConfigRepository(postgres);
+        String configuredInstanceId = config.instance().instanceId();
+        String botInstanceId = configuredInstanceId != null && !configuredInstanceId.isBlank()
+                ? configuredInstanceId
+                : new LocalInstanceRepository(sqlite).getOrCreate();
+        this.guildConfig = new CachingGuildConfigRepository(new JdbcGuildConfigRepository(postgres, botInstanceId));
         this.tickets = new TicketRepository(sqlite);
         this.actionLogs = new ActionLogRepository(sqlite);
         this.mutes = new MuteRepository(sqlite);
         this.ticketCategories = new TicketCategoryRepository(postgres);
-        this.actionTypes = new ActionTypeRepository(sqlite);
+        this.actionTypes = new ActionTypeRepository(postgres);
         this.messageArchive = new MessageArchiveRepository(sqlite);
+        this.verification = new VerificationRepository(sqlite);
+        this.verificationQuestions = new VerificationQuestionRepository(postgres);
         log.info("Databases ready.");
     }
 
@@ -116,6 +128,14 @@ public final class DatabaseManager implements AutoCloseable {
 
     public MessageArchiveRepository messageArchive() {
         return messageArchive;
+    }
+
+    public VerificationRepository verification() {
+        return verification;
+    }
+
+    public VerificationQuestionRepository verificationQuestions() {
+        return verificationQuestions;
     }
 
     public PostgresPool postgres() {

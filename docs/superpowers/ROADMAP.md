@@ -18,12 +18,14 @@ O bot está virando um **all-in-one** que substitui os outros bots (moderação,
 ## Ordem de build
 1. **Moderação + Infrações** — ✅ feito (sistema de casos, escalonamento, `/setup → Moderação`).
 2. **Logging completo** — ✅ feito (8 listeners focados, arquivo de mensagens + cofre de anexos, logs de membro ricas, layout "separado por linhas", footer global).
-3. **AutoMod + Segurança** — ⬜ anti-raid, anti-spam, filtro de links, automod que gera warns e escala punições. *(detalhes em FUTURE-IDEAS §Moderação Avançada)*
-4. **Welcome / self-roles** — ⬜ boas-vindas + cargos por reação/botão (precisa `GUILD_MEMBERS`).
-5. **Leveling** — ⬜ XP por mensagem/voz, ranking, cargos por nível. *(XP por voz usa o rastreamento de voz à prova de reinício — ver FUTURE-IDEAS §Apêndice Rastreamento de voz)*
-6. **Economia (por-usuário)** — ⬜ carteira/banco, `/daily`, `/trabalhar`, `/pagar`, ranking, loja de cargos, `/setup → Economia`.
-7. **Sorteios / Eventos** — ⬜ giveaways com requisitos avançados (cargo, dias no servidor, horas/janela em call). *(encaixa entre 6 e 7; tempo em call usa o mesmo rastreamento de voz — ver FUTURE-IDEAS §Apêndice)*
-8. **Fun** — ⬜ `/dado`, `/coinflip`, `/rep`, `/biscoito`, `/ship`, `/quiz`, `/jokenpo`, `/forca`, GIFs de ação, memes. *(detalhes em FUTURE-IDEAS)*
-9. **Utilidades** — ⬜ `/avatar`, `/banner`, `/lembrete`, `/afk`, `/enquete`, `/userinfo`, `/serverinfo`. *(detalhes em FUTURE-IDEAS)*
+3. **AutoMod + Segurança** — ✅ feito (anti-raid, anti-spam, filtro de links/convites, verificação, anti-nuke; AutoMod nativo → warns que escalam via Infrações).
+4. **Welcome / self-roles** — ✅ feito (boas-vindas/despedida/autorole + painéis de auto-cargos por botão/menu; precisa `GUILD_MEMBERS`).
+5. **Leveling** — ✅ feito (XP por mensagem/voz à prova de reinício, ranking, cargos por nível).
+6. **Economia (por-usuário)** — ✅ feito (carteira/banco, `/daily`/`/trabalhar`/`/crime`/`/roubar`/`/pagar`, ranking; **Loja** de cargos perm/temp + itens custom com `/loja` e sweep de expiração; `/setup → Economia` + `/setup → Loja`).
+7. **Sorteios / Eventos** — ✅ feito (giveaways com requisitos avançados: cargo, dias no servidor, horas/janela em call; + eventos aleatórios de chat).
+8. **Fun** — ✅ feito (`/dado`, `/coinflip`, `/rep`, `/biscoito`, `/ship`, `/quiz`, `/jokenpo`, `/forca`, GIFs de ação).
+9. **Utilidades** — ✅ feito (`/avatar`, `/banner`, `/lembrete`, `/afk`, `/enquete`, `/userinfo`, `/serverinfo`).
+
+**Fases 1–9 completas.** Pendências: smoke manual num servidor de teste (intents privilegiados) e backlog opcional em `FUTURE-IDEAS.md` (geradores de imagem/memes). Detalhes de cada subsistema em `PROGRESS.md` (§1–§22).
 
 Specs e plans de cada subsistema ficam em `docs/superpowers/specs/` e `docs/superpowers/plans/`.

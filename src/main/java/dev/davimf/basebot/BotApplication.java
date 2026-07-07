@@ -111,19 +111,16 @@ public final class BotApplication {
                 .build();
 
         context.setJda(jda);
-        registerShutdownHook(database, scheduler, jda);
+        GracefulShutdown shutdown = new GracefulShutdown(scheduler, jda, database);
+        registerShutdownHook(shutdown);
+        ConsoleControl.start(shutdown);
 
         jda.awaitReady();
         log.info("BaseBot connected as {}.", jda.getSelfUser().getAsTag());
     }
 
-    private void registerShutdownHook(DatabaseManager database, TaskScheduler scheduler, JDA jda) {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Shutting down BaseBot...");
-            jda.shutdown();
-            scheduler.close();
-            database.close();
-        }, "basebot-shutdown"));
+    private void registerShutdownHook(GracefulShutdown shutdown) {
+        Runtime.getRuntime().addShutdownHook(new Thread(shutdown, "basebot-shutdown"));
     }
 
     /** Fans the {@link ReadyEvent} out to each module's {@code onReady} hook. */

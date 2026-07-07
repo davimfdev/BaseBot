@@ -88,7 +88,9 @@ public final class SqliteMigrator {
             "/db/sqlite/033_reminders.sql",
             "/db/sqlite/034_shop.sql",
             "/db/sqlite/035_equipment.sql",
-            "/db/sqlite/036_shop_stock.sql"
+            "/db/sqlite/036_shop_stock.sql",
+            "/db/sqlite/037_bot_instance.sql",
+            "/db/sqlite/038_verification.sql"
     );
 
     private final SqliteManager sqlite;

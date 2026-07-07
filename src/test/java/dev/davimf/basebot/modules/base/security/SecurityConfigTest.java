@@ -69,6 +69,29 @@ class SecurityConfigTest {
     }
 
     @Test
+    void verifyUserSelectDefaultsFalseAndReads() {
+        assertFalse(SecurityConfig.verifyUserSelect(cfg(Map.of(), Map.of())));
+        assertTrue(SecurityConfig.verifyUserSelect(
+                cfg(Map.of(), Map.of(SecurityConfig.KEY_VERIFY_USERSELECT, true))));
+    }
+
+    @Test
+    void antispamDefaultsFalse() {
+        assertFalse(SecurityConfig.antispam(cfg(Map.of(), Map.of())));
+        assertTrue(SecurityConfig.antispam(cfg(Map.of(), Map.of(SecurityConfig.KEY_ANTISPAM, true))));
+    }
+
+    @Test
+    void spamExemptionRules() {
+        GuildConfig c = cfg(Map.of(SecurityConfig.KEY_EXEMPT_ROLES, "555"), Map.of());
+        assertTrue(SecurityConfig.isSpamExempt(c, true, false, false, List.of()));   // bot
+        assertTrue(SecurityConfig.isSpamExempt(c, false, true, false, List.of()));   // owner
+        assertTrue(SecurityConfig.isSpamExempt(c, false, false, true, List.of()));   // admin
+        assertTrue(SecurityConfig.isSpamExempt(c, false, false, false, List.of("555"))); // cargo isento
+        assertFalse(SecurityConfig.isSpamExempt(c, false, false, false, List.of("1")));  // membro comum
+    }
+
+    @Test
     void antiNukeDefaultsAndWhitelist() {
         GuildConfig c = cfg(Map.of(), Map.of());
         assertFalse(SecurityConfig.antinuke(c));

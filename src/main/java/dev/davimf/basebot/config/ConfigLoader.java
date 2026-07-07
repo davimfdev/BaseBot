@@ -63,11 +63,11 @@ public final class ConfigLoader {
         JsonNode sqlite = root.path("sqlite");
         JsonNode tickets = root.path("tickets");
         JsonNode rl = root.path("ratelimit");
+        JsonNode instance = root.path("instance");
 
         return new BotConfig(
                 new BotConfig.Discord(
                         require(dotenv, "BOT_TOKEN", str(discord, "token", null)),
-                        env(dotenv, "DEV_GUILD_ID", str(discord, "devGuildId", null)),
                         env(dotenv, "VAULT_GUILD_ID", str(discord, "vaultGuildId", null))
                 ),
                 new BotConfig.Postgres(
@@ -91,6 +91,10 @@ public final class ConfigLoader {
                         envLong(dotenv, "EMBED_DEBOUNCE_MS", longVal(rl, "embedDebounceMillis", 5_000L)),
                         envInt(dotenv, "GHOST_PING_BATCH", intVal(rl, "ghostPingBatchSize", 5)),
                         envInt(dotenv, "GHOST_PING_INTERVAL_S", intVal(rl, "ghostPingBatchIntervalSeconds", 30))
+                ),
+                new BotConfig.Instance(
+                        env(dotenv, "BOT_INSTANCE_ID", str(instance, "instanceId", null)),
+                        env(dotenv, "BOT_CLIENT_NAME", str(instance, "clientName", null))
                 )
         );
     }

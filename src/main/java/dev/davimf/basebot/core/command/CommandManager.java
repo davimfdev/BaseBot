@@ -29,21 +29,23 @@ import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInterac
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Registers {@link SlashCommand}s with Discord and dispatches incoming interactions.
  *
  * <p>Commands are registered <b>per guild</b> (so they appear instantly): on
  * {@code onReady} to every guild the bot is already in, and on {@link #onGuildJoin}
- * whenever the bot joins a new server. A {@code devGuildId} (one or more, comma-separated)
- * restricts registration to those guilds during development. Every handler runs inside a
- * try/catch so one failing command never tears down the listener.
+ * whenever the bot joins a new server. The one exception is the attachment-vault guild
+ * ({@code vaultGuildId}), which is storage-only and never gets slash commands. Every
+ * handler runs inside a try/catch so one failing command never tears down the listener.
  */
 public final class CommandManager extends ListenerAdapter {
 
@@ -73,47 +75,49 @@ public final class CommandManager extends ListenerAdapter {
     public void onReady(ReadyEvent event) {
         JDA jda = event.getJDA();
 
-        // Commands are registered per-guild (instant). Wipe any leftover GLOBAL commands
-        // so they don't show up duplicated alongside the per-guild ones during testing.
-        jda.updateCommands().queue(
-                ok -> log.info("Cleared global commands (using per-guild registration)."),
-                err -> log.warn("Could not clear global commands: {}", err.getMessage()));
-
-        if (context.config().discord().hasDevGuild()) {
-            for (String id : context.config().discord().devGuildIds()) {
-                Guild guild = jda.getGuildById(id);
-                if (guild != null) {
-                    registerTo(guild);
-                } else {
-                    log.warn("devGuildId {} not found — is the bot a member of that guild?", id);
-                }
-            }
-            return;
-        }
-        log.info("Registering {} commands to {} guild(s)...", commands.size(), jda.getGuilds().size());
+        log.info("Reconciling {} commands across {} guild(s)...", commands.size(), jda.getGuilds().size());
         jda.getGuilds().forEach(this::registerTo);
     }
 
     /** Registers the commands in a guild as soon as the bot joins it. */
     @Override
     public void onGuildJoin(GuildJoinEvent event) {
-        // In dev mode only the listed dev guild(s) are managed; ignore other joins.
-        if (context.config().discord().hasDevGuild()
-                && !context.config().discord().devGuildIds().contains(event.getGuild().getId())) {
-            return;
-        }
         registerTo(event.getGuild());
     }
 
-    /** Pushes all command definitions to a single guild. */
     private void registerTo(Guild guild) {
-        SlashCommandData[] data = commands.values().stream()
-                .map(SlashCommand::data)
-                .toArray(SlashCommandData[]::new);
-        guild.updateCommands().addCommands(data).queue(
-                ok -> log.info("Registered {} commands to guild {} ({}).",
-                        data.length, guild.getName(), guild.getId()),
-                err -> log.error("Failed to register commands to guild {}", guild.getId(), err));
+        if (isVaultGuild(guild)) {
+            log.info("Skipped vault guild {} ({}).", guild.getName(), guild.getId());
+            return;
+        }
+        guild.retrieveCommands().queue(existing -> {
+            Set<String> existingNames = existing.stream()
+                    .map(net.dv8tion.jda.api.interactions.commands.Command::getName)
+                    .collect(Collectors.toSet());
+            Set<String> missing = missingCommandNames(existingNames, commands.keySet());
+            if (missing.isEmpty()) {
+                log.info("Guild {} already has all {} commands.", guild.getId(), commands.size());
+                return;
+            }
+            log.info("Registering {} missing command(s) to guild {}.", missing.size(), guild.getId());
+            for (String name : missing) {
+                SlashCommand command = commands.get(name);
+                guild.upsertCommand(command.data()).queue(
+                        ok -> log.info("Registered /{} to guild {}.", name, guild.getId()),
+                        err -> log.error("Failed to register /{} to guild {}", name, guild.getId(), err));
+            }
+        }, err -> log.error("Failed to retrieve commands from guild {}", guild.getId(), err));
+    }
+
+    static Set<String> missingCommandNames(Set<String> existing, Set<String> desired) {
+        Set<String> missing = new LinkedHashSet<>(desired);
+        missing.removeAll(existing);
+        return missing;
+    }
+
+    /** True for the central attachment-vault guild, which never receives slash commands. */
+    private boolean isVaultGuild(Guild guild) {
+        return guild.getId().equals(context.config().discord().vaultGuildId());
     }
 
     @Override

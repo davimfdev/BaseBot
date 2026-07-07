@@ -19,10 +19,11 @@
 discord:
   # Bot token from the Discord Developer Portal. Env: BOT_TOKEN
   token: "YOUR_BOT_TOKEN"
-  # Optional: register slash commands instantly to these guild(s) during dev.
-  # Accepts one id or several comma-separated (e.g. "111,222"). Leave blank/null to
-  # register per-guild to every server the bot is in. Env: DEV_GUILD_ID
-  devGuildId: null
+  # Optional: id of a storage-only "attachment vault" guild. The bot is a member only
+  # to stash attachments there; it never registers slash commands in it. Every other
+  # guild the bot joins gets commands automatically. Leave blank/null to disable.
+  # Env: VAULT_GUILD_ID
+  vaultGuildId: null
 
 # PostgreSQL — source of truth for Guild Configurations (Setup, Roles, Toggles).
 # Today the dashboard uses Supabase; this will migrate to a dedicated Neon schema.
@@ -64,3 +65,11 @@ ratelimit:
   # Ghost-ping throttle: how many mentions per batch and the gap between batches.
   ghostPingBatchSize: 5
   ghostPingBatchIntervalSeconds: 30
+
+# Identidade desta instância do bot (1 bot por cliente) — usada para publicar
+# snapshots no dashboard. Sem instanceId os snapshots ficam desligados.
+# instance:
+#   # UUID estável gerado para esta instância. Env: BOT_INSTANCE_ID
+#   instanceId: null
+#   # Nome do cliente exibido no dashboard. Env: BOT_CLIENT_NAME
+#   clientName: null

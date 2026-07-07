@@ -20,6 +20,51 @@ class QuickLogSetupTest {
     }
 
     @Test
+    void standardChannelNameCanBeRecognizedForReuse() {
+        String standard = QuickLogSetup.channelName("log-mensagens");
+        assertTrue(QuickLogSetup.hasStandardName("log-mensagens", standard));
+        assertTrue(QuickLogSetup.hasStandardName("log-mensagens", standard.toUpperCase()));
+        assertFalse(QuickLogSetup.hasStandardName("log-comandos", standard));
+    }
+
+    @Test
+    void reconciliationKeepsConfiguredStandardChannelAndDeletesOtherCopies() {
+        String name = QuickLogSetup.channelName("log-mensagens");
+        var result = QuickLogSetup.reconcile("log-mensagens", "configured", List.of(
+                new QuickLogSetup.ChannelRef("duplicate", name),
+                new QuickLogSetup.ChannelRef("configured", name)));
+
+        assertEquals("configured", result.logChannelId());
+        assertFalse(result.updateConfig());
+        assertEquals(List.of("duplicate"), result.duplicateIds());
+    }
+
+    @Test
+    void reconciliationUsesFirstStandardChannelWhenConfigIsMissing() {
+        String name = QuickLogSetup.channelName("log-mensagens");
+        var result = QuickLogSetup.reconcile("log-mensagens", null, List.of(
+                new QuickLogSetup.ChannelRef("first", name),
+                new QuickLogSetup.ChannelRef("second", name)));
+
+        assertEquals("first", result.logChannelId());
+        assertTrue(result.updateConfig());
+        assertEquals(List.of("second"), result.duplicateIds());
+    }
+
+    @Test
+    void reconciliationKeepsDifferentConfiguredChannelAndOneStandardCopy() {
+        String name = QuickLogSetup.channelName("log-mensagens");
+        var result = QuickLogSetup.reconcile("log-mensagens", "custom", List.of(
+                new QuickLogSetup.ChannelRef("custom", "auditoria"),
+                new QuickLogSetup.ChannelRef("first", name),
+                new QuickLogSetup.ChannelRef("second", name)));
+
+        assertEquals("custom", result.logChannelId());
+        assertFalse(result.updateConfig());
+        assertEquals(List.of("second"), result.duplicateIds());
+    }
+
+    @Test
     void salesMapsToVendas() {
         assertEquals("Vendas", QuickLogSetup.logModuleFor("Sales"));
         assertEquals("Base", QuickLogSetup.logModuleFor("Base"));

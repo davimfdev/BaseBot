@@ -34,7 +34,7 @@ package dev.davimf.basebot.modules.facs.actions;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
-import dev.davimf.basebot.database.sqlite.ActionTypeRepository.ActionType;
+import dev.davimf.basebot.database.postgres.ActionTypeRepository.ActionType;
 import dev.davimf.basebot.modules.facs.actions.ActionRepository.Action;
 import dev.davimf.basebot.modules.facs.actions.ActionRepository.Participant;
 import dev.davimf.basebot.util.Emojis;

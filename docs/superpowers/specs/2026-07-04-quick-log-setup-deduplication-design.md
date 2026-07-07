@@ -33,3 +33,7 @@ Os testes cobrem a selecao pura do canal preservado:
 - canal configurado com nome diferente permanece configurado, enquanto os canais padrao repetidos sao reduzidos a um.
 
 O teste existente de reconhecimento do nome padrao permanece como regressao para a associacao sem recriacao.
+
+## Bootstrap no onReady
+
+Depois de registrar a instancia e sincronizar os snapshots no `onReady`, o bot percorre as guilds conectadas. Para cada guild sem nenhuma linha em `guild_config`, executa o mesmo setup rapido de logs fora da thread do JDA. Guilds que ja possuem uma linha, mesmo que parcialmente configurada, nao recebem criacao automatica no restart. Uma falha em uma guild e registrada e nao impede o bootstrap das demais.
