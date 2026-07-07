@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # BaseBot
 
 Multi-module Discord bot ecosystem (JDA), rebuilt per `BOTSPECS.MD`. Guild-scoped
@@ -109,3 +110,6 @@ The project builds, tests, and packages (`./gradlew test shadowJar` is green).
   (ADV 20-day expiry), `/painel-financeiro`, `/farm`, `/produzir`, `/relatorio`,
   `/recrutamento`, and `/painel-acoes` (Elite-priority reservation queue).
 ```
+=======
+# BaseBot
+>>>>>>> 26ca2baac9b56fb8bae6ffddff30c77067734628
