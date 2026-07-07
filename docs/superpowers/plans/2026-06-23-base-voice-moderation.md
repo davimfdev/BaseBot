@@ -1,3 +1,9 @@
+<!-- [OUTLINE START]
+Markdown Document: Base Module — Voice Moderation + `.env` Support
+[OUTLINE END] -->
+
+
+
 # Base Module — Voice Moderation + `.env` Support
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

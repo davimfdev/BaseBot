@@ -1,8 +1,27 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: MensagemCommand
+// 
+// Constructors:
+//   - `Constructor` : `public MensagemCommand(MessageBuilderService service)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// 
+// Fields:
+//   - `Field` : `private final MessageBuilderService service`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.message.MessageBuilderService;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -43,7 +62,7 @@ public final class MensagemCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         if ("editar".equals(event.getSubcommandName())) {

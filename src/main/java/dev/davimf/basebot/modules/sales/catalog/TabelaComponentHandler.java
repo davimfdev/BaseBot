@@ -1,3 +1,24 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.catalog
+// 
+// Class: TabelaComponentHandler
+// 
+// Constructors:
+//   - `Constructor` : `public TabelaComponentHandler(CatalogRepository catalog)`
+// 
+// Methods:
+//   - `Method` : `public String namespace()`
+//   - `Method` : `private Container hub(BotContext ctx, String guildId)`
+//   - `Method` : `private int accent(BotContext ctx, String guildId)`
+//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
+//   - `Method` : `private static int parseInt(String s)`
+// 
+// Fields:
+//   - `Field` : `private final CatalogRepository catalog`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.catalog;
 
 import dev.davimf.basebot.core.BotContext;
@@ -6,6 +27,7 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.database.model.CatalogCategory;
 import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Money;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -81,7 +103,7 @@ public final class TabelaComponentHandler implements ComponentHandler {
                 String name = value(event, "nome");
                 OptionalLong price = Money.parse(value(event, "preco"));
                 if (price.isEmpty()) {
-                    event.reply("Preço inválido. Use algo como `1.500,00`.").setEphemeral(true).queue();
+                    Replies.ephemeral(event, ctx, "Preço inválido. Use algo como `1.500,00`.");
                     return;
                 }
                 if (name != null && !name.isBlank()) {

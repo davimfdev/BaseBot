@@ -1,9 +1,24 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: UnmuteCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.moderation.InfractionType;
 import dev.davimf.basebot.modules.base.moderation.Moderation;
+import dev.davimf.basebot.modules.base.moderation.ModerationService;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -16,6 +31,12 @@ import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 
 /** /unmute — removes the configured "mutado" role (BOTSPECS Module 1). */
 public final class UnmuteCommand implements SlashCommand {
+
+    private final ModerationService service;
+
+    public UnmuteCommand(ModerationService service) {
+        this.service = service;
+    }
 
     @Override
     public String name() {
@@ -32,35 +53,36 @@ public final class UnmuteCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null || event.getMember() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         Member target = event.getOption("usuario", OptionMapping::getAsMember);
         if (target == null) {
-            event.reply("Membro inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Membro inválido.");
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
         String roleId = cfg.role("mutado");
         Role role = roleId == null ? null : event.getGuild().getRoleById(roleId);
         if (role == null) {
-            event.reply("Cargo de mutado não configurado. Use /setup → Cargos.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Cargo de mutado não configurado. Use /setup → Cargos.");
             return;
         }
         Member self = event.getGuild().getSelfMember();
         if (!Moderation.canModerate(event.getMember(), target, self) || !self.canInteract(role)) {
-            event.reply("Hierarquia insuficiente.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Hierarquia insuficiente.");
             return;
         }
-        event.getGuild().removeRoleFromMember(target, role).queue(
+        event.getGuild().removeRoleFromMember(target, role)
+                .reason(dev.davimf.basebot.util.ModReason.of(event.getUser(), "Unmute")).queue(
                 ok -> {
                     ctx.database().mutes().remove(event.getGuild().getId(), target.getId(),
                             dev.davimf.basebot.modules.base.voice.MuteRepository.TEXT);
                     ctx.database().actionLogs().log(event.getGuild().getId(),
                             event.getUser().getId(), target.getId(), "UNMUTE", null);
-                    event.reply(target.getUser().getAsTag() + " foi dessilenciado.").queue();
+                    service.deactivateLatest(event.getGuild().getId(), target.getId(), InfractionType.MUTE);
+                    Replies.reply(event, ctx, target.getUser().getAsTag() + " foi dessilenciado.");
                 },
-                err -> event.reply("Falha: " + err.getMessage()).setEphemeral(true).queue());
+                err -> Replies.ephemeral(event, ctx, "Falha: " + err.getMessage()));
     }
 }

@@ -1,11 +1,28 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: MuteCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.moderation.InfractionType;
 import dev.davimf.basebot.modules.base.moderation.Moderation;
+import dev.davimf.basebot.modules.base.moderation.ModerationService;
 import dev.davimf.basebot.modules.base.voice.MuteRepository;
 import dev.davimf.basebot.util.Durations;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -18,6 +35,12 @@ import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 
 /** /mute — text mute by applying the configured "mutado" role (BOTSPECS Module 1). */
 public final class MuteCommand implements SlashCommand {
+
+    private final ModerationService service;
+
+    public MuteCommand(ModerationService service) {
+        this.service = service;
+    }
 
     @Override
     public String name() {
@@ -36,45 +59,44 @@ public final class MuteCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null || event.getMember() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         Member target = event.getOption("usuario", OptionMapping::getAsMember);
         if (target == null) {
-            event.reply("Membro inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Membro inválido.");
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
         String roleId = cfg.role("mutado");
         Role role = roleId == null ? null : event.getGuild().getRoleById(roleId);
         if (role == null) {
-            event.reply("Cargo de mutado não configurado. Use /setup → Cargos.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Cargo de mutado não configurado. Use /setup → Cargos.");
             return;
         }
         Member self = event.getGuild().getSelfMember();
         if (!Moderation.canModerate(event.getMember(), target, self) || !self.canInteract(role)) {
-            event.reply("Hierarquia insuficiente para aplicar o cargo de mutado.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Hierarquia insuficiente para aplicar o cargo de mutado.");
             return;
         }
         var duration = Durations.parse(event.getOption("tempo", OptionMapping::getAsString));
         if (duration.isEmpty()) {
-            event.reply("Tempo inválido. Use algo como `10m`, `1h` ou `1d`.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Tempo inválido. Use algo como `10m`, `1h` ou `1d`.");
             return;
         }
         long millis = duration.getAsLong();
         String reason = event.getOption("motivo", "Sem motivo informado.", OptionMapping::getAsString);
         String guildId = event.getGuild().getId();
-        event.getGuild().addRoleToMember(target, role).reason(reason).queue(
+        event.getGuild().addRoleToMember(target, role)
+                .reason(dev.davimf.basebot.util.ModReason.of(event.getUser(), reason)).queue(
                 ok -> {
-                    ctx.database().mutes().add(guildId, target.getId(), MuteRepository.TEXT,
-                            System.currentTimeMillis() + millis);
-                    ctx.database().actionLogs().log(guildId,
-                            event.getUser().getId(), target.getId(), "MUTE", reason);
-                    event.reply(target.getUser().getAsTag() + " foi silenciado por "
-                            + Durations.format(millis) + ".").queue();
+                    long expiresAt = System.currentTimeMillis() + millis;
+                    ctx.database().mutes().add(guildId, target.getId(), MuteRepository.TEXT, expiresAt);
+                    var c = service.record(event.getGuild(), InfractionType.MUTE, target.getUser(),
+                            event.getUser().getId(), reason, expiresAt, millis);
+                    Replies.reply(event, ctx, "" + Emojis.of(Emojis.MUTE, "🔇") + " " + target.getUser().getAsTag() + " foi silenciado por "
+                            + Durations.format(millis) + " — Caso #" + c.caseNumber() + ".");
                 },
-                err -> event.reply("Falha: " + err.getMessage()).setEphemeral(true).queue());
+                err -> Replies.ephemeral(event, ctx, "Falha: " + err.getMessage()));
     }
 }

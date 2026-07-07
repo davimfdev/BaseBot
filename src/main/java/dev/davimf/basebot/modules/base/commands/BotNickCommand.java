@@ -1,7 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: BotNickCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -31,18 +44,19 @@ public final class BotNickCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         String apelido = event.getOption("apelido", OptionMapping::getAsString);
-        event.getGuild().getSelfMember().modifyNickname(apelido).queue(
+        event.getGuild().getSelfMember().modifyNickname(apelido)
+                .reason(dev.davimf.basebot.util.ModReason.of(event.getUser(), "Apelido do bot")).queue(
                 ok -> {
                     ctx.database().actionLogs().log(event.getGuild().getId(),
                             event.getUser().getId(), null, "BOT_NICK", apelido);
-                    event.reply(apelido == null || apelido.isBlank()
+                    Replies.reply(event, ctx, apelido == null || apelido.isBlank()
                             ? "Apelido removido neste servidor."
-                            : "Apelido alterado para **" + apelido + "** neste servidor.").queue();
+                            : "Apelido alterado para **" + apelido + "** neste servidor.");
                 },
-                err -> event.reply("Falha: " + err.getMessage()).setEphemeral(true).queue());
+                err -> Replies.ephemeral(event, ctx, "Falha: " + err.getMessage()));
     }
 }

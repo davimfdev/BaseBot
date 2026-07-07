@@ -1,11 +1,11 @@
 package dev.davimf.basebot.database.model;
 
-/** A seller's Pix key, scoped to a guild + the seller's user id (BOTSPECS Module 3). */
+/** A seller's Pix key: multiple per guild+user (BOTSPECS Module 3). City is no longer stored. */
 public record PixKey(
+        long id,
         String guildId,
         String userId,
         String keyType,
         String keyValue,
-        String merchantName,
-        String merchantCity
+        String merchantName
 ) {}

@@ -1,3 +1,15 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.core.command
+// 
+// Interface: SlashCommand
+// 
+// Methods:
+//   - `Method` : `package-private String name()`
+//   - `Method` : `package-private SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.core.command;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,3 +1,24 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.hierarchy
+// 
+// Class: FacHierarchy
+// 
+// Constructors:
+//   - `Constructor` : `private FacHierarchy()`
+// 
+// Methods:
+//   - `Method` : `public static final List<Level> LEVELS = List. of(new Level(,)`
+//   - `Method` : `public static List<String> keys()`
+// 
+// Record: Level
+// 
+// Record Components:
+//   - Record Component : public final String key
+//   - Record Component : public final String label
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.hierarchy;
 
 import java.util.List;
@@ -19,10 +40,12 @@ public final class FacHierarchy {
             new Level("gerente-geral", "Gerente Geral"),
             new Level("gerente-vendas", "Gerente de Vendas"),
             new Level("gerente-elite", "Gerente de Elite"),
+            new Level("gerente-elite-feminina", "Gerente de Elite Feminina"),
             new Level("gerente-recrutamento", "Gerente de Recrutamento"),
             new Level("gerente-farm", "Gerente de Farm"),
             new Level("recrutador", "Recrutador"),
             new Level("elite", "Elite"),
+            new Level("elite-feminina", "Elite Feminina"),
             new Level("membro", "Membro"),
             new Level("sem-set", "Sem Set")
     );

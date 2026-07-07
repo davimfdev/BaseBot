@@ -1,4 +1,31 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.economy
+// 
+// Class: FinanceService
+// 
+// Constructors:
+//   - `Constructor` : `public FinanceService(BotContext ctx, EconomyRepository economy)`
+// 
+// Methods:
+//   - `Method` : `public Container panel(String guildId)`
+//   - `Method` : `private static int pct(GuildConfig cfg, String key)`
+//   - `Method` : `private static int clampPct(String raw)`
+//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
+// 
+// Fields:
+//   - `Field` : `package-private static final String TOGGLE_LAVAGEM`
+//   - `Field` : `package-private static final String TOGGLE_DESMANCHE`
+//   - `Field` : `package-private static final String PCT_LAVAGEM`
+//   - `Field` : `package-private static final String PCT_DESMANCHE`
+//   - `Field` : `private final BotContext ctx`
+//   - `Field` : `private final EconomyRepository economy`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.economy;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.GuildConfig;
@@ -6,7 +33,8 @@ import dev.davimf.basebot.modules.base.setup.GuildConfigEdits;
 import dev.davimf.basebot.modules.facs.FacsLog;
 import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Money;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.util.Replies;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.entities.Mentions;
 import net.dv8tion.jda.api.entities.User;
@@ -14,8 +42,6 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.callbacks.IMessageEditCallback;
 import net.dv8tion.jda.api.interactions.modals.ModalMapping;
-
-import java.util.List;
 import java.util.OptionalLong;
 
 /**
@@ -51,9 +77,9 @@ public final class FinanceService {
         if (event.getGuild() == null) {
             return;
         }
-        if (!event.getMember().hasPermission(Permission.MANAGE_SERVER)) {
-            event.reply("Apenas a gerência (Manage Server) pode operar o painel financeiro.")
-                    .setEphemeral(true).queue();
+        GuildConfig gcfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), gcfg, ManagerPermissions.Capability.FINANCEIRO)) {
+            Replies.ephemeral(event, ctx, "Apenas a gerência **Financeiro** pode operar este painel.");
             return;
         }
         String guildId = event.getGuild().getId();
@@ -92,13 +118,14 @@ public final class FinanceService {
     private void move(ModalInteractionEvent event, String guildId, String type, int sign, String verb) {
         OptionalLong amount = Money.parse(value(event, "valor"));
         if (amount.isEmpty() || amount.getAsLong() <= 0) {
-            event.reply("Valor inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Valor inválido.");
             return;
         }
         long delta = sign * amount.getAsLong();
         long balance = economy.adjust(guildId, type, delta, event.getUser().getId(), verb);
-        log(guildId, "## 💰 " + verb + "\n**Valor:** " + Money.format(amount.getAsLong())
-                + "\n**Por:** <@" + event.getUser().getId() + ">\n**Novo saldo:** " + Money.format(balance));
+        log(guildId, "## " + Emojis.of(Emojis.MONEY, "💰") + " " + verb + "\n" + Emojis.of(Emojis.CASH, "💵") + " **Valor** · `" + Money.format(amount.getAsLong()) + "`"
+                + "\n" + Emojis.of(Emojis.MEMBER, "👤") + " **Por** · <@" + event.getUser().getId() + ">\n" + Emojis.of(Emojis.BANK, "🏦") + " **Novo saldo** · `"
+                + Money.format(balance) + "`");
         refresh(event, guildId);
     }
 
@@ -108,14 +135,14 @@ public final class FinanceService {
         Mentions mentions = destino == null ? null : destino.getAsMentions();
         User target = mentions == null || mentions.getUsers().isEmpty() ? null : mentions.getUsers().get(0);
         if (amount.isEmpty() || amount.getAsLong() <= 0 || target == null) {
-            event.reply("Valor ou destinatário inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Valor ou destinatário inválido.");
             return;
         }
         long balance = economy.adjust(guildId, "TRANSFER", -amount.getAsLong(),
                 event.getUser().getId(), "Transferência para " + target.getId());
-        log(guildId, "## 💸 Transferência\n**Valor:** " + Money.format(amount.getAsLong())
-                + "\n**Para:** <@" + target.getId() + ">\n**Por:** <@" + event.getUser().getId()
-                + ">\n**Novo saldo:** " + Money.format(balance));
+        log(guildId, "## " + Emojis.of(Emojis.EXPENSE, "💸") + " Transferência\n" + Emojis.of(Emojis.CASH, "💵") + " **Valor** · `" + Money.format(amount.getAsLong()) + "`"
+                + "\n" + Emojis.of(Emojis.TARGET, "🎯") + " **Para** · <@" + target.getId() + ">\n" + Emojis.of(Emojis.MEMBER, "👤") + " **Por** · <@" + event.getUser().getId()
+                + ">\n" + Emojis.of(Emojis.BANK, "🏦") + " **Novo saldo** · `" + Money.format(balance) + "`");
         refresh(event, guildId);
     }
 
@@ -123,7 +150,7 @@ public final class FinanceService {
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guildId);
         boolean now = !cfg.toggle(key, false);
         ctx.database().guildConfig().save(GuildConfigEdits.withToggle(cfg, key, now));
-        log(guildId, "## ⚙️ " + label + " " + (now ? "ativada" : "desativada")
+        log(guildId, "## " + Emojis.of(Emojis.GEAR, "⚙️") + " " + label + " " + (now ? "ativada" : "desativada")
                 + " por <@" + event.getUser().getId() + ">.");
         refresh(event, guildId);
     }

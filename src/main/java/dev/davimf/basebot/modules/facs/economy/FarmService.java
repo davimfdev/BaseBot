@@ -1,13 +1,37 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.economy
+// 
+// Class: FarmService
+// 
+// Constructors:
+//   - `Constructor` : `public FarmService(BotContext ctx, EconomyRepository economy, FarmRepository farm)`
+// 
+// Methods:
+//   - `Method` : `private boolean managerGate(ButtonInteractionEvent event)`
+//   - `Method` : `private static long payoutRate(GuildConfig cfg)`
+// 
+// Fields:
+//   - `Field` : `package-private static final String PAYOUT_KEY`
+//   - `Field` : `private final BotContext ctx`
+//   - `Field` : `private final EconomyRepository economy`
+//   - `Field` : `private final FarmRepository farm`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.economy;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.facs.FacsLog;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
 import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Money;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 
 import java.util.List;
@@ -32,13 +56,13 @@ public final class FarmService {
         this.farm = farm;
     }
 
-    public void submit(SlashCommandInteractionEvent event, String item, long quantity) {
+    public void submit(ModalInteractionEvent event, String item, long quantity) {
         String guildId = event.getGuild().getId();
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guildId);
         String channelId = cfg.channel("log-farm");
         TextChannel channel = channelId == null ? null : event.getGuild().getTextChannelById(channelId);
         if (channel == null) {
-            event.reply("Canal de farm não configurado em /setup → Logs.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Canal de farm não configurado em /setup → Logs.");
             return;
         }
         String pendingId = farm.create(guildId, event.getUser().getId(), item, quantity);
@@ -46,10 +70,10 @@ public final class FarmService {
                         event.getUser().getId(), item, quantity))
                 .useComponentsV2()
                 .setAllowedMentions(List.of())
-                .queue(msg -> event.reply("🌾 Entrega enviada para aprovação.").setEphemeral(true).queue(),
+                .queue(msg -> Replies.ephemeral(event, ctx, Emojis.of(Emojis.FARM, "🌾") + " Entrega enviada para aprovação."),
                         err -> {
                             farm.delete(pendingId);
-                            event.reply("Falha ao enviar: " + err.getMessage()).setEphemeral(true).queue();
+                            Replies.ephemeral(event, ctx, "Falha ao enviar: " + err.getMessage());
                         });
     }
 
@@ -59,7 +83,7 @@ public final class FarmService {
         }
         FarmRepository.Pending p = farm.find(pendingId).orElse(null);
         if (p == null) {
-            event.reply("Esta entrega já foi processada.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Esta entrega já foi processada.");
             return;
         }
         String guildId = p.guildId();
@@ -75,17 +99,13 @@ public final class FarmService {
         }
         farm.delete(pendingId);
 
-        event.editComponents(FarmView.resolved(accent, p.farmerId(), p.item(), p.quantity(),
-                "✅ Aprovado por <@" + event.getUser().getId() + ">. Estoque: " + newStock))
+        // The request message lives in #log-farm; edit it into the final record (no extra log).
+        String status = "" + Emojis.of(Emojis.CHECK_YES, "✅") + " **Aprovado** por <@" + event.getUser().getId() + ">\n"
+                + "" + Emojis.of(Emojis.STATS, "📊") + " **Estoque** · `" + newStock + "`"
+                + (payout > 0 ? "\n" + Emojis.of(Emojis.EXPENSE, "💸") + " **Pagamento** · `" + Money.format(payout)
+                        + "` · saldo `" + Money.format(balance) + "`" : "");
+        event.editComponents(FarmView.resolved(accent, p.farmerId(), p.item(), p.quantity(), status))
                 .useComponentsV2().queue();
-        StringBuilder log = new StringBuilder("## 🌾 Farm aprovado\n")
-                .append("<@").append(p.farmerId()).append("> entregou ").append(p.quantity())
-                .append("x **").append(p.item()).append("** · estoque agora ").append(newStock);
-        if (payout > 0) {
-            log.append("\n💸 Pagamento: ").append(Money.format(payout))
-                    .append(" · saldo: ").append(Money.format(balance));
-        }
-        FacsLog.post(ctx, guildId, "log-farm", log.toString());
         ctx.database().actionLogs().log(guildId, event.getUser().getId(), p.farmerId(),
                 "FARM_APPROVE", p.quantity() + "x " + p.item());
     }
@@ -96,19 +116,19 @@ public final class FarmService {
         }
         FarmRepository.Pending p = farm.find(pendingId).orElse(null);
         if (p == null) {
-            event.reply("Esta entrega já foi processada.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Esta entrega já foi processada.");
             return;
         }
         farm.delete(pendingId);
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(p.guildId()));
         event.editComponents(FarmView.resolved(accent, p.farmerId(), p.item(), p.quantity(),
-                "❌ Recusado por <@" + event.getUser().getId() + ">.")).useComponentsV2().queue();
+                "" + Emojis.of(Emojis.CHECK_NO, "❌") + " Recusado por <@" + event.getUser().getId() + ">.")).useComponentsV2().queue();
     }
 
     private boolean managerGate(ButtonInteractionEvent event) {
-        if (event.getMember() == null || !event.getMember().hasPermission(Permission.MANAGE_SERVER)) {
-            event.reply("Apenas a gerência pode aprovar/recusar entregas de farm.")
-                    .setEphemeral(true).queue();
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), cfg, ManagerPermissions.Capability.FARM)) {
+            Replies.ephemeral(event, ctx, "Apenas a gerência de **Farm** pode aprovar/recusar entregas.");
             return false;
         }
         return true;

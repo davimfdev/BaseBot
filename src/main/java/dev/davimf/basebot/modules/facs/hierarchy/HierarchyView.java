@@ -1,4 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.hierarchy
+// 
+// Class: HierarchyView
+// 
+// Constructors:
+//   - `Constructor` : `private HierarchyView()`
+// 
+// Methods:
+//   - `Method` : `public static Container panel(int accent, Guild guild, GuildConfig cfg)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.hierarchy;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
@@ -23,7 +39,7 @@ public final class HierarchyView {
      * suppressed when sending so the panel never pings.
      */
     public static Container panel(int accent, Guild guild, GuildConfig cfg) {
-        StringBuilder body = new StringBuilder("# 🏛️ Hierarquia — ").append(guild.getName()).append('\n');
+        StringBuilder body = new StringBuilder();
         Set<String> seen = new HashSet<>();
 
         for (FacHierarchy.Level level : FacHierarchy.LEVELS) {
@@ -38,7 +54,11 @@ public final class HierarchyView {
             List<Member> members = guild.getMembersWithRoles(role).stream()
                     .filter(m -> seen.add(m.getId()))
                     .toList();
-            body.append("\n### ").append(level.label()).append(" — <@&").append(roleId).append(">\n");
+            if (body.length() > 0) {
+                body.append('\n');
+            }
+            body.append("### ").append(level.label()).append(" · <@&").append(roleId)
+                    .append("> `").append(members.size()).append("`\n");
             if (members.isEmpty()) {
                 body.append("-# *ninguém*\n");
             } else {
@@ -47,8 +67,11 @@ public final class HierarchyView {
             }
         }
         if (seen.isEmpty()) {
-            body.append("\n-# Nenhum cargo da hierarquia configurado em /setup → Cargos.");
+            body.append("-# Nenhum cargo da hierarquia configurado em `/setup → Cargos`.");
         }
-        return Panels.container(accent, Panels.text(body.toString()));
+        return Panels.container(accent,
+                Panels.text("# " + Emojis.of(Emojis.SERVER, "🏛️") + " Hierarquia · " + guild.getName()),
+                Panels.divider(),
+                Panels.text(body.toString()));
     }
 }

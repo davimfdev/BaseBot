@@ -1,3 +1,13 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - fac_actions
+-- - fac_action_participants
+-- Created Indices:
+-- - idx_action_participants
+-- [OUTLINE END]
+
+
+
 -- Actions / Reservations (BOTSPECS Module 4 — /painel-acoes). An action has a capacity;
 -- members confirm or land on a reserve list, with Elite priority over normal members.
 CREATE TABLE IF NOT EXISTS fac_actions (

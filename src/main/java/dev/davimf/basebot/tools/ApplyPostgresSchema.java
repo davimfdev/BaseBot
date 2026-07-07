@@ -1,3 +1,14 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.tools
+// 
+// Class: ApplyPostgresSchema
+// 
+// Constructors:
+//   - `Constructor` : `private ApplyPostgresSchema()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.tools;
 
 import dev.davimf.basebot.config.DotEnv;

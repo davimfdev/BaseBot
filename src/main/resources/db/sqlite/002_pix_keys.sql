@@ -1,3 +1,10 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - pix_keys
+-- [OUTLINE END]
+
+
+
 -- Module 3: Pix keys registered per seller (identified by Discord role). Guild-scoped.
 CREATE TABLE IF NOT EXISTS pix_keys (
     guild_id      TEXT NOT NULL,

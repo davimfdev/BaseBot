@@ -1,14 +1,34 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.commands
+// 
+// Class: PunirCommand
+// 
+// Constructors:
+//   - `Constructor` : `public PunirCommand(PunishService service)`
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// 
+// Fields:
+//   - `Field` : `private final PunishService service`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
+import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.Punishment;
 import dev.davimf.basebot.modules.base.moderation.Moderation;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
+import dev.davimf.basebot.modules.facs.perms.ManagerPermissions.Capability;
 import dev.davimf.basebot.modules.facs.punish.PunishService;
-import net.dv8tion.jda.api.Permission;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -32,7 +52,6 @@ public final class PunirCommand implements SlashCommand {
     @Override
     public SlashCommandData data() {
         return Commands.slash("punir", "Aplica uma punição: Blacklist, Rebaixamento ou ADV.")
-                .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MODERATE_MEMBERS))
                 .addOption(OptionType.USER, "usuario", "Membro a punir", true)
                 .addOptions(new OptionData(OptionType.STRING, "tipo", "Tipo de punição", true)
                         .addChoice("ADV (advertência)", Punishment.ADV)
@@ -44,16 +63,21 @@ public final class PunirCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null || event.getMember() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
+            return;
+        }
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
+        if (!ManagerPermissions.can(event.getMember(), cfg, Capability.PUNICOES)) {
+            Replies.ephemeral(event, ctx, "Você não tem permissão de **Punições**.");
             return;
         }
         Member target = event.getOption("usuario", OptionMapping::getAsMember);
         if (target == null) {
-            event.reply("Esse usuário não está no servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Esse usuário não está no servidor.");
             return;
         }
         if (!Moderation.canModerate(event.getMember(), target, event.getGuild().getSelfMember())) {
-            event.reply("Hierarquia insuficiente para punir esse membro.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Hierarquia insuficiente para punir esse membro.");
             return;
         }
         String tipo = event.getOption("tipo", OptionMapping::getAsString);

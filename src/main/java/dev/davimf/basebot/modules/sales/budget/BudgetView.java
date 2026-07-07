@@ -1,4 +1,30 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.budget
+// 
+// Class: BudgetView
+// 
+// Constructors:
+//   - `Constructor` : `private BudgetView()`
+// 
+// Methods:
+//   - `Method` : `public static Container builder(int accent, String budgetId, String clientId, List<BudgetItem> items, List<CatalogCategory> categories)`
+//   - `Method` : `public static Container productPicker(int accent, String budgetId, CatalogCategory category, List<CatalogProduct> products)`
+//   - `Method` : `public static Modal quantityModal(String budgetId, String productId, String productName)`
+//   - `Method` : `public static Container approval(int accent, String budgetId, String sellerId, String clientId, List<BudgetItem> items)`
+//   - `Method` : `public static Container resolved(int accent, String sellerId, String clientId, List<BudgetItem> items, String statusLine)`
+//   - `Method` : `private static String itemsBlock(List<BudgetItem> items)`
+//   - `Method` : `package-private static long total(List<BudgetItem> items)`
+//   - `Method` : `private static String trim(String s, int max)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.budget;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
@@ -31,10 +57,15 @@ public final class BudgetView {
     public static Container builder(int accent, String budgetId, String clientId,
                                     List<BudgetItem> items, List<CatalogCategory> categories) {
         List<ContainerChildComponent> kids = new ArrayList<>();
-        kids.add(Panels.text(cart("## 🧮 Novo orçamento\n**Cliente:** <@" + clientId + ">", items)));
+        kids.add(Panels.text("## " + Emojis.of(Emojis.ABACUS, "🧮") + " Novo orçamento"));
+        kids.add(Panels.divider());
+        kids.add(Panels.text("" + Emojis.of(Emojis.MEMBER, "🧑") + " **Cliente** · <@" + clientId + ">"));
+        kids.add(Panels.divider());
+        kids.add(Panels.text(itemsBlock(items)));
+        kids.add(Panels.divider());
 
         if (categories.isEmpty()) {
-            kids.add(Panels.text("\n*Nenhuma categoria no catálogo. Crie produtos com `/tabela` primeiro.*"));
+            kids.add(Panels.text("-# *Nenhuma categoria no catálogo. Crie produtos com `/tabela` primeiro.*"));
         } else {
             StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "pickcat", budgetId))
                     .setPlaceholder("Adicionar item: escolha a categoria");
@@ -44,7 +75,7 @@ public final class BudgetView {
             kids.add(ActionRow.of(menu.build()));
         }
         kids.add(ActionRow.of(
-                Button.success(ComponentId.of(NS, "send", budgetId), "📨 Enviar ao cliente")
+                Button.success(ComponentId.of(NS, "send", budgetId), "Enviar ao cliente").withEmoji(Emojis.button(Emojis.DM))
                         .withDisabled(items.isEmpty()),
                 Button.danger(ComponentId.of(NS, "cancel", budgetId), "Cancelar")));
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
@@ -53,9 +84,11 @@ public final class BudgetView {
     public static Container productPicker(int accent, String budgetId, CatalogCategory category,
                                           List<CatalogProduct> products) {
         List<ContainerChildComponent> kids = new ArrayList<>();
-        kids.add(Panels.text("## 🧮 " + category.name() + "\nEscolha um produto para adicionar."));
+        kids.add(Panels.text("## " + Emojis.of(Emojis.ABACUS, "🧮") + " " + category.name()));
+        kids.add(Panels.divider());
+        kids.add(Panels.text("> Escolha um produto para adicionar ao orçamento."));
         if (products.isEmpty()) {
-            kids.add(Panels.text("\n*Sem produtos nesta categoria.*"));
+            kids.add(Panels.text("-# *Sem produtos nesta categoria.*"));
         } else {
             StringSelectMenu.Builder menu = StringSelectMenu
                     .create(ComponentId.of(NS, "pickprod", budgetId, category.id()))
@@ -82,40 +115,47 @@ public final class BudgetView {
 
     public static Container approval(int accent, String budgetId, String sellerId, String clientId,
                                      List<BudgetItem> items) {
-        String header = "## 🧾 Orçamento\n**Vendedor:** <@" + sellerId + ">\n**Cliente:** <@" + clientId + ">";
         return Panels.container(accent,
-                Panels.text(cart(header, items)),
-                Panels.text("-# Expira em 24h se não for respondido."),
+                Panels.text("## " + Emojis.of(Emojis.RECEIPT, "🧾") + " Orçamento"),
+                Panels.divider(),
+                Panels.text("" + Emojis.of(Emojis.MEMBER, "🧑") + "‍" + Emojis.of(Emojis.BUDGET, "💼") + " **Vendedor** · <@" + sellerId + ">\n" + Emojis.of(Emojis.MEMBER, "🧑") + " **Cliente** · <@" + clientId + ">"),
+                Panels.divider(),
+                Panels.text(itemsBlock(items)),
+                Panels.text("-# " + Emojis.of(Emojis.HOURGLASS, "⏳") + " Expira em 24h se não for respondido."),
                 ActionRow.of(
-                        Button.success(ComponentId.of(NS, "approve", budgetId), "✅ Aprovar"),
-                        Button.danger(ComponentId.of(NS, "reject", budgetId), "❌ Recusar")));
+                        Button.success(ComponentId.of(NS, "approve", budgetId), "Aprovar").withEmoji(Emojis.button(Emojis.CHECK_YES)),
+                        Button.danger(ComponentId.of(NS, "reject", budgetId), "Recusar").withEmoji(Emojis.button(Emojis.CHECK_NO))));
     }
 
     /** Final, button-less state of the approval message (approved/rejected/expired). */
     public static Container resolved(int accent, String sellerId, String clientId,
                                      List<BudgetItem> items, String statusLine) {
-        String header = "## 🧾 Orçamento\n**Vendedor:** <@" + sellerId + ">\n**Cliente:** <@" + clientId + ">";
         return Panels.container(accent,
-                Panels.text(cart(header, items)),
+                Panels.text("## " + Emojis.of(Emojis.RECEIPT, "🧾") + " Orçamento"),
+                Panels.divider(),
+                Panels.text("" + Emojis.of(Emojis.MEMBER, "🧑") + "‍" + Emojis.of(Emojis.BUDGET, "💼") + " **Vendedor** · <@" + sellerId + ">\n" + Emojis.of(Emojis.MEMBER, "🧑") + " **Cliente** · <@" + clientId + ">"),
+                Panels.divider(),
+                Panels.text(itemsBlock(items)),
+                Panels.divider(),
                 Panels.text(statusLine));
     }
 
     // --- helpers ---------------------------------------------------------------
 
-    /** Renders the item list + total under {@code header}. */
-    private static String cart(String header, List<BudgetItem> items) {
-        StringBuilder sb = new StringBuilder(header).append("\n");
+    /** Renders the item list as a numbered list with a total, or a placeholder when empty. */
+    private static String itemsBlock(List<BudgetItem> items) {
         if (items.isEmpty()) {
-            sb.append("\n*Nenhum item adicionado ainda.*");
-            return sb.toString();
+            return "" + Emojis.of(Emojis.SALES, "🛒") + " **Itens**\n-# *Nenhum item adicionado ainda.*";
         }
+        StringBuilder sb = new StringBuilder("" + Emojis.of(Emojis.SALES, "🛒") + " **Itens**\n");
         long total = 0;
-        for (BudgetItem it : items) {
+        for (int i = 0; i < items.size(); i++) {
+            BudgetItem it = items.get(i);
             total += it.subtotalCents();
-            sb.append("\n• ").append(it.quantity()).append("x **").append(it.productName())
-                    .append("** — ").append(Money.format(it.subtotalCents()));
+            sb.append(i + 1).append(". `").append(it.quantity()).append("x` **").append(it.productName())
+                    .append("** · ").append(Money.format(it.subtotalCents())).append('\n');
         }
-        sb.append("\n\n**Total:** ").append(Money.format(total));
+        sb.append("\n" + Emojis.of(Emojis.MONEY, "💰") + " **Total** · `").append(Money.format(total)).append('`');
         return sb.toString();
     }
 

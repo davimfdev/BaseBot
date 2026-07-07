@@ -1,4 +1,28 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.catalog
+// 
+// Class: TabelaView
+// 
+// Constructors:
+//   - `Constructor` : `private TabelaView()`
+// 
+// Methods:
+//   - `Method` : `public static Container hub(int accent, List<CatalogCategory> categories)`
+//   - `Method` : `public static Container category(int accent, CatalogCategory cat, List<CatalogProduct> products, int pageIndex)`
+//   - `Method` : `public static Modal categoryModal()`
+//   - `Method` : `public static Modal productModal(String categoryId)`
+//   - `Method` : `private static String trim(String s, int max)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+//   - `Field` : `public static final int PAGE_SIZE`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.catalog;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
@@ -33,10 +57,11 @@ public final class TabelaView {
 
     public static Container hub(int accent, List<CatalogCategory> categories) {
         List<ContainerChildComponent> kids = new ArrayList<>();
-        kids.add(Panels.text("## 🧾 Tabela de Preços\n"
-                + (categories.isEmpty()
-                        ? "Nenhuma categoria cadastrada. Crie a primeira abaixo."
-                        : "Selecione uma categoria para ver os produtos ou gerencie-as.")));
+        kids.add(Panels.text("## " + Emojis.of(Emojis.RECEIPT, "🧾") + " Tabela de Preços"));
+        kids.add(Panels.divider());
+        kids.add(Panels.text("> " + (categories.isEmpty()
+                ? "Nenhuma categoria cadastrada ainda. Crie a primeira abaixo."
+                : "Selecione uma categoria para ver os produtos ou gerencie o catálogo.")));
         if (!categories.isEmpty()) {
             StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "catview"))
                     .setPlaceholder("Ver categoria");
@@ -45,7 +70,7 @@ public final class TabelaView {
             }
             kids.add(ActionRow.of(menu.build()));
         }
-        kids.add(ActionRow.of(Button.success(ComponentId.of(NS, "catnew"), "➕ Nova categoria")));
+        kids.add(ActionRow.of(Button.success(ComponentId.of(NS, "catnew"), "Nova categoria").withEmoji(Emojis.button(Emojis.PLUS))));
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
 
@@ -57,13 +82,16 @@ public final class TabelaView {
         int page = Math.max(0, Math.min(pageIndex, pages - 1));
         List<CatalogProduct> slice = Paginator.page(products, page, PAGE_SIZE);
 
-        StringBuilder body = new StringBuilder("## 🧾 ").append(cat.name()).append('\n');
+        StringBuilder body = new StringBuilder();
         if (products.isEmpty()) {
-            body.append("\n*Nenhum produto nesta categoria.*");
+            body.append("-# *Nenhum produto nesta categoria.*");
         } else {
             for (CatalogProduct p : slice) {
-                body.append("\n**").append(p.name()).append("** — ")
-                        .append(Money.format(p.priceCents()));
+                if (body.length() > 0) {
+                    body.append('\n');
+                }
+                body.append("**").append(p.name()).append("** · `")
+                        .append(Money.format(p.priceCents())).append('`');
                 if (p.description() != null && !p.description().isBlank()) {
                     body.append("\n-# ").append(p.description());
                 }
@@ -72,6 +100,8 @@ public final class TabelaView {
         }
 
         List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## " + Emojis.of(Emojis.RECEIPT, "🧾") + " " + cat.name()));
+        kids.add(Panels.divider());
         kids.add(Panels.text(body.toString()));
         kids.add(ActionRow.of(
                 Button.secondary(ComponentId.of(NS, "prodnav", cat.id(), String.valueOf(page - 1)), "◀")
@@ -80,8 +110,8 @@ public final class TabelaView {
                         .withDisabled(page >= pages - 1),
                 Button.secondary(ComponentId.of(NS, "hub"), "◀ Voltar")));
         kids.add(ActionRow.of(
-                Button.success(ComponentId.of(NS, "prodnew", cat.id()), "➕ Novo produto"),
-                Button.danger(ComponentId.of(NS, "catdel", cat.id()), "🗑️ Remover categoria")));
+                Button.success(ComponentId.of(NS, "prodnew", cat.id()), "Novo produto").withEmoji(Emojis.button(Emojis.PLUS)),
+                Button.danger(ComponentId.of(NS, "catdel", cat.id()), "Remover categoria").withEmoji(Emojis.button(Emojis.TRASH))));
         if (!slice.isEmpty()) {
             StringSelectMenu.Builder del = StringSelectMenu.create(ComponentId.of(NS, "proddel", cat.id()))
                     .setPlaceholder("Remover um produto desta página");

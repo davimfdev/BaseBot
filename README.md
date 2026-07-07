@@ -1,3 +1,9 @@
+<!-- [OUTLINE START]
+Markdown Document: BaseBot
+[OUTLINE END] -->
+
+
+
 # BaseBot
 
 Multi-module Discord bot ecosystem (JDA), rebuilt per `BOTSPECS.MD`. Guild-scoped
@@ -108,7 +114,3 @@ The project builds, tests, and packages (`./gradlew test shadowJar` is green).
 - **Module 4 — Facs/FiveM:** `/hierarquia`, `/pd`, `/solicitar-cargo`, `/punir` + `/punições`
   (ADV 20-day expiry), `/painel-financeiro`, `/farm`, `/produzir`, `/relatorio`,
   `/recrutamento`, and `/painel-acoes` (Elite-priority reservation queue).
-```
-=======
-# BaseBot
->>>>>>> 26ca2baac9b56fb8bae6ffddff30c77067734628

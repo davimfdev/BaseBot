@@ -1,3 +1,10 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - fac_farm_pending
+-- [OUTLINE END]
+
+
+
 -- Pending farm submissions awaiting manager approval (BOTSPECS Module 4 — /farm).
 -- Approval increments fac_stock and pays the farmer from the treasury (fac_finance).
 CREATE TABLE IF NOT EXISTS fac_farm_pending (

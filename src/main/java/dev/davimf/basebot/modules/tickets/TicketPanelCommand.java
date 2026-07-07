@@ -1,9 +1,24 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.tickets
+// 
+// Class: TicketPanelCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.tickets;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.TicketCategory;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -32,20 +47,19 @@ public final class TicketPanelCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         String guildId = event.getGuild().getId();
         List<TicketCategory> categories = ctx.database().ticketCategories().listByGuild(guildId);
         if (categories.isEmpty()) {
-            event.reply("Nenhuma categoria de ticket configurada. Use /setup → Tickets primeiro.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Nenhuma categoria de ticket configurada. Use /setup → Tickets primeiro.");
             return;
         }
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(guildId));
         // Post as a normal channel message (editable via /mensagem editar); confirm ephemerally.
         event.getChannel().sendMessageComponents(TicketView.panel(accent, categories)).useComponentsV2().queue(
-                msg -> event.reply("🎫 Painel de tickets publicado.").setEphemeral(true).queue(),
-                err -> event.reply("Falha ao publicar: " + err.getMessage()).setEphemeral(true).queue());
+                msg -> Replies.ephemeral(event, ctx, Emojis.of(Emojis.TICKET, "🎟️") + " Painel de tickets publicado."),
+                err -> Replies.ephemeral(event, ctx, "Falha ao publicar: " + err.getMessage()));
     }
 }
