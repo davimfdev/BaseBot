@@ -175,7 +175,7 @@ public final class BudgetService {
             return;
         }
         List<BudgetItem> items = budgets.listItems(budgetId);
-        Optional<PixKey> key = pixKeys.findByUser(b.guildId(), b.sellerId());
+        Optional<PixKey> key = pixKeys.findDefault(b.guildId(), b.sellerId());
         budgets.setStatus(budgetId, Budget.APPROVED);
         ctx.database().actionLogs().log(b.guildId(), b.sellerId(), b.clientId(), "BUDGET_APPROVED", budgetId);
 
@@ -185,11 +185,11 @@ public final class BudgetService {
 
         if (key.isEmpty()) {
             event.getChannel().sendMessageComponents(Panels.container(accent, Panels.text("" + Emojis.of(Emojis.WARN, "⚠️") + " <@" + b.sellerId()
-                            + "> registre sua chave com `/pix registrar` para enviar a cobrança.")))
+                            + "> registre sua chave em `/pix` → Gerenciar chaves para enviar a cobrança.")))
                     .useComponentsV2().setAllowedMentions(EnumSet.of(Message.MentionType.USER)).queue();
             return;
         }
-        PixDispatch.Rendered pix = PixDispatch.render(key.get(), BudgetView.total(items), accent, b.sellerId());
+        PixDispatch.Rendered pix = PixDispatch.render(key.get(), BudgetView.total(items), accent, b.sellerId(), b.clientId());
         event.getChannel().sendMessageComponents(pix.container()).useComponentsV2()
                 .addFiles(pix.file()).queue();
     }

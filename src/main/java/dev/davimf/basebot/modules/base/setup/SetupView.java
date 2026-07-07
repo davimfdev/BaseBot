@@ -40,7 +40,7 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.TicketCategory;
-import dev.davimf.basebot.database.sqlite.ActionTypeRepository.ActionType;
+import dev.davimf.basebot.database.postgres.ActionTypeRepository.ActionType;
 import dev.davimf.basebot.modules.base.moderation.ModerationConfig;
 import dev.davimf.basebot.modules.base.moderation.ModerationConfig.EscalationRule;
 import dev.davimf.basebot.modules.base.moderation.ModerationService;
@@ -57,7 +57,12 @@ import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu.DefaultValue;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu.SelectTarget;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import dev.davimf.basebot.modules.base.leveling.LevelingConfig;
+import dev.davimf.basebot.modules.base.economy.EconomyConfig;
+import dev.davimf.basebot.modules.base.events.ChatEventConfig;
+import dev.davimf.basebot.modules.base.fun.QuizQuestion;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
@@ -104,6 +109,11 @@ public final class SetupView {
                 .addOption("Segurança", "seguranca", "AutoMod, anti-raid, verificação e anti-nuke")
                 .addOption("Boas-vindas", "boasvindas", "Boas-vindas, despedida, autorole e imagem")
                 .addOption("Auto-cargos", "autocargos", "Painéis de auto-atribuição de cargos")
+                .addOption("Nível", "nivel", "XP por mensagem/voz, níveis e cargos por nível")
+                .addOption("Economia", "economia", "Carteira, banco, ganhos, roubo e ranking")
+                .addOption("Loja", "loja", "Itens de cargo/custom à venda por moedas")
+                .addOption("Eventos", "eventos", "Eventos aleatórios no chat principal (quiz, coleta…)")
+                .addOption("Fun", "fun", "Quiz personalizado do servidor")
                 .addOption("Bot", "bot", "Perfil e cor das embeds do bot")
                 .addOption("Permissões", "permissoes", "O que cada categoria de gerência pode fazer")
                 .build();
@@ -577,6 +587,329 @@ public final class SetupView {
                 .build();
     }
 
+    // --- Nível (leveling) ------------------------------------------------------
+
+    public static Container levelingScreen(GuildConfig cfg, java.util.Map<Integer, String> rewards) {
+        int accent = EmbedColor.resolve(cfg);
+        boolean on = LevelingConfig.enabled(cfg);
+        String mode = LevelingConfig.notifyMode(cfg);
+        String notifyChan = LevelingConfig.notifyChannelId(cfg);
+        java.util.Set<String> ignored = LevelingConfig.ignoredChannels(cfg);
+        String modeLabel = switch (mode) {
+            case "channel" -> "canal fixo";
+            case "dm" -> "DM";
+            case "off" -> "desligado";
+            default -> "canal atual";
+        };
+        StringBuilder overview = new StringBuilder();
+        overview.append(Emojis.of(Emojis.STAR, "⭐")).append(" **XP** · ").append(on ? "ligado" : "desligado").append("\n");
+        overview.append(Emojis.of(Emojis.BELL, "🔔")).append(" **Notificação** · ").append(modeLabel);
+        if ("channel".equals(mode)) {
+            overview.append(notifyChan != null ? " · <#" + notifyChan + ">" : " · *canal não definido*");
+        }
+        overview.append("\n").append(Emojis.of(Emojis.HASH, "#")).append(" **Canais ignorados** · `").append(ignored.size()).append("`");
+
+        StringBuilder rw = new StringBuilder(Emojis.of(Emojis.ROLES, "🏷️") + " **Cargos por nível**\n");
+        if (rewards.isEmpty()) {
+            rw.append("-# Nenhum cargo configurado.");
+        } else {
+            rewards.forEach((lvl, role) -> rw.append("• Nível `").append(lvl).append("` → <@&").append(role).append(">\n"));
+        }
+
+        StringSelectMenu notify = StringSelectMenu.create(ComponentId.of(NS, "nivelnotify"))
+                .setPlaceholder("Notificação de level-up…")
+                .addOptions(
+                        SelectOption.of("Canal atual", "current").withDefault("current".equals(mode)),
+                        SelectOption.of("Canal fixo", "channel").withDefault("channel".equals(mode)),
+                        SelectOption.of("DM", "dm").withDefault("dm".equals(mode)),
+                        SelectOption.of("Desligado", "off").withDefault("off".equals(mode)))
+                .build();
+
+        EntitySelectMenu.Builder ign = EntitySelectMenu.create(ComponentId.of(NS, "nivelignored"), SelectTarget.CHANNEL)
+                .setChannelTypes(ChannelType.TEXT)
+                .setPlaceholder("Canais sem XP (ignorados)…")
+                .setRequiredRange(0, 25);
+        if (!ignored.isEmpty()) {
+            ign.setDefaultValues(ignored.stream().map(DefaultValue::channel).toList());
+        }
+
+        java.util.List<ContainerChildComponent> kids = new java.util.ArrayList<>();
+        kids.add(Panels.text("## " + Emojis.of(Emojis.RANK, "📊") + " Nível"));
+        kids.add(Panels.divider());
+        kids.add(Panels.text(overview.toString()));
+        kids.add(Panels.text(rw.toString()));
+        kids.add(Panels.divider());
+        kids.add(ActionRow.of(notify));
+        kids.add(ActionRow.of(channelSelect("nivelnotifychan", LevelingConfig.KEY_NOTIFY_CHANNEL,
+                "Canal fixo de level-up…", notifyChan)));
+        kids.add(ActionRow.of(ign.build()));
+        if (!rewards.isEmpty()) {
+            StringSelectMenu.Builder rem = StringSelectMenu.create(ComponentId.of(NS, "nivelrewarddel"))
+                    .setPlaceholder("Remover cargo de nível…");
+            rewards.keySet().forEach(lvl -> rem.addOption("Nível " + lvl, String.valueOf(lvl)));
+            kids.add(ActionRow.of(rem.build()));
+        }
+        kids.add(ActionRow.of(
+                Button.secondary(ComponentId.of(NS, "niveltoggle"), "XP: " + (on ? "on" : "off"))
+                        .withEmoji(Emojis.button(Emojis.STAR)),
+                Button.primary(ComponentId.of(NS, "nivelreward"), "Cargo por nível")
+                        .withEmoji(Emojis.button(Emojis.ROLES)),
+                Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
+        kids.add(moduleNav("nivel"));
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    public static Modal levelRewardModal() {
+        TextInput.Builder nivel = TextInput.create("nivel", TextInputStyle.SHORT)
+                .setPlaceholder("Nível (ex.: 10)").setRequired(true).setMaxLength(5);
+        TextInput.Builder cargo = TextInput.create("cargo", TextInputStyle.SHORT)
+                .setPlaceholder("Cargo: id ou menção").setRequired(true).setMaxLength(40);
+        return Modal.create(ComponentId.of(NS, "nivelrewardform"), "Cargo por nível")
+                .addComponents(Label.of("Nível", nivel.build()), Label.of("Cargo", cargo.build()))
+                .build();
+    }
+
+    // --- Fun (quiz personalizado) ----------------------------------------------
+
+    public static Container funScreen(GuildConfig cfg, java.util.List<QuizQuestion> quizzes) {
+        int accent = EmbedColor.resolve(cfg);
+        java.util.List<ContainerChildComponent> kids = new java.util.ArrayList<>();
+        kids.add(Panels.text("## " + Emojis.of(Emojis.GAME, "🎮") + " Fun — Quiz personalizado\n-# `"
+                + quizzes.size() + "` pergunta(s) cadastrada(s). Usadas no `/quiz`."));
+        kids.add(Panels.divider());
+        if (!quizzes.isEmpty()) {
+            StringSelectMenu.Builder rem = StringSelectMenu.create(ComponentId.of(NS, "quizdel"))
+                    .setPlaceholder("Remover uma pergunta…");
+            for (QuizQuestion q : quizzes.subList(0, Math.min(25, quizzes.size()))) {
+                String label = q.question().length() > 90 ? q.question().substring(0, 90) : q.question();
+                rem.addOption(label, q.id());
+            }
+            kids.add(ActionRow.of(rem.build()));
+        }
+        kids.add(ActionRow.of(
+                Button.primary(ComponentId.of(NS, "quizadd"), "Adicionar pergunta").withEmoji(Emojis.button(Emojis.PLUS)),
+                Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
+        kids.add(moduleNav("fun"));
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    public static Modal quizAddModal() {
+        TextInput.Builder pergunta = TextInput.create("pergunta", TextInputStyle.PARAGRAPH)
+                .setPlaceholder("A pergunta").setRequired(true).setMaxLength(200);
+        TextInput.Builder correta = TextInput.create("correta", TextInputStyle.SHORT)
+                .setPlaceholder("Resposta correta").setRequired(true).setMaxLength(80);
+        TextInput.Builder e1 = TextInput.create("errada1", TextInputStyle.SHORT)
+                .setPlaceholder("Alternativa errada 1").setRequired(true).setMaxLength(80);
+        TextInput.Builder e2 = TextInput.create("errada2", TextInputStyle.SHORT)
+                .setPlaceholder("Alternativa errada 2").setRequired(true).setMaxLength(80);
+        TextInput.Builder e3 = TextInput.create("errada3", TextInputStyle.SHORT)
+                .setPlaceholder("Alternativa errada 3").setRequired(true).setMaxLength(80);
+        return Modal.create(ComponentId.of(NS, "quizaddform"), "Nova pergunta de quiz")
+                .addComponents(Label.of("Pergunta", pergunta.build()), Label.of("Correta", correta.build()),
+                        Label.of("Errada 1", e1.build()), Label.of("Errada 2", e2.build()),
+                        Label.of("Errada 3", e3.build()))
+                .build();
+    }
+
+    // --- Eventos de chat -------------------------------------------------------
+
+    public static Container eventsScreen(GuildConfig cfg) {
+        int accent = EmbedColor.resolve(cfg);
+        boolean on = ChatEventConfig.enabled(cfg);
+        String chan = ChatEventConfig.channelId(cfg);
+        String overview = Emojis.of(Emojis.GIFT, "🎉") + " **Eventos** · " + (on ? "ligados" : "desligados") + "\n"
+                + Emojis.of(Emojis.CHANNEL, "#") + " **Canal principal** · " + (chan != null ? "<#" + chan + ">" : "nenhum") + "\n"
+                + Emojis.of(Emojis.CLOCK, "⏰") + " **Intervalo** · `" + ChatEventConfig.minMinutes(cfg) + "–"
+                + ChatEventConfig.maxMinutes(cfg) + " min`";
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.GIFT, "🎉") + " Eventos de chat"),
+                Panels.divider(),
+                Panels.text(overview),
+                Panels.text("-# Quiz, digitação, matemática e coleta — recompensa moedas (por nível) + XP."),
+                Panels.divider(),
+                ActionRow.of(channelSelect("eventchan", ChatEventConfig.KEY_CHANNEL, "Canal principal dos eventos…", chan)),
+                ActionRow.of(
+                        Button.secondary(ComponentId.of(NS, "evttoggle"), "Eventos: " + (on ? "on" : "off"))
+                                .withEmoji(Emojis.button(Emojis.GIFT)),
+                        Button.primary(ComponentId.of(NS, "evtinterval"), "Intervalo").withEmoji(Emojis.button(Emojis.CLOCK)),
+                        Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")),
+                moduleNav("eventos"));
+    }
+
+    public static Modal eventIntervalModal(GuildConfig cfg) {
+        TextInput.Builder min = TextInput.create("min", TextInputStyle.SHORT)
+                .setPlaceholder("Intervalo mínimo (minutos)").setRequired(true).setMaxLength(6);
+        min.setValue(String.valueOf(ChatEventConfig.minMinutes(cfg)));
+        TextInput.Builder max = TextInput.create("max", TextInputStyle.SHORT)
+                .setPlaceholder("Intervalo máximo (minutos)").setRequired(true).setMaxLength(6);
+        max.setValue(String.valueOf(ChatEventConfig.maxMinutes(cfg)));
+        return Modal.create(ComponentId.of(NS, "eventform-interval"), "Intervalo dos eventos")
+                .addComponents(Label.of("Mínimo (min)", min.build()), Label.of("Máximo (min)", max.build()))
+                .build();
+    }
+
+    // --- Economia --------------------------------------------------------------
+
+    public static Container economyScreen(GuildConfig cfg) {
+        int accent = EmbedColor.resolve(cfg);
+        boolean on = EconomyConfig.enabled(cfg);
+        String overview = Emojis.of(Emojis.MONEY, "💰") + " **Economia** · " + (on ? "ligada" : "desligada") + "\n"
+                + Emojis.of(Emojis.GEM, "💠") + " **Moeda** · " + EconomyConfig.currencyEmoji(cfg) + " "
+                + EconomyConfig.currencyName(cfg) + "\n"
+                + Emojis.of(Emojis.CASH, "💵") + " **Diário** · `" + EconomyConfig.daily(cfg) + "`\n"
+                + Emojis.of(Emojis.GROWTH, "📈") + " **Trabalhar** · `" + EconomyConfig.workMin(cfg) + "–"
+                + EconomyConfig.workMax(cfg) + "` a cada `" + EconomyConfig.workCooldownSeconds(cfg) + "s`";
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.MONEY, "💰") + " Economia"),
+                Panels.divider(),
+                Panels.text(overview),
+                Panels.text("-# Crime e roubo usam valores padrão fixos no v1."),
+                Panels.divider(),
+                ActionRow.of(
+                        Button.secondary(ComponentId.of(NS, "ecotoggle"), "Economia: " + (on ? "on" : "off"))
+                                .withEmoji(Emojis.button(Emojis.MONEY)),
+                        Button.primary(ComponentId.of(NS, "ecocurrency"), "Moeda").withEmoji(Emojis.button(Emojis.GEM)),
+                        Button.primary(ComponentId.of(NS, "ecovalues"), "Valores").withEmoji(Emojis.button(Emojis.EDIT))),
+                ActionRow.of(Button.primary(ComponentId.of(NS, "shop"), "Loja").withEmoji(Emojis.button(Emojis.SALES))),
+                ActionRow.of(Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")),
+                moduleNav("economia"));
+    }
+
+    public static Modal economyCurrencyModal(GuildConfig cfg) {
+        TextInput.Builder nome = TextInput.create("nome", TextInputStyle.SHORT)
+                .setPlaceholder("Nome da moeda (ex.: moedas)").setRequired(true).setMaxLength(20);
+        nome.setValue(EconomyConfig.currencyName(cfg));
+        TextInput.Builder emoji = TextInput.create("emoji", TextInputStyle.SHORT)
+                .setPlaceholder("Emoji da moeda (unicode ou custom)").setRequired(true).setMaxLength(60);
+        emoji.setValue(EconomyConfig.currencyEmoji(cfg));
+        return Modal.create(ComponentId.of(NS, "economyform-currency"), "Moeda da economia")
+                .addComponents(Label.of("Nome", nome.build()), Label.of("Emoji", emoji.build()))
+                .build();
+    }
+
+    public static Modal economyValuesModal(GuildConfig cfg) {
+        TextInput.Builder daily = TextInput.create("daily", TextInputStyle.SHORT)
+                .setPlaceholder("Valor do /daily").setRequired(true).setMaxLength(9);
+        daily.setValue(String.valueOf(EconomyConfig.daily(cfg)));
+        TextInput.Builder wmin = TextInput.create("work_min", TextInputStyle.SHORT)
+                .setPlaceholder("Trabalhar — mínimo").setRequired(true).setMaxLength(9);
+        wmin.setValue(String.valueOf(EconomyConfig.workMin(cfg)));
+        TextInput.Builder wmax = TextInput.create("work_max", TextInputStyle.SHORT)
+                .setPlaceholder("Trabalhar — máximo").setRequired(true).setMaxLength(9);
+        wmax.setValue(String.valueOf(EconomyConfig.workMax(cfg)));
+        TextInput.Builder wcd = TextInput.create("work_cooldown", TextInputStyle.SHORT)
+                .setPlaceholder("Trabalhar — cooldown (segundos)").setRequired(true).setMaxLength(9);
+        wcd.setValue(String.valueOf(EconomyConfig.workCooldownSeconds(cfg)));
+        return Modal.create(ComponentId.of(NS, "economyform-values"), "Valores da economia")
+                .addComponents(Label.of("Diário", daily.build()), Label.of("Trabalhar mín.", wmin.build()),
+                        Label.of("Trabalhar máx.", wmax.build()), Label.of("Cooldown trabalhar (s)", wcd.build()))
+                .build();
+    }
+
+    // --- Loja da economia -------------------------------------------------------
+
+    public static Container shopScreen(int accent, List<dev.davimf.basebot.modules.base.economy.ShopItem> items,
+            GuildConfig cfg) {
+        StringBuilder body = new StringBuilder("## " + Emojis.of(Emojis.SALES, "🛒") + " Loja\n");
+        if (items.isEmpty()) {
+            body.append("\n*Nenhum item. Use **Adicionar** para criar.*");
+        } else {
+            for (var it : items) {
+                body.append("\n`#").append(it.id()).append("` **").append(it.name()).append("** · ")
+                        .append(dev.davimf.basebot.modules.base.economy.EconomyFormat.format(it.price(), cfg))
+                        .append(" · ").append(it.type());
+                if (it.type() == dev.davimf.basebot.modules.base.economy.ShopItem.Type.ROLE_TEMP) {
+                    body.append(" (").append(dev.davimf.basebot.util.Durations.format(it.durationS() * 1000L)).append(")");
+                }
+                if (it.limited()) {
+                    body.append(" · estoque ").append(it.remaining());
+                }
+                if (it.perUser() != null) {
+                    body.append(" · máx ").append(it.perUser()).append("/usuário");
+                }
+            }
+        }
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text(body.toString()));
+        boolean hasCustom = items.stream()
+                .anyMatch(i -> i.type() == dev.davimf.basebot.modules.base.economy.ShopItem.Type.CUSTOM);
+        if (hasCustom && cfg.channel("log-loja") == null) {
+            kids.add(Panels.text("-# " + Emojis.of(Emojis.WARN, "⚠️") + " Há itens **custom** mas o canal "
+                    + "`log-loja` não está configurado — as compras não serão registradas para a staff entregar. "
+                    + "Configure em **Logs**."));
+        }
+        kids.add(Panels.divider());
+        if (!items.isEmpty()) {
+            StringSelectMenu.Builder rem = StringSelectMenu.create(ComponentId.of(NS, "shopremove"))
+                    .setPlaceholder("Remover item…");
+            for (var it : items.size() > 25 ? items.subList(0, 25) : items) {
+                rem.addOption(trim("#" + it.id() + " " + it.name(), 100), String.valueOf(it.id()));
+            }
+            kids.add(ActionRow.of(rem.build()));
+        }
+        kids.add(ActionRow.of(
+                Button.success(ComponentId.of(NS, "shopadd"), "Adicionar").withEmoji(Emojis.button(Emojis.EDIT)),
+                Button.secondary(ComponentId.of(NS, "nav", "economia"), "◀ Voltar")));
+        kids.add(moduleNav("loja"));
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    public static Container shopTypePrompt(int accent) {
+        StringSelectMenu menu = StringSelectMenu.create(ComponentId.of(NS, "shoptype"))
+                .setPlaceholder("Tipo do item…")
+                .addOption("Cargo permanente", "ROLE_PERM")
+                .addOption("Cargo temporário", "ROLE_TEMP")
+                .addOption("Item custom (entrega manual)", "CUSTOM")
+                .build();
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.SALES, "🛒") + " Novo item\nEscolha o tipo:"),
+                Panels.divider(),
+                ActionRow.of(menu),
+                ActionRow.of(Button.secondary(ComponentId.of(NS, "shop"), "◀ Voltar")));
+    }
+
+    public static Container shopRolePrompt(int accent, String type) {
+        EntitySelectMenu roles = EntitySelectMenu.create(ComponentId.of(NS, "shoprole", type), SelectTarget.ROLE)
+                .setPlaceholder("Escolha o cargo à venda").setRequiredRange(1, 1).build();
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.SALES, "🛒") + " Novo item\nEscolha o cargo:"),
+                Panels.divider(),
+                ActionRow.of(roles));
+    }
+
+    public static Container shopFormPrompt(int accent, String type, String roleId) {
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.SALES, "🛒") + " Novo item\nCargo <@&" + roleId
+                        + "> escolhido. Clique para preencher os detalhes:"),
+                Panels.divider(),
+                ActionRow.of(Button.primary(ComponentId.of(NS, "shopform", type, roleId), "Preencher detalhes")
+                        .withEmoji(Emojis.button(Emojis.EDIT))));
+    }
+
+    /** Modal de detalhes do item. type ∈ {ROLE_PERM,ROLE_TEMP,CUSTOM}; roleId vazio p/ CUSTOM. */
+    public static Modal shopItemModal(String type, String roleId) {
+        boolean temp = "ROLE_TEMP".equals(type);
+        TextInput.Builder name = TextInput.create("name", TextInputStyle.SHORT)
+                .setPlaceholder("Nome do item").setRequired(true).setMaxLength(80);
+        TextInput.Builder desc = TextInput.create("description", TextInputStyle.PARAGRAPH)
+                .setPlaceholder("Descrição (opcional)").setRequired(false).setMaxLength(300);
+        TextInput.Builder price = TextInput.create("price", TextInputStyle.SHORT)
+                .setPlaceholder("Preço (número inteiro)").setRequired(true).setMaxLength(9);
+        TextInput.Builder limits = TextInput.create("limits", TextInputStyle.SHORT)
+                .setPlaceholder("Estoque/usuário, ex.: 10/1 (vazio = ilimitado)").setRequired(false).setMaxLength(20);
+        Modal.Builder b = Modal.create(ComponentId.of(NS, "shopitemform", type, roleId == null ? "" : roleId),
+                        "Item da loja")
+                .addComponents(Label.of("Nome", name.build()), Label.of("Descrição", desc.build()),
+                        Label.of("Preço", price.build()));
+        if (temp) {
+            TextInput.Builder dur = TextInput.create("duration", TextInputStyle.SHORT)
+                    .setPlaceholder("Duração, ex.: 7d, 12h, 30m").setRequired(true).setMaxLength(10);
+            b.addComponents(Label.of("Duração", dur.build()));
+        }
+        b.addComponents(Label.of("Limites", limits.build()));
+        return b.build();
+    }
+
     // --- Auto-cargos -----------------------------------------------------------
 
     public static Modal selfRoleDetailsModal(String panelId, String title, String description) {
@@ -635,15 +968,102 @@ public final class SetupView {
                 ActionRow.of(
                         Button.secondary(ComponentId.of(NS, "sectoggle", "verify"), "Verificação: " + (verify ? "on" : "off"))
                                 .withEmoji(Emojis.button(Emojis.CHECK_YES)),
-                        Button.primary(ComponentId.of(NS, "verifypanel"), "Publicar painel").withEmoji(Emojis.button(Emojis.SEND))),
+                        Button.primary(ComponentId.of(NS, "secnav", "verify"), "Configurar verificação").withEmoji(Emojis.button(Emojis.EDIT))),
                 ActionRow.of(
                         Button.secondary(ComponentId.of(NS, "sectoggle", "antinuke"), "Anti-nuke: " + (nuke ? "on" : "off"))
                                 .withEmoji(Emojis.button(Emojis.SHIELD)),
-                        Button.primary(ComponentId.of(NS, "nukeedit"), "Editar anti-nuke").withEmoji(Emojis.button(Emojis.EDIT))),
+                        Button.primary(ComponentId.of(NS, "nukeedit"), "Editar anti-nuke").withEmoji(Emojis.button(Emojis.EDIT)),
+                        Button.primary(ComponentId.of(NS, "secnav", "antispam"), "Anti-spam").withEmoji(Emojis.button(Emojis.WARN))),
                 ActionRow.of(
                         Button.primary(ComponentId.of(NS, "secedit"), "Editar AutoMod").withEmoji(Emojis.button(Emojis.EDIT)),
                         Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")),
                 moduleNav("seguranca"));
+    }
+
+    /** Dedicated verification sub-screen: toggles, per-server questions, approval channel, publish. */
+    public static Container verificationScreen(GuildConfig cfg,
+            List<dev.davimf.basebot.database.postgres.VerificationQuestionRepository.Question> questions) {
+        int accent = EmbedColor.resolve(cfg);
+        boolean on = dev.davimf.basebot.modules.base.security.SecurityConfig.verify(cfg);
+        boolean us = dev.davimf.basebot.modules.base.security.SecurityConfig.verifyUserSelect(cfg);
+        String chId = cfg.channel(dev.davimf.basebot.modules.base.security.SecurityConfig.CHANNEL_VERIFY);
+        StringBuilder q = new StringBuilder();
+        for (var item : questions) {
+            q.append("- `").append(item.prompt()).append("`\n");
+        }
+        if (questions.isEmpty()) {
+            q.append("-# Nenhuma pergunta — o botão Verificar concede sem formulário.\n");
+        }
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## " + Emojis.of(Emojis.CHECK_YES, "✅") + " Verificação"));
+        kids.add(Panels.divider());
+        kids.add(Panels.text(Emojis.of(Emojis.CHECK_YES, "✅") + " **Ativa** · " + (on ? "sim" : "não") + "\n"
+                + Emojis.of(Emojis.MEMBERS, "👥") + " **Seleção de usuário** · " + (us ? "sim" : "não") + "\n"
+                + Emojis.of(Emojis.LIST, "📋") + " **Canal de aprovação** · "
+                + (chId == null ? "não definido" : "<#" + chId + ">")));
+        if (on && cfg.role("membro") == null) {
+            kids.add(Panels.text("-# " + Emojis.of(Emojis.WARN, "⚠️")
+                    + " Cargo **membro** não configurado — canais não serão escondidos."));
+        }
+        kids.add(Panels.divider());
+        kids.add(Panels.text("**Perguntas** (máx. 5)\n" + q));
+        kids.add(ActionRow.of(channelSelect("verifychan",
+                dev.davimf.basebot.modules.base.security.SecurityConfig.CHANNEL_VERIFY,
+                "Canal de aprovação…", chId)));
+        kids.add(ActionRow.of(
+                Button.secondary(ComponentId.of(NS, "sectoggle", "verify"), "Ativa: " + (on ? "on" : "off"))
+                        .withEmoji(Emojis.button(Emojis.CHECK_YES)),
+                Button.secondary(ComponentId.of(NS, "sectoggle", "verifyuser"), "Seleção usuário: " + (us ? "on" : "off"))
+                        .withEmoji(Emojis.button(Emojis.MEMBERS)),
+                Button.primary(ComponentId.of(NS, "verifyqadd"), "Adicionar pergunta")
+                        .withEmoji(Emojis.button(Emojis.EDIT))));
+        if (!questions.isEmpty()) {
+            List<Button> dels = new ArrayList<>();
+            for (int i = 0; i < questions.size(); i++) {
+                dels.add(Button.danger(ComponentId.of(NS, "verifyqdel", questions.get(i).id()),
+                        "Remover " + (i + 1)));
+            }
+            kids.add(ActionRow.of(dels));
+        }
+        kids.add(ActionRow.of(
+                Button.secondary(ComponentId.of(NS, "verifylock"), "Esconder canais")
+                        .withEmoji(Emojis.button(Emojis.LOCK)),
+                Button.secondary(ComponentId.of(NS, "verifyunlock"), "Reabrir canais")
+                        .withEmoji(Emojis.button(Emojis.UNLOCK))));
+        kids.add(ActionRow.of(
+                Button.primary(ComponentId.of(NS, "verifypanel"), "Publicar painel")
+                        .withEmoji(Emojis.button(Emojis.SEND)),
+                Button.secondary(ComponentId.of(NS, "nav", "seguranca"), "◀ Voltar")));
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    public static Modal verifyQuestionModal() {
+        TextInput prompt = TextInput.create("prompt", TextInputStyle.SHORT)
+                .setPlaceholder("Ex.: Quem te convidou para o servidor?").setRequired(true).setMaxLength(45).build();
+        return Modal.create(ComponentId.of(NS, "verifyqform"), "Nova pergunta de verificação")
+                .addComponents(Label.of("Pergunta", prompt))
+                .build();
+    }
+
+    /** Dedicated anti-spam trap-channel sub-screen: toggle, trap channel, publish standing warning. */
+    public static Container antispamScreen(GuildConfig cfg) {
+        int accent = EmbedColor.resolve(cfg);
+        boolean on = dev.davimf.basebot.modules.base.security.SecurityConfig.antispam(cfg);
+        String chId = cfg.channel(dev.davimf.basebot.modules.base.security.SecurityConfig.CHANNEL_ANTISPAM);
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.WARN, "⚠️") + " Anti-spam (canal-armadilha)"),
+                Panels.divider(),
+                Panels.text(Emojis.of(Emojis.SHIELD, "🛡️") + " **Ativo** · " + (on ? "sim" : "não") + "\n"
+                        + Emojis.of(Emojis.LIST, "📋") + " **Canal** · " + (chId == null ? "não definido" : "<#" + chId + ">") + "\n"
+                        + "-# Qualquer mensagem no canal → kick + apaga as 10 mensagens recentes do autor."),
+                ActionRow.of(channelSelect("antispamchan",
+                        dev.davimf.basebot.modules.base.security.SecurityConfig.CHANNEL_ANTISPAM,
+                        "Canal-armadilha…", chId)),
+                ActionRow.of(
+                        Button.secondary(ComponentId.of(NS, "sectoggle", "antispam"), "Ativar: " + (on ? "on" : "off"))
+                                .withEmoji(Emojis.button(Emojis.SHIELD)),
+                        Button.primary(ComponentId.of(NS, "antispampanel"), "Publicar aviso").withEmoji(Emojis.button(Emojis.SEND)),
+                        Button.secondary(ComponentId.of(NS, "nav", "seguranca"), "◀ Voltar")));
     }
 
     public static Modal antiraidModal(GuildConfig cfg) {
@@ -717,6 +1137,11 @@ public final class SetupView {
         addNav(menu, current, "Segurança", "seguranca");
         addNav(menu, current, "Boas-vindas", "boasvindas");
         addNav(menu, current, "Auto-cargos", "autocargos");
+        addNav(menu, current, "Nível", "nivel");
+        addNav(menu, current, "Economia", "economia");
+        addNav(menu, current, "Loja", "loja");
+        addNav(menu, current, "Eventos", "eventos");
+        addNav(menu, current, "Fun", "fun");
         addNav(menu, current, "Bot", "bot");
         addNav(menu, current, "Permissões", "permissoes");
         return ActionRow.of(menu.build());

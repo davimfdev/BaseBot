@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.pix
-// 
-// Class: PixKeyRepositoryTest
-// 
-// Fields:
-//   - `Field` : `private SqliteManager sqlite`
-//   - `Field` : `private PixKeyRepository repo`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.pix;
 
 import dev.davimf.basebot.config.BotConfig;
@@ -22,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
-import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,38 +31,58 @@ class PixKeyRepositoryTest {
         sqlite.close();
     }
 
-    @Test
-    void upsertThenFindByUserReturnsKey() {
-        repo.upsert(new PixKey("g1", "u1", "EMAIL", "a@b.com", "Loja X", "SAO PAULO"));
-
-        Optional<PixKey> found = repo.findByUser("g1", "u1");
-        assertTrue(found.isPresent());
-        assertEquals("a@b.com", found.get().keyValue());
-        assertEquals("Loja X", found.get().merchantName());
+    private PixKey unsaved(String guild, String user, String type, String value, String name) {
+        return new PixKey(0, guild, user, type, value, name);
     }
 
     @Test
-    void upsertReplacesExistingRow() {
-        repo.upsert(new PixKey("g1", "u1", "EMAIL", "old@b.com", "Loja X", "SAO PAULO"));
-        repo.upsert(new PixKey("g1", "u1", "RANDOM", "new-key", "Loja Y", "RIO"));
-
-        PixKey k = repo.findByUser("g1", "u1").orElseThrow();
-        assertEquals("RANDOM", k.keyType());
-        assertEquals("new-key", k.keyValue());
-        assertEquals("Loja Y", k.merchantName());
+    void insertThenListReturnsAllUserKeys() {
+        repo.insert(unsaved("g1", "u1", "EMAIL", "a@b.com", "Loja X"));
+        repo.insert(unsaved("g1", "u1", "PHONE", "+5562986089609", "Loja X"));
+        List<PixKey> keys = repo.list("g1", "u1");
+        assertEquals(2, keys.size());
+        assertEquals("a@b.com", keys.get(0).keyValue());
+        assertEquals("+5562986089609", keys.get(1).keyValue());
     }
 
     @Test
-    void findByUserIsGuildScoped() {
-        repo.upsert(new PixKey("g1", "u1", "EMAIL", "a@b.com", "Loja X", "SAO PAULO"));
-        assertTrue(repo.findByUser("g2", "u1").isEmpty());
+    void findReturnsById() {
+        long id = repo.insert(unsaved("g1", "u1", "EMAIL", "a@b.com", "Loja X"));
+        PixKey k = repo.find(id).orElseThrow();
+        assertEquals("a@b.com", k.keyValue());
+        assertEquals("Loja X", k.merchantName());
     }
 
     @Test
-    void keysAreSeparatePerUser() {
-        repo.upsert(new PixKey("g1", "u1", "EMAIL", "u1@b.com", "Loja 1", "SP"));
-        repo.upsert(new PixKey("g1", "u2", "EMAIL", "u2@b.com", "Loja 2", "RJ"));
-        assertEquals("u1@b.com", repo.findByUser("g1", "u1").orElseThrow().keyValue());
-        assertEquals("u2@b.com", repo.findByUser("g1", "u2").orElseThrow().keyValue());
+    void updateChangesValueAndName() {
+        long id = repo.insert(unsaved("g1", "u1", "EMAIL", "old@b.com", "Old"));
+        repo.update(id, "new@b.com", "New");
+        PixKey k = repo.find(id).orElseThrow();
+        assertEquals("new@b.com", k.keyValue());
+        assertEquals("New", k.merchantName());
+        assertEquals("EMAIL", k.keyType());
+    }
+
+    @Test
+    void deleteRemovesRow() {
+        long id = repo.insert(unsaved("g1", "u1", "EMAIL", "a@b.com", "Loja X"));
+        repo.delete(id);
+        assertTrue(repo.find(id).isEmpty());
+        assertTrue(repo.list("g1", "u1").isEmpty());
+    }
+
+    @Test
+    void findDefaultReturnsFirstByInsertionOrder() {
+        repo.insert(unsaved("g1", "u1", "EMAIL", "first@b.com", "A"));
+        repo.insert(unsaved("g1", "u1", "PHONE", "+5562986089609", "B"));
+        assertEquals("first@b.com", repo.findDefault("g1", "u1").orElseThrow().keyValue());
+    }
+
+    @Test
+    void keysAreGuildAndUserScoped() {
+        repo.insert(unsaved("g1", "u1", "EMAIL", "u1@b.com", "L1"));
+        repo.insert(unsaved("g2", "u1", "EMAIL", "other@b.com", "L2"));
+        assertEquals(1, repo.list("g1", "u1").size());
+        assertTrue(repo.list("g1", "u2").isEmpty());
     }
 }

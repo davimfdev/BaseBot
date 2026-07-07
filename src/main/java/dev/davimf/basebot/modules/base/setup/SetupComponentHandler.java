@@ -31,7 +31,7 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.TicketCategory;
-import dev.davimf.basebot.database.sqlite.ActionTypeRepository.ActionType;
+import dev.davimf.basebot.database.postgres.ActionTypeRepository.ActionType;
 import dev.davimf.basebot.modules.base.listeners.AttachmentVault;
 import dev.davimf.basebot.modules.base.moderation.ModerationConfig;
 import dev.davimf.basebot.modules.base.selfroles.SelfRolePanel;
@@ -90,6 +90,10 @@ public final class SetupComponentHandler implements ComponentHandler {
                 case "seguranca" -> SetupView.securityScreen(config(ctx, guildId));
                 case "boasvindas" -> SetupView.welcomeScreen(config(ctx, guildId));
                 case "autocargos" -> selfRolesScreen(ctx, guildId);
+                case "nivel" -> SetupView.levelingScreen(config(ctx, guildId), levelRewards(ctx).all(guildId));
+                case "economia" -> SetupView.economyScreen(config(ctx, guildId));
+                case "eventos" -> SetupView.eventsScreen(config(ctx, guildId));
+                case "fun" -> SetupView.funScreen(config(ctx, guildId), quizRepo(ctx).list(guildId));
                 default -> hubScreen(ctx, guildId);
             });
             case "logpage" -> edit(event, SetupView.logsPage(config(ctx, guildId), parseInt(id.arg(0))));
@@ -156,6 +160,29 @@ public final class SetupComponentHandler implements ComponentHandler {
             case "raidedit" -> event.replyModal(SetupView.antiraidModal(config(ctx, guildId))).queue();
             case "nukeedit" -> event.replyModal(SetupView.antinukeModal(config(ctx, guildId))).queue();
             case "verifypanel" -> publishVerify(event, ctx, guildId);
+            case "secnav" -> {
+                if ("verify".equals(id.arg(0))) {
+                    edit(event, SetupView.verificationScreen(config(ctx, guildId),
+                            ctx.database().verificationQuestions().listByGuild(guildId)));
+                } else if ("antispam".equals(id.arg(0))) {
+                    edit(event, SetupView.antispamScreen(config(ctx, guildId)));
+                }
+            }
+            case "verifylock" -> runVerificationLockdown(event, ctx, guildId, true);
+            case "verifyunlock" -> runVerificationLockdown(event, ctx, guildId, false);
+            case "antispampanel" -> publishAntispam(event, ctx, guildId);
+            case "verifyqadd" -> {
+                if (ctx.database().verificationQuestions().count(guildId) >= 5) {
+                    Replies.ephemeral(event, ctx, "Máximo de 5 perguntas.");
+                } else {
+                    event.replyModal(SetupView.verifyQuestionModal()).queue();
+                }
+            }
+            case "verifyqdel" -> {
+                ctx.database().verificationQuestions().delete(id.arg(0));
+                edit(event, SetupView.verificationScreen(config(ctx, guildId),
+                        ctx.database().verificationQuestions().listByGuild(guildId)));
+            }
             case "sectoggle" -> {
                 GuildConfig cfg = config(ctx, guildId);
                 String arg = id.arg(0);
@@ -164,6 +191,8 @@ public final class SetupComponentHandler implements ComponentHandler {
                     case "warn" -> dev.davimf.basebot.modules.base.security.SecurityConfig.KEY_AUTOMOD_WARN;
                     case "antiraid" -> dev.davimf.basebot.modules.base.security.SecurityConfig.KEY_ANTIRAID;
                     case "verify" -> dev.davimf.basebot.modules.base.security.SecurityConfig.KEY_VERIFY;
+                    case "verifyuser" -> dev.davimf.basebot.modules.base.security.SecurityConfig.KEY_VERIFY_USERSELECT;
+                    case "antispam" -> dev.davimf.basebot.modules.base.security.SecurityConfig.KEY_ANTISPAM;
                     case "antinuke" -> dev.davimf.basebot.modules.base.security.SecurityConfig.KEY_ANTINUKE;
                     default -> dev.davimf.basebot.modules.base.security.SecurityConfig.KEY_BLOCK_INVITES;
                 };
@@ -173,7 +202,17 @@ public final class SetupComponentHandler implements ComponentHandler {
                 net.dv8tion.jda.api.entities.Guild guild = event.getGuild();
                 ctx.scheduler().executor().execute(() ->
                         dev.davimf.basebot.modules.base.security.AutoModManager.sync(guild, updated));
-                edit(event, SetupView.securityScreen(updated));
+                if ("verify".equals(arg) || "verifyuser".equals(arg)) {
+                    if ("verify".equals(arg)) {
+                        scheduleVerificationLockdown(ctx, event, updated);
+                    }
+                    edit(event, SetupView.verificationScreen(updated,
+                            ctx.database().verificationQuestions().listByGuild(guildId)));
+                } else if ("antispam".equals(arg)) {
+                    edit(event, SetupView.antispamScreen(updated));
+                } else {
+                    edit(event, SetupView.securityScreen(updated));
+                }
             }
             case "welcedit" -> event.replyModal(SetupView.welcomeModal(config(ctx, guildId))).queue();
             case "welctoggle" -> {
@@ -187,6 +226,40 @@ public final class SetupComponentHandler implements ComponentHandler {
                 ctx.database().guildConfig().save(updated);
                 edit(event, SetupView.welcomeScreen(updated));
             }
+            case "niveltoggle" -> {
+                GuildConfig cfg = config(ctx, guildId);
+                GuildConfig updated = GuildConfigEdits.withToggle(cfg,
+                        dev.davimf.basebot.modules.base.leveling.LevelingConfig.KEY_ENABLED,
+                        !cfg.toggle(dev.davimf.basebot.modules.base.leveling.LevelingConfig.KEY_ENABLED, false));
+                ctx.database().guildConfig().save(updated);
+                edit(event, SetupView.levelingScreen(updated, levelRewards(ctx).all(guildId)));
+            }
+            case "nivelreward" -> event.replyModal(SetupView.levelRewardModal()).queue();
+            case "ecotoggle" -> {
+                GuildConfig cfg = config(ctx, guildId);
+                GuildConfig updated = GuildConfigEdits.withToggle(cfg,
+                        dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_ENABLED,
+                        !cfg.toggle(dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_ENABLED, false));
+                ctx.database().guildConfig().save(updated);
+                edit(event, SetupView.economyScreen(updated));
+            }
+            case "ecocurrency" -> event.replyModal(SetupView.economyCurrencyModal(config(ctx, guildId))).queue();
+            case "ecovalues" -> event.replyModal(SetupView.economyValuesModal(config(ctx, guildId))).queue();
+            case "shop" -> edit(event, SetupView.shopScreen(EmbedColor.resolve(config(ctx, guildId)),
+                    shopCatalog(ctx, guildId),
+                    config(ctx, guildId)));
+            case "shopadd" -> edit(event, SetupView.shopTypePrompt(EmbedColor.resolve(config(ctx, guildId))));
+            case "shopform" -> event.replyModal(SetupView.shopItemModal(id.arg(0), id.arg(1))).queue();
+            case "evttoggle" -> {
+                GuildConfig cfg = config(ctx, guildId);
+                GuildConfig updated = GuildConfigEdits.withToggle(cfg,
+                        dev.davimf.basebot.modules.base.events.ChatEventConfig.KEY_ENABLED,
+                        !cfg.toggle(dev.davimf.basebot.modules.base.events.ChatEventConfig.KEY_ENABLED, false));
+                ctx.database().guildConfig().save(updated);
+                edit(event, SetupView.eventsScreen(updated));
+            }
+            case "evtinterval" -> event.replyModal(SetupView.eventIntervalModal(config(ctx, guildId))).queue();
+            case "quizadd" -> event.replyModal(SetupView.quizAddModal()).queue();
             case "modrules" -> event.replyModal(SetupView.moderationRulesModal(config(ctx, guildId))).queue();
             case "modtoggle" -> {
                 GuildConfig cfg = config(ctx, guildId);
@@ -261,6 +334,13 @@ public final class SetupComponentHandler implements ComponentHandler {
                     case "seguranca" -> SetupView.securityScreen(cfg);
                     case "boasvindas" -> SetupView.welcomeScreen(cfg);
                     case "autocargos" -> selfRolesScreen(ctx, guildId);
+                    case "nivel" -> SetupView.levelingScreen(cfg, levelRewards(ctx).all(guildId));
+                    case "economia" -> SetupView.economyScreen(cfg);
+                    case "loja" -> SetupView.shopScreen(EmbedColor.resolve(cfg),
+                            shopCatalog(ctx, guildId),
+                            cfg);
+                    case "eventos" -> SetupView.eventsScreen(cfg);
+                    case "fun" -> SetupView.funScreen(cfg, quizRepo(ctx).list(guildId));
                     default -> hubScreen(ctx, guildId);
                 };
                 edit(event, screen);
@@ -284,6 +364,36 @@ public final class SetupComponentHandler implements ComponentHandler {
                 ctx.database().guildConfig().save(updated);
                 edit(event, SetupView.farmScreen(updated));
             }
+            case "nivelnotify" -> {
+                GuildConfig cfg = config(ctx, guildId);
+                GuildConfig updated = GuildConfigEdits.withSetting(cfg,
+                        dev.davimf.basebot.modules.base.leveling.LevelingConfig.KEY_NOTIFY, event.getValues().get(0));
+                ctx.database().guildConfig().save(updated);
+                edit(event, SetupView.levelingScreen(updated, levelRewards(ctx).all(guildId)));
+            }
+            case "nivelrewarddel" -> {
+                levelRewards(ctx).remove(guildId, parseInt(event.getValues().get(0)));
+                edit(event, SetupView.levelingScreen(config(ctx, guildId), levelRewards(ctx).all(guildId)));
+            }
+            case "quizdel" -> {
+                quizRepo(ctx).remove(event.getValues().get(0));
+                edit(event, SetupView.funScreen(config(ctx, guildId), quizRepo(ctx).list(guildId)));
+            }
+            case "shoptype" -> {
+                String type = event.getValues().get(0);
+                if ("CUSTOM".equals(type)) {
+                    event.replyModal(SetupView.shopItemModal("CUSTOM", "")).queue();
+                } else {
+                    edit(event, SetupView.shopRolePrompt(EmbedColor.resolve(config(ctx, guildId)), type));
+                }
+            }
+            case "shopremove" -> {
+                new dev.davimf.basebot.modules.base.economy.ShopItemRepository(ctx.database().postgres())
+                        .delete(guildId, Long.parseLong(event.getValues().get(0)));
+                edit(event, SetupView.shopScreen(EmbedColor.resolve(config(ctx, guildId)),
+                        shopCatalog(ctx, guildId),
+                        config(ctx, guildId)));
+            }
             default -> { /* not ours */ }
         }
     }
@@ -293,8 +403,45 @@ public final class SetupComponentHandler implements ComponentHandler {
         switch (id.action()) {
             case "setlogchannel" -> { saveChannel(event, ctx, id.arg(0), firstChannelId(event)); ack(event); }
             case "setrole" -> { saveRole(event, ctx, id.arg(0), firstRoleId(event)); ack(event); }
+            case "shoprole" -> {
+                String roleId = firstRoleId(event);
+                if (roleId == null) {
+                    ack(event);
+                } else {
+                    edit(event, SetupView.shopFormPrompt(EmbedColor.resolve(config(ctx, event.getGuild().getId())),
+                            id.arg(0), roleId));
+                }
+            }
+            case "verifychan" -> {
+                saveChannel(event, ctx, id.arg(0), firstChannelId(event));
+                edit(event, SetupView.verificationScreen(config(ctx, event.getGuild().getId()),
+                        ctx.database().verificationQuestions().listByGuild(event.getGuild().getId())));
+            }
+            case "antispamchan" -> {
+                saveChannel(event, ctx, id.arg(0), firstChannelId(event));
+                edit(event, SetupView.antispamScreen(config(ctx, event.getGuild().getId())));
+            }
             case "welcomechan" -> { saveChannel(event, ctx, id.arg(0), firstChannelId(event)); edit(event, SetupView.welcomeScreen(config(ctx, event.getGuild().getId()))); }
             case "welcomerole" -> { saveRole(event, ctx, id.arg(0), firstRoleId(event)); edit(event, SetupView.welcomeScreen(config(ctx, event.getGuild().getId()))); }
+            case "eventchan" -> {
+                saveChannel(event, ctx, id.arg(0), firstChannelId(event));
+                edit(event, SetupView.eventsScreen(config(ctx, event.getGuild().getId())));
+            }
+            case "nivelnotifychan" -> {
+                saveChannel(event, ctx, id.arg(0), firstChannelId(event));
+                edit(event, SetupView.levelingScreen(config(ctx, event.getGuild().getId()),
+                        levelRewards(ctx).all(event.getGuild().getId())));
+            }
+            case "nivelignored" -> {
+                String guildId = event.getGuild().getId();
+                String csv = event.getMentions().getChannels().stream()
+                        .map(net.dv8tion.jda.api.entities.channel.middleman.GuildChannel::getId)
+                        .collect(java.util.stream.Collectors.joining(","));
+                GuildConfig updated = GuildConfigEdits.withSetting(config(ctx, guildId),
+                        dev.davimf.basebot.modules.base.leveling.LevelingConfig.KEY_IGNORED, csv);
+                ctx.database().guildConfig().save(updated);
+                edit(event, SetupView.levelingScreen(updated, levelRewards(ctx).all(guildId)));
+            }
             case "permrole" -> {
                 String principal = "role:" + firstRoleId(event);
                 edit(event, SetupView.permissionsDetail(config(ctx, event.getGuild().getId()), principal,
@@ -334,6 +481,10 @@ public final class SetupComponentHandler implements ComponentHandler {
             saveFarmItem(event, ctx);
             return;
         }
+        if ("verifyqform".equals(id.action())) {
+            saveVerifyQuestion(event, ctx);
+            return;
+        }
         if ("securityform".equals(id.action())) {
             saveSecurity(event, ctx);
             return;
@@ -348,6 +499,47 @@ public final class SetupComponentHandler implements ComponentHandler {
         }
         if ("welcomeform".equals(id.action())) {
             saveWelcome(event, ctx);
+            return;
+        }
+        if ("nivelrewardform".equals(id.action())) {
+            saveLevelReward(event, ctx);
+            return;
+        }
+        if ("economyform-currency".equals(id.action())) {
+            saveEconomyCurrency(event, ctx);
+            return;
+        }
+        if ("economyform-values".equals(id.action())) {
+            saveEconomyValues(event, ctx);
+            return;
+        }
+        if ("shopitemform".equals(id.action())) {
+            saveShopItem(event, ctx, id);
+            return;
+        }
+        if ("quizaddform".equals(id.action())) {
+            String guildId = event.getGuild().getId();
+            String pergunta = value(event, "pergunta");
+            String correta = value(event, "correta");
+            String e1 = value(event, "errada1");
+            String e2 = value(event, "errada2");
+            String e3 = value(event, "errada3");
+            if (pergunta == null || pergunta.isBlank() || correta == null || correta.isBlank()
+                    || e1 == null || e1.isBlank() || e2 == null || e2.isBlank() || e3 == null || e3.isBlank()) {
+                Replies.ephemeral(event, ctx, "Preencha todos os campos.");
+                return;
+            }
+            quizRepo(ctx).add(guildId, pergunta.trim(), correta.trim(), e1.trim(), e2.trim(), e3.trim());
+            edit(event, SetupView.funScreen(config(ctx, guildId), quizRepo(ctx).list(guildId)));
+            return;
+        }
+        if ("eventform-interval".equals(id.action())) {
+            String guildId = event.getGuild().getId();
+            GuildConfig u = config(ctx, guildId);
+            u = withLong(u, dev.davimf.basebot.modules.base.events.ChatEventConfig.KEY_MIN, value(event, "min"));
+            u = withLong(u, dev.davimf.basebot.modules.base.events.ChatEventConfig.KEY_MAX, value(event, "max"));
+            ctx.database().guildConfig().save(u);
+            edit(event, SetupView.eventsScreen(u));
             return;
         }
         if ("srdetailsform".equals(id.action())) {
@@ -572,7 +764,7 @@ public final class SetupComponentHandler implements ComponentHandler {
     }
 
     private SelfRolePanelRepository selfRoles(BotContext ctx) {
-        return new SelfRolePanelRepository(ctx.database().sqlite());
+        return new SelfRolePanelRepository(ctx.database().postgres());
     }
 
     private Container selfRolesScreen(BotContext ctx, String guildId) {
@@ -654,6 +846,143 @@ public final class SetupComponentHandler implements ComponentHandler {
         ctx.database().actionLogs().log(guildId, event.getUser().getId(), roleId, "SETUP_ROLE", key);
     }
 
+    private dev.davimf.basebot.modules.base.leveling.LevelRewardRepository levelRewards(BotContext ctx) {
+        return new dev.davimf.basebot.modules.base.leveling.LevelRewardRepository(ctx.database().postgres());
+    }
+
+    /** Itens da loja com o contador {@code sold} preenchido a partir do shop_stock (SQLite). */
+    private java.util.List<dev.davimf.basebot.modules.base.economy.ShopItem> shopCatalog(BotContext ctx, String guildId) {
+        var repo = new dev.davimf.basebot.modules.base.economy.ShopItemRepository(ctx.database().postgres());
+        var stockRepo = new dev.davimf.basebot.modules.base.economy.ShopStockRepository(ctx.database().sqlite());
+        java.util.List<dev.davimf.basebot.modules.base.economy.ShopItem> out = new java.util.ArrayList<>();
+        for (var it : repo.list(guildId)) {
+            out.add(it.withSold(stockRepo.soldOf(it.id())));
+        }
+        return out;
+    }
+
+    private dev.davimf.basebot.modules.base.fun.QuizRepository quizRepo(BotContext ctx) {
+        return new dev.davimf.basebot.modules.base.fun.QuizRepository(ctx.database().postgres());
+    }
+
+    private void saveEconomyCurrency(ModalInteractionEvent event, BotContext ctx) {
+        String guildId = event.getGuild().getId();
+        GuildConfig u = config(ctx, guildId);
+        String nome = value(event, "nome");
+        String emoji = value(event, "emoji");
+        u = GuildConfigEdits.withSetting(u, dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_CURRENCY_NAME,
+                nome == null ? "" : nome.trim());
+        u = GuildConfigEdits.withSetting(u, dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_CURRENCY_EMOJI,
+                emoji == null ? "" : emoji.trim());
+        ctx.database().guildConfig().save(u);
+        edit(event, SetupView.economyScreen(u));
+    }
+
+    private void saveEconomyValues(ModalInteractionEvent event, BotContext ctx) {
+        String guildId = event.getGuild().getId();
+        GuildConfig u = config(ctx, guildId);
+        u = withLong(u, dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_DAILY, value(event, "daily"));
+        u = withLong(u, dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_WORK_MIN, value(event, "work_min"));
+        u = withLong(u, dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_WORK_MAX, value(event, "work_max"));
+        u = withLong(u, dev.davimf.basebot.modules.base.economy.EconomyConfig.KEY_WORK_COOLDOWN, value(event, "work_cooldown"));
+        ctx.database().guildConfig().save(u);
+        edit(event, SetupView.economyScreen(u));
+    }
+
+    private void saveShopItem(ModalInteractionEvent event, BotContext ctx, ComponentId id) {
+        String guildId = event.getGuild().getId();
+        var repo = new dev.davimf.basebot.modules.base.economy.ShopItemRepository(ctx.database().postgres());
+        if (repo.count(guildId) >= 25) {
+            Replies.ephemeral(event, ctx, "Loja cheia (máx. 25 itens). Remova um item antes de adicionar.");
+            return;
+        }
+        String type = id.arg(0);
+        String roleId = id.arg(1) != null && !id.arg(1).isBlank() ? id.arg(1) : null;
+        String name = value(event, "name");
+        String description = value(event, "description");
+        long price;
+        try {
+            price = Long.parseLong(value(event, "price").trim());
+        } catch (Exception e) {
+            Replies.ephemeral(event, ctx, "Preço inválido — use um número inteiro.");
+            return;
+        }
+        if (price <= 0) {
+            Replies.ephemeral(event, ctx, "Preço deve ser maior que zero.");
+            return;
+        }
+        Long durationS = null;
+        if ("ROLE_TEMP".equals(type)) {
+            var parsed = dev.davimf.basebot.util.Durations.parse(value(event, "duration"));
+            if (parsed.isEmpty()) {
+                Replies.ephemeral(event, ctx, "Duração inválida — use ex.: 7d, 12h, 30m.");
+                return;
+            }
+            durationS = parsed.getAsLong() / 1000L;
+        }
+        var limits = dev.davimf.basebot.modules.base.economy.ShopPurchaseRules.parseLimits(value(event, "limits"));
+        if (!limits.valid()) {
+            Replies.ephemeral(event, ctx, "Limites inválidos — use ex.: 10/1 (estoque/usuário).");
+            return;
+        }
+        if (roleId != null) {
+            Role role = event.getGuild().getRoleById(roleId);
+            if (role == null) {
+                Replies.ephemeral(event, ctx, "Cargo não encontrado.");
+                return;
+            }
+            if (!event.getGuild().getSelfMember().canInteract(role)) {
+                Replies.ephemeral(event, ctx, "Não consigo atribuir " + role.getAsMention()
+                        + " (hierarquia) — mova o cargo do bot acima dele e tente de novo.");
+                return;
+            }
+        }
+        var item = new dev.davimf.basebot.modules.base.economy.ShopItem(0, guildId,
+                dev.davimf.basebot.modules.base.economy.ShopItem.Type.valueOf(type), roleId,
+                name == null ? "Item" : name.trim(),
+                description == null ? null : description.trim(),
+                price, durationS, limits.stock(), limits.perUser(), 0, System.currentTimeMillis());
+        repo.insert(item);
+        edit(event, SetupView.shopScreen(EmbedColor.resolve(config(ctx, guildId)), repo.list(guildId), config(ctx, guildId)));
+    }
+
+    /** Salva um inteiro válido (≥0); ignora entradas inválidas mantendo o valor anterior. */
+    private static GuildConfig withLong(GuildConfig cfg, String key, String raw) {
+        if (raw == null || raw.isBlank()) {
+            return cfg;
+        }
+        try {
+            long v = Long.parseLong(raw.trim());
+            if (v < 0) {
+                return cfg;
+            }
+            return GuildConfigEdits.withSetting(cfg, key, String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return cfg;
+        }
+    }
+
+    private void saveLevelReward(ModalInteractionEvent event, BotContext ctx) {
+        String guildId = event.getGuild().getId();
+        String nivelRaw = value(event, "nivel");
+        String cargoRaw = value(event, "cargo");
+        int level;
+        try {
+            level = Integer.parseInt(nivelRaw == null ? "" : nivelRaw.trim());
+        } catch (NumberFormatException e) {
+            Replies.ephemeral(event, ctx, "Nível inválido.");
+            return;
+        }
+        String roleId = cargoRaw == null ? "" : cargoRaw.replaceAll("\\D", "");
+        net.dv8tion.jda.api.entities.Role role = roleId.isBlank() ? null : event.getGuild().getRoleById(roleId);
+        if (level < 1 || role == null) {
+            Replies.ephemeral(event, ctx, "Informe um nível ≥ 1 e um cargo válido (id ou menção).");
+            return;
+        }
+        levelRewards(ctx).put(guildId, level, roleId);
+        edit(event, SetupView.levelingScreen(config(ctx, guildId), levelRewards(ctx).all(guildId)));
+    }
+
     // --- helpers ---------------------------------------------------------------
 
     private void edit(IMessageEditCallback event, Container screen) {
@@ -668,6 +997,33 @@ public final class SetupComponentHandler implements ComponentHandler {
         return ctx.database().guildConfig().findOrEmpty(guildId);
     }
 
+    private void saveVerifyQuestion(ModalInteractionEvent event, BotContext ctx) {
+        String guildId = event.getGuild().getId();
+        String prompt = value(event, "prompt");
+        if (prompt != null && !prompt.isBlank()
+                && ctx.database().verificationQuestions().count(guildId) < 5) {
+            int pos = ctx.database().verificationQuestions().count(guildId);
+            ctx.database().verificationQuestions().add(
+                    new dev.davimf.basebot.database.postgres.VerificationQuestionRepository.Question(
+                            dev.davimf.basebot.database.postgres.VerificationQuestionRepository.newId(),
+                            guildId, pos, prompt.trim(), true));
+        }
+        edit(event, SetupView.verificationScreen(config(ctx, guildId),
+                ctx.database().verificationQuestions().listByGuild(guildId)));
+    }
+
+    private void publishAntispam(ButtonInteractionEvent event, BotContext ctx, String guildId) {
+        if (!(event.getChannel() instanceof net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel ch)) {
+            Replies.ephemeral(event, ctx, "Use num canal de texto.");
+            return;
+        }
+        int accent = EmbedColor.resolve(config(ctx, guildId));
+        ch.sendMessageComponents(dev.davimf.basebot.modules.base.security.AntiSpamView.panel(accent))
+                .useComponentsV2()
+                .queue(ok -> Replies.ephemeral(event, ctx, "Aviso do anti-spam publicado."),
+                        err -> Replies.ephemeral(event, ctx, "Falha ao publicar: " + err.getMessage()));
+    }
+
     private void publishVerify(ButtonInteractionEvent event, BotContext ctx, String guildId) {
         if (!(event.getChannel() instanceof net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel ch)) {
             Replies.ephemeral(event, ctx, "Use num canal de texto.");
@@ -678,6 +1034,74 @@ public final class SetupComponentHandler implements ComponentHandler {
                 .useComponentsV2()
                 .queue(ok -> Replies.ephemeral(event, ctx, "Painel de verificação publicado."),
                         err -> Replies.ephemeral(event, ctx, "Falha ao publicar: " + err.getMessage()));
+    }
+
+    /** Agenda o sweep de lockdown após um toggle verify (on→apply, off→revert). Se o cargo membro
+     *  não estiver configurado ao ligar, não faz nada — o banner da sub-tela comunica o motivo. */
+    private void scheduleVerificationLockdown(BotContext ctx, ButtonInteractionEvent event, GuildConfig updated) {
+        boolean nowOn = dev.davimf.basebot.modules.base.security.SecurityConfig.verify(updated);
+        boolean hasMembro = updated.role("membro") != null;
+        if (nowOn && !hasMembro) {
+            return;
+        }
+        net.dv8tion.jda.api.entities.Guild guild = event.getGuild();
+        String userId = event.getUser().getId();
+        ctx.scheduler().executor().execute(() -> {
+            try {
+                dev.davimf.basebot.modules.base.security.VerificationLockdown.Summary s = nowOn
+                        ? dev.davimf.basebot.modules.base.security.VerificationLockdown.apply(ctx, guild)
+                        : dev.davimf.basebot.modules.base.security.VerificationLockdown.revert(ctx, guild);
+                ctx.database().actionLogs().log(guild.getId(), userId, null,
+                        nowOn ? "VERIFY_LOCKDOWN" : "VERIFY_UNLOCK",
+                        s.busy() ? "ocupado — operação já em andamento"
+                                : s.memberRoleMissing() ? "cargo membro ausente — nada alterado"
+                                : s.changed() + " alterados / " + s.skipped() + " pulados");
+            } catch (RuntimeException e) {
+                // best-effort; o toggle já foi respondido com a re-renderização síncrona da tela
+            }
+        });
+    }
+
+    /** Botão manual: esconde (hide=true) ou reabre (hide=false) e devolve um resumo efêmero. */
+    private void runVerificationLockdown(ButtonInteractionEvent event, BotContext ctx, String guildId, boolean hide) {
+        event.deferEdit().queue();
+        net.dv8tion.jda.api.entities.Guild guild = event.getGuild();
+        String userId = event.getUser().getId();
+        ctx.scheduler().executor().execute(() -> {
+            try {
+                dev.davimf.basebot.modules.base.security.VerificationLockdown.Summary s = hide
+                        ? dev.davimf.basebot.modules.base.security.VerificationLockdown.apply(ctx, guild)
+                        : dev.davimf.basebot.modules.base.security.VerificationLockdown.revert(ctx, guild);
+                GuildConfig refreshed = ctx.database().guildConfig().findOrEmpty(guildId);
+                event.getHook().editOriginalComponents(SetupView.verificationScreen(refreshed,
+                                ctx.database().verificationQuestions().listByGuild(guildId)))
+                        .useComponentsV2().queue(ok -> {}, err -> {});
+                String msg;
+                String detail;
+                if (s.busy()) {
+                    msg = "Já há uma operação de lockdown em andamento neste servidor. Tente novamente em instantes.";
+                    detail = "ocupado — operação já em andamento";
+                } else if (s.memberRoleMissing()) {
+                    msg = "Configure o cargo **membro** primeiro — nada foi alterado.";
+                    detail = "cargo membro ausente — nada alterado";
+                } else {
+                    msg = (hide ? "Escondidos" : "Reabertos") + " `" + s.changed() + "` canais · `"
+                            + s.skipped() + "` pulados.";
+                    detail = s.changed() + " alterados / " + s.skipped() + " pulados";
+                }
+                ctx.database().actionLogs().log(guildId, userId, null,
+                        hide ? "VERIFY_LOCKDOWN" : "VERIFY_UNLOCK", detail);
+                event.getHook().sendMessageComponents(
+                                Panels.container(EmbedColor.resolve(refreshed), Panels.text(msg)))
+                        .useComponentsV2().setEphemeral(true).queue(ok -> {}, err -> {});
+            } catch (RuntimeException e) {
+                event.getHook().sendMessageComponents(
+                                Panels.container(EmbedColor.resolve(GuildConfig.empty(guildId)),
+                                        Panels.text("Falha ao " + (hide ? "esconder" : "reabrir")
+                                                + " canais: " + e.getMessage())))
+                        .useComponentsV2().setEphemeral(true).queue(ok -> {}, err -> {});
+            }
+        });
     }
 
     private void publishSelfRole(ButtonInteractionEvent event, BotContext ctx, String guildId, String panelId) {

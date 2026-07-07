@@ -19,13 +19,13 @@ class SetupLogTypesTest {
 
     @Test
     void pagesAreGroupedByModuleAndChunked() {
-        // Base has 13 logs -> with a cap of 8 it splits into 8 + 5 (both Base), then one
+        // Base has 14 logs -> with a cap of 8 it splits into 8 + 6 (both Base), then one
         // page each for Tickets (1), Vendas (2) and Facs (7).
         List<List<LogType>> pages = SetupLogTypes.pages(8);
         assertEquals(5, pages.size());
         assertEquals(8, pages.get(0).size());
         assertTrue(pages.get(0).stream().allMatch(t -> t.module().equals("Base")));
-        assertEquals(5, pages.get(1).size());
+        assertEquals(6, pages.get(1).size());
         assertEquals("Base", pages.get(1).get(0).module());
         assertEquals("Tickets", pages.get(2).get(0).module());
         assertEquals("Vendas", pages.get(3).get(0).module());

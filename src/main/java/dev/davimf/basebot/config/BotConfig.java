@@ -14,12 +14,11 @@
 // 
 // Record Components:
 //   - Record Component : public final String token
-//   - Record Component : public final String devGuildId
-// 
+//   - Record Component : public final String vaultGuildId
+//
 // Methods:
-//   - `Method` : `public boolean hasDevGuild()`
-//   - `Method` : `public java.util.List<String> devGuildIds()`
-// 
+//   - `Method` : `public boolean hasVault()`
+//
 // Record: Postgres
 // 
 // Record Components:
@@ -69,28 +68,14 @@ public record BotConfig(
         Postgres postgres,
         Sqlite sqlite,
         Tickets tickets,
-        RateLimit rateLimit
+        RateLimit rateLimit,
+        Instance instance
 ) {
 
-    public record Discord(String token, String devGuildId, String vaultGuildId) {
-        public boolean hasDevGuild() {
-            return devGuildId != null && !devGuildId.isBlank();
-        }
-
+    public record Discord(String token, String vaultGuildId) {
         /** True when a central attachment-vault guild is configured. */
         public boolean hasVault() {
             return vaultGuildId != null && !vaultGuildId.isBlank();
-        }
-
-        /** Dev guild ids (comma-separated in config) commands are restricted to; empty in prod. */
-        public java.util.List<String> devGuildIds() {
-            if (!hasDevGuild()) {
-                return java.util.List.of();
-            }
-            return java.util.Arrays.stream(devGuildId.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toList();
         }
     }
 
@@ -131,4 +116,12 @@ public record BotConfig(
             int ghostPingBatchSize,
             int ghostPingBatchIntervalSeconds
     ) {}
+
+    /** Identidade da instância deste bot (1 bot por cliente) — usada para os snapshots. */
+    public record Instance(String instanceId, String clientName) {
+        /** True quando um BOT_INSTANCE_ID (uuid) está configurado; sem ele os snapshots ficam off. */
+        public boolean hasInstance() {
+            return instanceId != null && !instanceId.isBlank();
+        }
+    }
 }

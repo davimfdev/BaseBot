@@ -45,7 +45,10 @@ public final class PostgresMigrator {
             "/db/postgres/001_guild_config.sql",
             "/db/postgres/002_guild_settings.sql",
             "/db/postgres/003_ticket_categories.sql",
-            "/db/postgres/004_config_tables.sql"
+            "/db/postgres/004_config_tables.sql",
+            "/db/postgres/005_snapshots.sql",
+            "/db/postgres/006_dashboard_access.sql",
+            "/db/postgres/007_updated_by.sql"
     );
 
     private PostgresMigrator() {}

@@ -28,6 +28,9 @@ public final class SecurityConfig {
 
     // Verificação (Módulo 3)
     public static final String KEY_VERIFY = "sec:verify";
+    public static final String KEY_VERIFY_USERSELECT = "sec:verify-userselect";
+    /** Nome lógico do canal (guild_config.channels) onde a fila de aprovação é postada. */
+    public static final String CHANNEL_VERIFY = "verificacao";
 
     // Anti-raid (Módulo 2)
     public static final String KEY_ANTIRAID = "sec:antiraid";
@@ -102,6 +105,32 @@ public final class SecurityConfig {
     // --- verificação -----------------------------------------------------------
 
     public static boolean verify(GuildConfig cfg) { return cfg.toggle(KEY_VERIFY, false); }
+    public static boolean verifyUserSelect(GuildConfig cfg) { return cfg.toggle(KEY_VERIFY_USERSELECT, false); }
+
+    // --- anti-spam (canal-armadilha) -------------------------------------------
+
+    public static final String KEY_ANTISPAM = "sec:antispam";
+    /** Nome lógico do canal-armadilha em guild_config.channels. */
+    public static final String CHANNEL_ANTISPAM = "anti-spam";
+    /** Quantas mensagens recentes do autor apagar ao punir. */
+    public static final int ANTISPAM_PURGE = 10;
+
+    public static boolean antispam(GuildConfig cfg) { return cfg.toggle(KEY_ANTISPAM, false); }
+
+    /** True quando o autor não deve ser punido pelo anti-spam. */
+    public static boolean isSpamExempt(GuildConfig cfg, boolean bot, boolean owner, boolean admin,
+                                       Collection<String> roleIds) {
+        if (bot || owner || admin) {
+            return true;
+        }
+        Set<String> exempt = exemptRoleIds(cfg);
+        for (String r : roleIds) {
+            if (exempt.contains(r)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // --- anti-raid -------------------------------------------------------------
 

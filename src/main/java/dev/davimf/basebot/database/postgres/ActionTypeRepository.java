@@ -1,6 +1,4 @@
-package dev.davimf.basebot.database.sqlite;
-
-import dev.davimf.basebot.database.postgres.RepositoryException;
+package dev.davimf.basebot.database.postgres;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,10 +10,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * SQLite store for saved action types (BOTSPECS Module 4). Managed in {@code /setup → Ações}
- * and consumed by {@code /painel-acoes}: each type carries a name, contingent bounds and a
- * dirty-money payout. Lives in the shared DB layer because the {@code /setup} handler (base
- * module) and the action panel (facs module) both reach it — same as ticket categories.
+ * Postgres store for saved action types (BOTSPECS Module 4), config editável pelo dashboard.
+ * Managed in {@code /setup → Ações} and consumed by {@code /painel-acoes}: each type carries a
+ * name, contingent bounds and a dirty-money payout.
  */
 public final class ActionTypeRepository {
 
@@ -23,16 +20,16 @@ public final class ActionTypeRepository {
     public record ActionType(String id, String guildId, String name,
                              int maxContingent, int minContingent, int dirtyMoney) {}
 
-    private final SqliteManager sqlite;
+    private final PostgresPool pool;
 
-    public ActionTypeRepository(SqliteManager sqlite) {
-        this.sqlite = sqlite;
+    public ActionTypeRepository(PostgresPool pool) {
+        this.pool = pool;
     }
 
     public List<ActionType> listByGuild(String guildId) {
         String sql = "SELECT * FROM fac_action_types WHERE guild_id = ? ORDER BY name";
         List<ActionType> out = new ArrayList<>();
-        try (Connection c = sqlite.getConnection();
+        try (Connection c = pool.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, guildId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -47,7 +44,7 @@ public final class ActionTypeRepository {
     }
 
     public Optional<ActionType> find(String id) {
-        try (Connection c = sqlite.getConnection();
+        try (Connection c = pool.getConnection();
              PreparedStatement ps = c.prepareStatement("SELECT * FROM fac_action_types WHERE id = ?")) {
             ps.setString(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -59,7 +56,7 @@ public final class ActionTypeRepository {
     }
 
     public int count(String guildId) {
-        try (Connection c = sqlite.getConnection();
+        try (Connection c = pool.getConnection();
              PreparedStatement ps = c.prepareStatement(
                      "SELECT count(*) FROM fac_action_types WHERE guild_id = ?")) {
             ps.setString(1, guildId);
@@ -78,12 +75,12 @@ public final class ActionTypeRepository {
                     (id, guild_id, name, max_contingent, min_contingent, dirty_money)
                 VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
-                    name           = excluded.name,
-                    max_contingent = excluded.max_contingent,
-                    min_contingent = excluded.min_contingent,
-                    dirty_money    = excluded.dirty_money
+                    name           = EXCLUDED.name,
+                    max_contingent = EXCLUDED.max_contingent,
+                    min_contingent = EXCLUDED.min_contingent,
+                    dirty_money    = EXCLUDED.dirty_money
                 """;
-        try (Connection c = sqlite.getConnection();
+        try (Connection c = pool.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, type.id());
             ps.setString(2, type.guildId());
@@ -98,7 +95,7 @@ public final class ActionTypeRepository {
     }
 
     public void delete(String id) {
-        try (Connection c = sqlite.getConnection();
+        try (Connection c = pool.getConnection();
              PreparedStatement ps = c.prepareStatement("DELETE FROM fac_action_types WHERE id = ?")) {
             ps.setString(1, id);
             ps.executeUpdate();

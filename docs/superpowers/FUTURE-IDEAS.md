@@ -83,3 +83,12 @@ Sistema **à prova de reinício** usado pelos **Sorteios por tempo de call** (fa
 **⚠️ Sharding (futuro):** o cache de voz pode demorar segundos pra popular após o `ready`. Não rodar a varredura no milissegundo do connect — **dar um delay de 2–5s** (ou esperar a sincronização das guildas) pra a lista "quem está em call agora" vir 100% preenchida.
 
 *(Guardar o "timestamp da queda" do bot: pode-se persistir um heartbeat periódico, ou usar o `updated_at` da última sessão ativa como aproximação.)*
+
+## Reconcile de republicação de painéis (deferido do A3 — dashboard integration)
+Quando o dashboard editar config que afeta um painel publicado (self-roles, ticket, hierarquia, recrutamento), o reconcile loop do bot deve re-editar a mensagem publicada. Requer: detectar mudança (guild_config/tabela `updated_at` > última publicação) + `message_id` por painel, e um editor idempotente por tipo de painel. Maior que o A3; candidato a uma "Parte A4".
+
+## 🔒 Lockdown de verificação — melhorias (fast-follow) — *fase 3*
+Feature entregue (esconde canais não-log ao ligar a verificação; reverte por assinatura). Backlog:
+- **Cargo `membro` apagado após o lockdown:** o Discord remove os overrides do cargo, então a assinatura (`membro` permite VIEW) deixa de bater e o `revert` não reabre esses canais (ficam `@everyone`-negado, recuperável só na mão). Ideia: distinguir "cargo não configurado" de "cargo apagado" no `Summary`/banner, ou detectar canais órfãos com `@everyone`-deny sem cargo membro para reabrir.
+- **Lockdown de canais criados DEPOIS de ligar:** hoje só o botão manual "Esconder canais" cobre. Poderia haver reconcile periódico ou hook em criação de canal.
+- **Disparo pela dashboard:** ligar/desligar a verificação pela dashboard (escreve no Neon direto) não dispara o sweep; só o toggle/botão do bot. Um reconcile resolveria.

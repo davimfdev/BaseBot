@@ -94,6 +94,6 @@ public final class SelfRoleComponentHandler implements ComponentHandler {
     }
 
     private static SelfRolePanelRepository repo(BotContext ctx) {
-        return new SelfRolePanelRepository(ctx.database().sqlite());
+        return new SelfRolePanelRepository(ctx.database().postgres());
     }
 }

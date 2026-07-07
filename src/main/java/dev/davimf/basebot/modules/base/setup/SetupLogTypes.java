@@ -58,6 +58,7 @@ public final class SetupLogTypes {
             new LogType("log-kicks", "Expulsões", "Base"),
             new LogType("log-moderacao", "Moderação (casos)", "Base"),
             new LogType("log-formularios", "Formulários", "Base"),
+            new LogType("log-loja", "Loja", "Base"),
             // " + Emojis.of(Emojis.TICKET, "🎟️") + " Tickets
             new LogType("log-tickets", "Tickets", "Tickets"),
             // " + Emojis.of(Emojis.SALES, "🛒") + " Vendas
