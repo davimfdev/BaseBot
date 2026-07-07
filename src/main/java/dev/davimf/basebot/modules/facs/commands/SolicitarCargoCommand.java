@@ -1,10 +1,25 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.commands
+// 
+// Class: SolicitarCargoCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.commands;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.facs.sets.SetRequestView;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -36,25 +51,23 @@ public final class SolicitarCargoCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         Role role = event.getOption("cargo", OptionMapping::getAsRole);
         if (role == null) {
-            event.reply("Cargo inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Cargo inválido.");
             return;
         }
         if (!event.getGuild().getSelfMember().canInteract(role)) {
-            event.reply("Não posso atribuir esse cargo (acima do meu cargo mais alto).")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Não posso atribuir esse cargo (acima do meu cargo mais alto).");
             return;
         }
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(event.getGuild().getId());
         String channelId = cfg.channel("log-sets");
         TextChannel channel = channelId == null ? null : event.getGuild().getTextChannelById(channelId);
         if (channel == null) {
-            event.reply("Canal de solicitações de Set não configurado em /setup → Logs.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Canal de solicitações de Set não configurado em /setup → Logs.");
             return;
         }
         String reason = event.getOption("motivo", OptionMapping::getAsString);
@@ -65,8 +78,7 @@ public final class SolicitarCargoCommand implements SlashCommand {
                 .queue(msg -> {
                     ctx.database().actionLogs().log(event.getGuild().getId(), event.getUser().getId(),
                             role.getId(), "SET_REQUEST", reason);
-                    event.reply("🎖️ Solicitação enviada para análise.").setEphemeral(true).queue();
-                }, err -> event.reply("Falha ao enviar solicitação: " + err.getMessage())
-                        .setEphemeral(true).queue());
+                    Replies.ephemeral(event, ctx, Emojis.of(Emojis.RANK, "🎖️") + " Solicitação enviada para análise.");
+                }, err -> Replies.ephemeral(event, ctx, "Falha ao enviar solicitação: " + err.getMessage()));
     }
 }

@@ -1,3 +1,23 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.util
+// 
+// Class: EmbedColor
+// 
+// Constructors:
+//   - `Constructor` : `private EmbedColor()`
+// 
+// Methods:
+//   - `Method` : `public static OptionalInt parse(String hex)`
+//   - `Method` : `public static int resolve(GuildConfig cfg)`
+//   - `Method` : `public static String hex(int color)`
+// 
+// Fields:
+//   - `Field` : `public static final int DEFAULT`
+//   - `Field` : `public static final String SETTING_KEY`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.util;
 
 import dev.davimf.basebot.database.model.GuildConfig;

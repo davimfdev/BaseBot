@@ -1,3 +1,29 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.integration
+// 
+// Class: TicketIngestClient
+// 
+// Constructors:
+//   - `Constructor` : `public TicketIngestClient(BotConfig.Tickets cfg)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(TicketIngestClient.class)`
+//   - `Method` : `private final HttpClient http = HttpClient. newBuilder()`
+//   - `Method` : `public String store(String id, String guildName, String channelName, EncryptedBundle bundle)`
+// 
+// Fields:
+//   - `Field` : `private final BotConfig.Tickets cfg`
+//   - `Field` : `public static final class IngestException extends RuntimeException`
+// 
+// Class: IngestException
+// 
+// Constructors:
+//   - `Constructor` : `public IngestException(String message)`
+//   - `Constructor` : `public IngestException(String message, Throwable cause)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,3 +1,21 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.recruit
+// 
+// Class: RecruitStatsRepository
+// 
+// Constructors:
+//   - `Constructor` : `public RecruitStatsRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public int increment(String guildId, String recruiterId)`
+//   - `Method` : `public int get(String guildId, String recruiterId)`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.recruit;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;

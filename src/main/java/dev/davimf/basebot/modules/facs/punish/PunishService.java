@@ -1,4 +1,30 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.punish
+// 
+// Class: PunishService
+// 
+// Constructors:
+//   - `Constructor` : `public PunishService(BotContext ctx, PunishmentRepository repo)`
+// 
+// Methods:
+//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(PunishService.class)`
+//   - `Method` : `private static final Duration ADV_TTL = Duration. ofDays(20)`
+//   - `Method` : `public Container history(String guildId, String userId)`
+//   - `Method` : `private static String labelOf(String type, int level)`
+//   - `Method` : `private int accent(String guildId)`
+//   - `Method` : `private static String trim(String s, int max)`
+// 
+// Fields:
+//   - `Field` : `package-private static final String NS`
+//   - `Field` : `private final BotContext ctx`
+//   - `Field` : `private final PunishmentRepository repo`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.punish;
+
+import dev.davimf.basebot.util.Emojis;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentId;
@@ -6,6 +32,7 @@ import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.Punishment;
 import dev.davimf.basebot.modules.facs.FacsLog;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
@@ -54,31 +81,35 @@ public final class PunishService {
 
         String label = labelOf(type, level);
         ctx.database().actionLogs().log(guildId, event.getUser().getId(), userId, "PUNISH_" + type, label);
-        String entry = "## ⚖️ " + label + "\n"
-                + "**Membro:** " + target.getUser().getAsTag() + " (`" + userId + "`)\n"
-                + "**Responsável:** <@" + event.getUser().getId() + ">\n"
-                + "**Motivo:** " + (reason == null || reason.isBlank() ? "*não informado*" : reason)
+        String entry = "## " + Emojis.of(Emojis.SCALES, "⚖️") + " " + label + "\n---\n"
+                + "" + Emojis.of(Emojis.MEMBER, "👤") + " **Membro** · " + target.getUser().getAsTag() + " · `" + userId + "`\n---\n"
+                + "" + Emojis.of(Emojis.SHIELD, "🛡️") + " **Responsável** · <@" + event.getUser().getId() + ">\n"
+                + "" + Emojis.of(Emojis.NOTE, "📝") + " **Motivo** · " + (reason == null || reason.isBlank() ? "*não informado*" : reason)
                 + (Punishment.ADV.equals(type) ? "\n-# Expira automaticamente em 20 dias." : "");
         FacsLog.post(ctx, guildId, "log-punicoes", entry);
 
-        event.reply("⚖️ **" + label + "** aplicado em " + target.getAsMention() + ".")
-                .setAllowedMentions(List.of()).queue();
+        Replies.reply(event, ctx, "" + Emojis.of(Emojis.SCALES, "⚖️") + " **" + label + "** aplicado em " + target.getAsMention() + ".");
     }
 
     public Container history(String guildId, String userId) {
         List<Punishment> all = repo.listByUser(guildId, userId);
-        StringBuilder body = new StringBuilder("## ⚖️ Punições de <@").append(userId).append(">\n");
+        StringBuilder body = new StringBuilder();
         if (all.isEmpty()) {
-            body.append("\n*Nenhuma punição registrada.*");
+            body.append("-# *Nenhuma punição registrada.*");
         } else {
             for (Punishment p : all) {
-                body.append(p.active() ? "\n🔴 " : "\n⚪ ").append("**").append(p.label()).append("** — ")
+                if (body.length() > 0) {
+                    body.append('\n');
+                }
+                body.append(p.active() ? "" + Emojis.of(Emojis.OFFLINE, "🔴") + " " : "" + Emojis.of(Emojis.DOT, "⚪") + " ").append("**").append(p.label()).append("** · ")
                         .append(p.reason() == null || p.reason().isBlank() ? "*sem motivo*" : p.reason())
-                        .append(" · por <@").append(p.appliedBy()).append("> · ").append(p.createdAt());
+                        .append("\n-# por <@").append(p.appliedBy()).append("> · ").append(p.createdAt());
             }
         }
 
         List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## " + Emojis.of(Emojis.SCALES, "⚖️") + " Punições · <@" + userId + ">"));
+        kids.add(Panels.divider());
         kids.add(Panels.text(body.toString()));
         List<Punishment> active = repo.listActiveByUser(guildId, userId);
         if (!active.isEmpty()) {
@@ -101,7 +132,7 @@ public final class PunishService {
         repo.find(punishmentId).ifPresent(p -> {
             repo.setActive(punishmentId, false);
             ctx.database().actionLogs().log(guildId, event.getUser().getId(), userId, "PUNISH_REVOKE", p.label());
-            FacsLog.post(ctx, guildId, "log-punicoes", "## ♻️ Punição revogada\n"
+            FacsLog.post(ctx, guildId, "log-punicoes", "## " + Emojis.of(Emojis.RECYCLE, "♻️") + " Punição revogada\n---\n"
                     + "**" + p.label() + "** de <@" + userId + "> revogada por <@"
                     + event.getUser().getId() + ">.");
         });
@@ -115,7 +146,7 @@ public final class PunishService {
             repo.setActive(p.id(), false);
             ctx.database().actionLogs().log(p.guildId(), "system", p.userId(), "ADV_EXPIRED", p.label());
             FacsLog.post(ctx, p.guildId(), "log-punicoes",
-                    "## ⌛ ADV expirado\n**" + p.label() + "** de <@" + p.userId() + "> expirou (20 dias).");
+                    "## " + Emojis.of(Emojis.HOURGLASS, "⌛") + " ADV expirado\n---\n**" + p.label() + "** de <@" + p.userId() + "> expirou (20 dias).");
         }
         if (!expired.isEmpty()) {
             log.info("Expired {} ADV(s).", expired.size());

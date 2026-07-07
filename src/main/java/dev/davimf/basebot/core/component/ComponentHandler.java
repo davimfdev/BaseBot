@@ -1,3 +1,14 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.core.component
+// 
+// Interface: ComponentHandler
+// 
+// Methods:
+//   - `Method` : `package-private String namespace()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.core.component;
 
 import dev.davimf.basebot.core.BotContext;

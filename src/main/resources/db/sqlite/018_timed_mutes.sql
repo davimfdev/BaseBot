@@ -1,3 +1,12 @@
+-- [OUTLINE START]
+-- Created Tables:
+-- - timed_mutes
+-- Created Indices:
+-- - idx_timed_mutes_expiry
+-- [OUTLINE END]
+
+
+
 -- Timed mutes (BOTSPECS Module 1). A mute (TEXT = "mutado" role, VOICE = server mute)
 -- lasts until expires_at_millis, then a scheduler sweep removes it. Replaces voice_mutes.
 CREATE TABLE IF NOT EXISTS timed_mutes (

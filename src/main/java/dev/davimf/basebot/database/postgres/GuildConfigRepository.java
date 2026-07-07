@@ -1,3 +1,15 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.postgres
+// 
+// Interface: GuildConfigRepository
+// 
+// Methods:
+//   - `Method` : `package-private Optional<GuildConfig> find(String guildId)`
+//   - `Method` : `package-private default GuildConfig findOrEmpty(String guildId)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.postgres;
 
 import dev.davimf.basebot.database.model.GuildConfig;

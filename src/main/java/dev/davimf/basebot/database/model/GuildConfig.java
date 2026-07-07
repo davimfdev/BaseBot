@@ -1,3 +1,27 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.model
+// 
+// Record: GuildConfig
+// 
+// Record Components:
+//   - Record Component : public final String guildId
+//   - Record Component : public final // Common log channel IDs (nullable when unset). String logChannelId
+//   - Record Component : public final String ticketLogChannelId
+//   - Record Component : public final // Generic
+//   - Record Component : public final dashboard-driven settings. Map<String, String> channels
+//   - Record Component : public final // logical name -> channel id Map<String
+//   - Record Component : public final String> roles, // logical name -> role id Map<String, Boolean> toggles, // feature flag -> on/off List<String> staffRoleIds, // ticket-allowed staff roles Map<String, String> settings // free-form text config (ticket desc/emoji, percentages)
+// 
+// Methods:
+//   - `Method` : `public static GuildConfig empty(String guildId)`
+//   - `Method` : `public boolean toggle(String key, boolean def)`
+//   - `Method` : `public String channel(String key)`
+//   - `Method` : `public String role(String key)`
+//   - `Method` : `public String setting(String key)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.model;
 
 import java.util.List;

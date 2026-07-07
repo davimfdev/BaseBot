@@ -1,4 +1,36 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.message
+// 
+// Class: MessageBuilderService
+// 
+// Constructors:
+//   - `Constructor` : `public MessageBuilderService(BotContext ctx, MessageDraftRepository drafts)`
+// 
+// Methods:
+//   - `Method` : `private static ArrayNode buttonsOf(ObjectNode state, String bi)`
+//   - `Method` : `private static ObjectNode buttonAt(ObjectNode state, String bi, String ji)`
+//   - `Method` : `private static ObjectNode webhookBody(ObjectNode state, int accent, boolean container)`
+//   - `Method` : `private int accent(net.dv8tion.jda.api.interactions.Interaction event)`
+//   - `Method` : `private static String[] parseRef(SlashCommandInteractionEvent event, String ref)`
+//   - `Method` : `private CompletableFuture<Webhook> webhook(TextChannel channel)`
+//   - `Method` : `private ObjectNode load(String userId)`
+//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
+//   - `Method` : `private static String id(String action, String arg)`
+//   - `Method` : `private static String userId(IMessageEditCallback cb)`
+//   - `Method` : `private static String guildId(IMessageEditCallback cb)`
+//   - `Method` : `private static String root(Throwable err)`
+// 
+// Fields:
+//   - `Field` : `private static final String WEBHOOK_NAME`
+//   - `Field` : `private final BotContext ctx`
+//   - `Field` : `private final MessageDraftRepository drafts`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.message;
+
+import dev.davimf.basebot.util.Emojis;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -7,6 +39,7 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.modules.base.message.MessageBuilderView.Field;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Replies;
 import dev.davimf.basebot.util.WebhookSender;
 import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -295,7 +328,7 @@ public final class MessageBuilderService {
         String channelId = MessageState.str(state, "channelId");
         TextChannel channel = channelId == null ? null : event.getGuild().getTextChannelById(channelId);
         if (channel == null) {
-            event.reply("Selecione um canal de destino primeiro.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Selecione um canal de destino primeiro.");
             return;
         }
         int accent = accent(event);
@@ -331,7 +364,7 @@ public final class MessageBuilderService {
         String[] loc = parseRef(event, ref);
         TextChannel channel = event.getGuild().getTextChannelById(loc[0]);
         if (channel == null) {
-            event.reply("Canal da mensagem não encontrado.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Canal da mensagem não encontrado.");
             return;
         }
         event.deferReply(true).queue();
@@ -342,8 +375,7 @@ public final class MessageBuilderService {
             boolean mine = event.getJDA().getSelfUser().getId().equals(msg.getAuthor().getId());
             boolean webhookMsg = msg.isWebhookMessage() && !mine;
             if (!mine && !webhookMsg) {
-                event.getHook().sendMessage("Só posso editar mensagens enviadas por mim ou pelo meu webhook.")
-                        .queue();
+                Replies.hook(event, ctx, "Só posso editar mensagens enviadas por mim ou pelo meu webhook.");
                 return;
             }
             ObjectNode state = MessageBuilderParse.fromMessage(msg);
@@ -357,7 +389,7 @@ public final class MessageBuilderService {
             }
             drafts.save(event.getUser().getId(), event.getGuild().getId(), MessageState.stringify(state));
             event.getHook().sendMessageComponents(MessageBuilderView.panel(state)).useComponentsV2().queue();
-        }, err -> event.getHook().sendMessage("Mensagem não encontrada nesse canal.").queue());
+        }, err -> Replies.hook(event, ctx, "Mensagem não encontrada nesse canal."));
     }
 
     private void editExisting(ButtonInteractionEvent event, ObjectNode state) {
@@ -365,7 +397,7 @@ public final class MessageBuilderService {
         String messageId = MessageState.str(state, "editMessageId");
         TextChannel channel = channelId == null ? null : event.getGuild().getTextChannelById(channelId);
         if (channel == null) {
-            event.reply("O canal da mensagem não existe mais.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "O canal da mensagem não existe mais.");
             return;
         }
         int accent = accent(event);
@@ -414,9 +446,8 @@ public final class MessageBuilderService {
 
     private void finishWebhook(ButtonInteractionEvent event, TextChannel channel, Throwable ex, boolean edit) {
         if (ex != null) {
-            event.getHook().sendMessage("Falha via webhook: " + root(ex)
-                    + "\n-# O bot precisa da permissão **Gerenciar Webhooks** no canal.")
-                    .setEphemeral(true).queue();
+            Replies.hookEphemeral(event, ctx, "Falha via webhook: " + root(ex)
+                    + "\n-# O bot precisa da permissão **Gerenciar Webhooks** no canal.");
         } else {
             done(event, channel, edit);
         }
@@ -446,13 +477,13 @@ public final class MessageBuilderService {
     private void done(ButtonInteractionEvent event, TextChannel channel, boolean edit) {
         drafts.delete(event.getUser().getId());
         event.getHook().editOriginalComponents(Panels.container(EmbedColor.DEFAULT,
-                        Panels.text("✅ Mensagem " + (edit ? "editada" : "enviada") + " em "
+                        Panels.text("" + Emojis.of(Emojis.CHECK_YES, "✅") + " Mensagem " + (edit ? "editada" : "enviada") + " em "
                                 + channel.getAsMention() + ".")))
                 .useComponentsV2().queue(ok -> {}, e -> {});
     }
 
     private void fail(ButtonInteractionEvent event, Throwable err) {
-        event.getHook().sendMessage("Falha ao enviar: " + root(err)).setEphemeral(true).queue();
+        Replies.hookEphemeral(event, ctx, "Falha ao enviar: " + root(err));
     }
 
     // --- helpers ---------------------------------------------------------------

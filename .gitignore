@@ -1,4 +1,9 @@
-<<<<<<< HEAD
+# [OUTLINE START]
+# Binary or Text Resource File
+# [OUTLINE END]
+
+
+
 # Build output
 .gradle/
 build/
@@ -30,7 +35,9 @@ config.yml
 # OS
 .DS_Store
 Thumbs.db
-=======
+
+# JAVA
+
 # Compiled class file
 *.class
 
@@ -55,4 +62,12 @@ Thumbs.db
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
->>>>>>> 26ca2baac9b56fb8bae6ffddff30c77067734628
+
+# IA SHIT
+.agents
+.claude
+.codex
+
+
+# Documentation Specs/Plans
+docs/

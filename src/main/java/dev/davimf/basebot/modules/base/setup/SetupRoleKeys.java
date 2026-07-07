@@ -1,3 +1,19 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.setup
+// 
+// Class: SetupRoleKeys
+// 
+// Constructors:
+//   - `Constructor` : `private SetupRoleKeys()`
+// 
+// Methods:
+//   - `Method` : `public static final List<Map.Entry<String, String>> OPTIONS = build()`
+//   - `Method` : `private static List<Map.Entry<String, String>> build()`
+//   - `Method` : `public static String labelFor(String key)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.setup;
 
 import dev.davimf.basebot.modules.facs.hierarchy.FacHierarchy;
@@ -19,6 +35,7 @@ public final class SetupRoleKeys {
                 Map.entry("moderador", "Moderador"),
                 Map.entry("staff", "Staff"),
                 Map.entry("mutado", "Cargo de Mutado"),
+                Map.entry("nao-verificado", "Não-verificado"),
                 Map.entry("vendedor", "Vendedor (Pix)")
         ));
         // Module 4 FiveM chain of command (top -> bottom), configured here as role slots.

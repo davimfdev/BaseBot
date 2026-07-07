@@ -1,9 +1,22 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: AddEmojiCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.util.EmojiNames;
 import dev.davimf.basebot.util.ImageMedia;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Icon;
 import net.dv8tion.jda.api.entities.Message;
@@ -36,18 +49,18 @@ public final class AddEmojiCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         String name = EmojiNames.sanitize(event.getOption("nome", OptionMapping::getAsString));
         if (!EmojiNames.isValid(name)) {
-            event.reply("Nome de emoji inválido.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Nome de emoji inválido.");
             return;
         }
         Message.Attachment att = event.getOption("imagem", OptionMapping::getAsAttachment);
         String link = event.getOption("link", OptionMapping::getAsString);
         if ((att == null) == (link == null)) {
-            event.reply("Forneça **uma** imagem: um anexo OU um link.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Forneça **uma** imagem: um anexo OU um link.");
             return;
         }
 
@@ -67,17 +80,17 @@ public final class AddEmojiCommand implements SlashCommand {
                         ctx.database().actionLogs().log(event.getGuild().getId(),
                                 event.getUser().getId(), emoji.getId(), "ADD_EMOJI", name);
                         fetched.erase();
-                        event.getHook().sendMessage("Emoji adicionado: " + emoji.getAsMention()).queue();
+                        Replies.hook(event, ctx, "Emoji adicionado: " + emoji.getAsMention());
                     },
                     err -> {
                         fetched.erase();
-                        event.getHook().sendMessage("Falha ao adicionar o emoji: " + err.getMessage()).queue();
+                        Replies.hook(event, ctx, "Falha ao adicionar o emoji: " + err.getMessage());
                     });
         } catch (IOException e) {
             if (image != null) {
                 image.erase();
             }
-            event.getHook().sendMessage(e.getMessage()).queue();
+            Replies.hook(event, ctx, e.getMessage());
         }
     }
 }

@@ -1,3 +1,17 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.message
+// 
+// Class: MessageBuilderParse
+// 
+// Constructors:
+//   - `Constructor` : `private MessageBuilderParse()`
+// 
+// Methods:
+//   - `Method` : `public static ObjectNode fromMessage(Message message)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.message;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;

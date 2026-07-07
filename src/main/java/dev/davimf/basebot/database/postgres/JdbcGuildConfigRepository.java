@@ -1,8 +1,33 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.postgres
+// 
+// Class: JdbcGuildConfigRepository
+// 
+// Constructors:
+//   - `Constructor` : `public JdbcGuildConfigRepository(PostgresPool pool)`
+// 
+// Methods:
+//   - `Method` : `public Optional<GuildConfig> find(String guildId)`
+//   - `Method` : `private GuildConfig map(ResultSet rs)`
+//   - `Method` : `private static String write(Object value)`
+//   - `Method` : `private static <T> T read(String json, TypeReference<T> type, T fallback)`
+// 
+// Fields:
+//   - `Field` : `private static final TypeReference<Map<String, String>> STR_MAP`
+//   - `Field` : `private static final TypeReference<Map<String, Boolean>> BOOL_MAP`
+//   - `Field` : `private static final TypeReference<List<String>> STR_LIST`
+//   - `Field` : `private final PostgresPool pool`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.postgres;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.davimf.basebot.database.model.GuildConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -24,15 +49,28 @@ import java.util.Optional;
  */
 public final class JdbcGuildConfigRepository implements GuildConfigRepository {
 
+    private static final Logger log = LoggerFactory.getLogger(JdbcGuildConfigRepository.class);
+
+    @FunctionalInterface
+    interface ConnectionProvider {
+        Connection getConnection() throws SQLException;
+    }
+
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<Map<String, String>> STR_MAP = new TypeReference<>() {};
     private static final TypeReference<Map<String, Boolean>> BOOL_MAP = new TypeReference<>() {};
     private static final TypeReference<List<String>> STR_LIST = new TypeReference<>() {};
 
-    private final PostgresPool pool;
+    private final ConnectionProvider connections;
+    private final String botInstanceId;
 
-    public JdbcGuildConfigRepository(PostgresPool pool) {
-        this.pool = pool;
+    public JdbcGuildConfigRepository(PostgresPool pool, String botInstanceId) {
+        this(pool::getConnection, botInstanceId);
+    }
+
+    JdbcGuildConfigRepository(ConnectionProvider connections, String botInstanceId) {
+        this.connections = connections;
+        this.botInstanceId = botInstanceId;
     }
 
     @Override
@@ -43,7 +81,7 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
                   FROM guild_config
                  WHERE guild_id = ?
                 """;
-        try (Connection c = pool.getConnection();
+        try (Connection c = connections.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, guildId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -57,33 +95,58 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
 
     @Override
     public void save(GuildConfig cfg) {
+        log.info("Saving guild_config for guild {} ({} channel keys, {} role keys, {} toggles)",
+                cfg.guildId(), cfg.channels().size(), cfg.roles().size(), cfg.toggles().size());
+        // Merge por chave (||) nos mapas JSONB: um save(fullConfig) do /setup nunca apaga chaves
+        // que o dashboard gravou e que não estão nesta cópia. GuildConfigEdits só faz put (nunca
+        // remove chave), então merge não perde capacidade. dashboard_access não é tocada (preservada).
+        // Caveat: se o dashboard REMOVE uma chave e o bot salva uma cópia (possivelmente do cache)
+        // que ainda a tem, o merge a re-adiciona — aceito (last-write-wins por chave, janela <= TTL).
         String sql = """
+                WITH claimed AS (
+                    INSERT INTO bot_guilds (guild_id, bot_instance_id, bot_present, last_seen_at)
+                    VALUES (?, ?::uuid, true, now())
+                    ON CONFLICT (guild_id) DO UPDATE SET
+                        bot_instance_id = EXCLUDED.bot_instance_id,
+                        bot_present     = true,
+                        last_seen_at    = now()
+                    RETURNING guild_id
+                )
                 INSERT INTO guild_config
                     (guild_id, log_channel_id, ticket_log_channel_id,
                      channels, roles, toggles, staff_role_ids, settings, updated_at)
-                VALUES (?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, now())
+                SELECT guild_id, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, ?::jsonb, now()
+                  FROM claimed
                 ON CONFLICT (guild_id) DO UPDATE SET
                     log_channel_id        = EXCLUDED.log_channel_id,
                     ticket_log_channel_id = EXCLUDED.ticket_log_channel_id,
-                    channels              = EXCLUDED.channels,
-                    roles                 = EXCLUDED.roles,
-                    toggles               = EXCLUDED.toggles,
+                    channels              = coalesce(guild_config.channels, '{}'::jsonb) || EXCLUDED.channels,
+                    roles                 = coalesce(guild_config.roles,    '{}'::jsonb) || EXCLUDED.roles,
+                    toggles               = coalesce(guild_config.toggles,  '{}'::jsonb) || EXCLUDED.toggles,
                     staff_role_ids        = EXCLUDED.staff_role_ids,
-                    settings              = EXCLUDED.settings,
+                    settings              = coalesce(guild_config.settings, '{}'::jsonb) || EXCLUDED.settings,
                     updated_at            = now()
                 """;
-        try (Connection c = pool.getConnection();
+        try (Connection c = connections.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, cfg.guildId());
-            ps.setString(2, cfg.logChannelId());
-            ps.setString(3, cfg.ticketLogChannelId());
-            ps.setString(4, write(cfg.channels()));
-            ps.setString(5, write(cfg.roles()));
-            ps.setString(6, write(cfg.toggles()));
-            ps.setString(7, write(cfg.staffRoleIds()));
-            ps.setString(8, write(cfg.settings()));
-            ps.executeUpdate();
+            ps.setString(2, botInstanceId);
+            ps.setString(3, cfg.logChannelId());
+            ps.setString(4, cfg.ticketLogChannelId());
+            ps.setString(5, write(cfg.channels()));
+            ps.setString(6, write(cfg.roles()));
+            ps.setString(7, write(cfg.toggles()));
+            ps.setString(8, write(cfg.staffRoleIds()));
+            ps.setString(9, write(cfg.settings()));
+            int rows = ps.executeUpdate();
+            if (rows != 1) {
+                String message = "atomic claim/save affected " + rows + " rows for guild " + cfg.guildId();
+                log.error(message);
+                throw new RepositoryException(message, new IllegalStateException(message));
+            }
+            log.info("Claimed guild and saved guild_config atomically for guild {}", cfg.guildId());
         } catch (SQLException e) {
+            log.error("Failed to save guild_config for guild {}", cfg.guildId(), e);
             throw new RepositoryException("save guild_config " + cfg.guildId(), e);
         }
     }
@@ -98,16 +161,58 @@ public final class JdbcGuildConfigRepository implements GuildConfigRepository {
                     toggles    = jsonb_set(coalesce(guild_config.toggles, '{}'::jsonb), ARRAY[?], to_jsonb(?::boolean)),
                     updated_at = now()
                 """;
-        try (Connection c = pool.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = connections.getConnection()) {
+            claimGuild(c, guildId);
+            if (!ownsGuild(c, guildId)) {
+                String message = "ownership claim failed for guild " + guildId
+                        + " and bot instance " + botInstanceId;
+                log.error(message);
+                throw new RepositoryException(message, new IllegalStateException(message));
+            }
+            try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, guildId);
             ps.setString(2, key);
             ps.setBoolean(3, value);
             ps.setString(4, key);
             ps.setBoolean(5, value);
-            ps.executeUpdate();
+            int rows = ps.executeUpdate();
+            log.info("Saved toggle {}/{}={} ({} row affected)", guildId, key, value, rows);
+            }
         } catch (SQLException e) {
+            log.error("Failed to save toggle {}/{}", guildId, key, e);
             throw new RepositoryException("setToggle " + guildId + "/" + key, e);
+        }
+    }
+
+    /**
+     * Establishes ownership for a new guild or reclaims a stale binding left by an older
+     * deployment of this bot. Callers only reach this repository from a live guild event.
+     */
+    private void claimGuild(Connection connection, String guildId) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement("""
+                INSERT INTO bot_guilds (guild_id, bot_instance_id, bot_present, last_seen_at)
+                VALUES (?, ?::uuid, true, now())
+                ON CONFLICT (guild_id) DO UPDATE SET
+                    bot_instance_id = EXCLUDED.bot_instance_id,
+                    bot_present     = true,
+                    last_seen_at    = now()
+                """)) {
+            ps.setString(1, guildId);
+            ps.setString(2, botInstanceId);
+            int rows = ps.executeUpdate();
+            log.info("Claimed guild {} for bot instance {} ({} row affected)",
+                    guildId, botInstanceId, rows);
+        }
+    }
+
+    private boolean ownsGuild(Connection connection, String guildId) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT 1 FROM bot_guilds WHERE guild_id = ? AND bot_instance_id = ?::uuid")) {
+            ps.setString(1, guildId);
+            ps.setString(2, botInstanceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 

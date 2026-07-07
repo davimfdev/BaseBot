@@ -1,3 +1,26 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.tickets
+// 
+// Class: TicketCategoryRepository
+// 
+// Constructors:
+//   - `Constructor` : `public TicketCategoryRepository(PostgresPool pool)`
+// 
+// Methods:
+//   - `Method` : `public List<TicketCategory> listByGuild(String guildId)`
+//   - `Method` : `public Optional<TicketCategory> find(String id)`
+//   - `Method` : `public int count(String guildId)`
+//   - `Method` : `private TicketCategory map(ResultSet rs)`
+//   - `Method` : `private static String write(List<String> value)`
+//   - `Method` : `private static List<String> read(String json)`
+// 
+// Fields:
+//   - `Field` : `private static final TypeReference<List<String>> STR_LIST`
+//   - `Field` : `private final PostgresPool pool`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.tickets;
 
 import com.fasterxml.jackson.core.type.TypeReference;

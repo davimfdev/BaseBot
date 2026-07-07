@@ -1,3 +1,14 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.tickets
+// 
+// Class: TicketsModule
+// 
+// Methods:
+//   - `Method` : `public String name()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.tickets;
 
 import dev.davimf.basebot.core.BotContext;

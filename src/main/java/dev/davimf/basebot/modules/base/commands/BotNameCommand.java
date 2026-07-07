@@ -1,8 +1,21 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: BotNameCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.ratelimit.ProfileRateLimiter;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -30,14 +43,14 @@ public final class BotNameCommand implements SlashCommand {
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         String nome = event.getOption("nome", OptionMapping::getAsString);
         if (nome == null || nome.length() < 2 || nome.length() > 32) {
-            event.reply("O nome deve ter entre 2 e 32 caracteres.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "O nome deve ter entre 2 e 32 caracteres.");
             return;
         }
         ProfileRateLimiter.Decision d = ctx.profileRateLimiter().check("name", System.currentTimeMillis());
         if (!d.allowed()) {
             long mins = (d.retryAfterMillis() + 59_999) / 60_000;
-            event.reply("Limite de 2 alterações por hora atingido. Tente novamente em ~" + mins + " min.")
-                    .setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx,
+                    "Limite de 2 alterações por hora atingido. Tente novamente em ~" + mins + " min.");
             return;
         }
         event.getJDA().getSelfUser().getManager().setName(nome).queue(
@@ -45,9 +58,9 @@ public final class BotNameCommand implements SlashCommand {
                     ctx.database().actionLogs().log(
                             event.getGuild() == null ? null : event.getGuild().getId(),
                             event.getUser().getId(), null, "BOT_NAME", nome);
-                    event.reply("Nome global alterado para **" + nome + "**. "
-                            + "(Afeta todos os servidores; limite do Discord: 2x por hora.)").queue();
+                    Replies.reply(event, ctx, "Nome global alterado para **" + nome + "**. "
+                            + "(Afeta todos os servidores; limite do Discord: 2x por hora.)");
                 },
-                err -> event.reply("Falha ao alterar o nome: " + err.getMessage()).setEphemeral(true).queue());
+                err -> Replies.ephemeral(event, ctx, "Falha ao alterar o nome: " + err.getMessage()));
     }
 }

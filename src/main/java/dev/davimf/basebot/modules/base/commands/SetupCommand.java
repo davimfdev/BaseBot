@@ -1,9 +1,22 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.commands
+// 
+// Class: SetupCommand
+// 
+// Methods:
+//   - `Method` : `public String name()`
+//   - `Method` : `public SlashCommandData data()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.base.setup.SetupView;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -27,13 +40,14 @@ public final class SetupCommand implements SlashCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
         if (event.getGuild() == null) {
-            event.reply("Use este comando em um servidor.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
         String guildId = event.getGuild().getId();
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guildId);
         int ticketCats = ctx.database().ticketCategories().count(guildId);
-        event.replyComponents(SetupView.hub(cfg, ticketCats))
+        int actionTypes = ctx.database().actionTypes().count(guildId);
+        event.replyComponents(SetupView.hub(cfg, ticketCats, actionTypes))
                 .useComponentsV2()
                 .setEphemeral(true)
                 .queue();

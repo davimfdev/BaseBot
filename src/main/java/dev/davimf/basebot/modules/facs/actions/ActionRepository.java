@@ -1,3 +1,63 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.actions
+// 
+// Class: ActionRepository
+// 
+// Constructors:
+//   - `Constructor` : `public ActionRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public String create(String guildId, String createdBy, String whenText, int capacity, String actionName, int minContingent, int dirtyMoney, boolean isPast, boolean entriesOpen, long dueAt)`
+//   - `Method` : `public Optional<Action> find(String id)`
+//   - `Method` : `public List<Action> listOpenByGuild(String guildId)`
+//   - `Method` : `public List<Action> dueForReveal(long now)`
+//   - `Method` : `private static Action mapAction(ResultSet rs)`
+//   - `Method` : `public Optional<Participant> participant(String actionId, String userId)`
+//   - `Method` : `public List<Participant> confirmedByBumpOrder(String actionId)`
+//   - `Method` : `public List<Participant> confirmed(String actionId)`
+//   - `Method` : `public List<Participant> reserveByPromotionOrder(String actionId)`
+//   - `Method` : `public int countConfirmed(String actionId)`
+//   - `Method` : `private List<Participant> list(String actionId, String kind, String order)`
+//   - `Method` : `private static Participant mapParticipant(ResultSet rs)`
+//   - `Method` : `private static String newId()`
+// 
+// Fields:
+//   - `Field` : `public static final String CONFIRMED`
+//   - `Field` : `public static final String RESERVE`
+//   - `Field` : `private final SqliteManager sqlite`
+// 
+// Record: Action
+// 
+// Record Components:
+//   - Record Component : public final String id
+//   - Record Component : public final String guildId
+//   - Record Component : public final String channelId
+//   - Record Component : public final String messageId
+//   - Record Component : public final String whenText
+//   - Record Component : public final int capacity
+//   - Record Component : public final String status
+//   - Record Component : public final String createdBy
+//   - Record Component : public final String actionName
+//   - Record Component : public final int minContingent
+//   - Record Component : public final int dirtyMoney
+//   - Record Component : public final boolean isPast
+//   - Record Component : public final boolean entriesOpen
+//   - Record Component : public final long dueAt
+//   - Record Component : public final boolean dueNotified
+// 
+// Record: Participant
+// 
+// Record Components:
+//   - Record Component : public final String userId
+//   - Record Component : public final String kind
+//   - Record Component : public final int priority
+//   - Record Component : public final String joinedAt
+// 
+// Interface: Binder
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.actions;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;
@@ -18,9 +78,17 @@ public final class ActionRepository {
     public static final String CONFIRMED = "CONFIRMED";
     public static final String RESERVE = "RESERVE";
 
-    /** An action event. */
+    /**
+     * An action event. {@code actionName}/{@code minContingent}/{@code dirtyMoney} are
+     * denormalized from the saved action type at creation so history survives type edits.
+     * {@code isPast} actions skip the queue (members are backfilled). {@code dueAt} is the
+     * epoch-millis schedule for future actions (0 = none); {@code dueNotified} is set once
+     * the scheduler reveals the Vitória/Derrota buttons.
+     */
     public record Action(String id, String guildId, String channelId, String messageId,
-                         String whenText, int capacity, String status, String createdBy) {}
+                         String whenText, int capacity, String status, String createdBy,
+                         String actionName, int minContingent, int dirtyMoney,
+                         boolean isPast, boolean entriesOpen, long dueAt, boolean dueNotified) {}
 
     /** A participant row. */
     public record Participant(String userId, String kind, int priority, String joinedAt) {}
@@ -31,18 +99,29 @@ public final class ActionRepository {
         this.sqlite = sqlite;
     }
 
-    public String create(String guildId, String createdBy, String whenText, int capacity) {
+    public String create(String guildId, String createdBy, String whenText, int capacity,
+                         String actionName, int minContingent, int dirtyMoney,
+                         boolean isPast, boolean entriesOpen, long dueAt) {
         String id = newId();
         try (Connection c = sqlite.getConnection();
              PreparedStatement ps = c.prepareStatement("""
-                     INSERT INTO fac_actions (id, guild_id, when_text, capacity, created_by)
-                     VALUES (?, ?, ?, ?, ?)
+                     INSERT INTO fac_actions
+                         (id, guild_id, when_text, capacity, created_by,
+                          action_name, min_contingent, dirty_money,
+                          is_past, entries_open, due_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                      """)) {
             ps.setString(1, id);
             ps.setString(2, guildId);
             ps.setString(3, whenText);
             ps.setInt(4, capacity);
             ps.setString(5, createdBy);
+            ps.setString(6, actionName);
+            ps.setInt(7, minContingent);
+            ps.setInt(8, dirtyMoney);
+            ps.setInt(9, isPast ? 1 : 0);
+            ps.setInt(10, entriesOpen ? 1 : 0);
+            ps.setLong(11, dueAt);
             ps.executeUpdate();
             return id;
         } catch (SQLException e) {
@@ -51,27 +130,39 @@ public final class ActionRepository {
     }
 
     public void setMessage(String id, String channelId, String messageId) {
-        try (Connection c = sqlite.getConnection();
-             PreparedStatement ps = c.prepareStatement(
-                     "UPDATE fac_actions SET channel_id = ?, message_id = ? WHERE id = ?")) {
-            ps.setString(1, channelId);
-            ps.setString(2, messageId);
-            ps.setString(3, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new RepositoryException("set action message " + id, e);
-        }
+        update("UPDATE fac_actions SET channel_id = ?, message_id = ? WHERE id = ?",
+                ps -> {
+                    ps.setString(1, channelId);
+                    ps.setString(2, messageId);
+                    ps.setString(3, id);
+                }, "set action message " + id);
     }
 
     public void setStatus(String id, String status) {
-        try (Connection c = sqlite.getConnection();
-             PreparedStatement ps = c.prepareStatement("UPDATE fac_actions SET status = ? WHERE id = ?")) {
+        update("UPDATE fac_actions SET status = ? WHERE id = ?", ps -> {
             ps.setString(1, status);
             ps.setString(2, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new RepositoryException("set action status " + id, e);
-        }
+        }, "set action status " + id);
+    }
+
+    public void setEntriesOpen(String id, boolean open) {
+        update("UPDATE fac_actions SET entries_open = ? WHERE id = ?", ps -> {
+            ps.setInt(1, open ? 1 : 0);
+            ps.setString(2, id);
+        }, "set action entries " + id);
+    }
+
+    public void setWhen(String id, String whenText, long dueAt) {
+        update("UPDATE fac_actions SET when_text = ?, due_at = ?, due_notified = 0 WHERE id = ?", ps -> {
+            ps.setString(1, whenText);
+            ps.setLong(2, dueAt);
+            ps.setString(3, id);
+        }, "set action when " + id);
+    }
+
+    public void markDueNotified(String id) {
+        update("UPDATE fac_actions SET due_notified = 1 WHERE id = ?",
+                ps -> ps.setString(1, id), "mark action due " + id);
     }
 
     public Optional<Action> find(String id) {
@@ -79,16 +170,58 @@ public final class ActionRepository {
              PreparedStatement ps = c.prepareStatement("SELECT * FROM fac_actions WHERE id = ?")) {
             ps.setString(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return Optional.empty();
-                }
-                return Optional.of(new Action(rs.getString("id"), rs.getString("guild_id"),
-                        rs.getString("channel_id"), rs.getString("message_id"), rs.getString("when_text"),
-                        rs.getInt("capacity"), rs.getString("status"), rs.getString("created_by")));
+                return rs.next() ? Optional.of(mapAction(rs)) : Optional.empty();
             }
         } catch (SQLException e) {
             throw new RepositoryException("find action " + id, e);
         }
+    }
+
+    /** Open actions for a guild, newest first (for the "Editar ações" picker). */
+    public List<Action> listOpenByGuild(String guildId) {
+        String sql = "SELECT * FROM fac_actions WHERE guild_id = ? AND status = 'OPEN' "
+                + "ORDER BY created_at DESC";
+        List<Action> out = new ArrayList<>();
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, guildId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(mapAction(rs));
+                }
+            }
+            return out;
+        } catch (SQLException e) {
+            throw new RepositoryException("list open actions " + guildId, e);
+        }
+    }
+
+    /** Future, still-open actions whose scheduled time has passed and weren't revealed yet. */
+    public List<Action> dueForReveal(long now) {
+        String sql = "SELECT * FROM fac_actions WHERE status = 'OPEN' AND is_past = 0 "
+                + "AND due_notified = 0 AND due_at > 0 AND due_at <= ?";
+        List<Action> out = new ArrayList<>();
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, now);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(mapAction(rs));
+                }
+            }
+            return out;
+        } catch (SQLException e) {
+            throw new RepositoryException("list due actions", e);
+        }
+    }
+
+    private static Action mapAction(ResultSet rs) throws SQLException {
+        return new Action(rs.getString("id"), rs.getString("guild_id"),
+                rs.getString("channel_id"), rs.getString("message_id"), rs.getString("when_text"),
+                rs.getInt("capacity"), rs.getString("status"), rs.getString("created_by"),
+                rs.getString("action_name"), rs.getInt("min_contingent"), rs.getInt("dirty_money"),
+                rs.getInt("is_past") == 1, rs.getInt("entries_open") == 1,
+                rs.getLong("due_at"), rs.getInt("due_notified") == 1);
     }
 
     // --- participants ----------------------------------------------------------
@@ -176,6 +309,20 @@ public final class ActionRepository {
     private static Participant mapParticipant(ResultSet rs) throws SQLException {
         return new Participant(rs.getString("user_id"), rs.getString("kind"),
                 rs.getInt("priority"), rs.getString("joined_at"));
+    }
+
+    private interface Binder {
+        void bind(PreparedStatement ps) throws SQLException;
+    }
+
+    private void update(String sql, Binder binder, String errorContext) {
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            binder.bind(ps);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RepositoryException(errorContext, e);
+        }
     }
 
     private static String newId() {

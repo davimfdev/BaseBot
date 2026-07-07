@@ -1,3 +1,11 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: PixPayloadTest
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 import org.junit.jupiter.api.Test;
@@ -42,6 +50,22 @@ class PixPayloadTest {
                 .amount(new BigDecimal("10.5"))
                 .build().toBrCode();
         assertTrue(code.contains("540510.50"), "amount tag 54, len 05, value 10.50");
+    }
+
+    @Test
+    void foldsAccentsToAsciiSoBrCodeIsByteSafe() {
+        String code = PixPayload.builder()
+                .key("+5562986089609")
+                .merchantName("José da Silva")
+                .merchantCity("Goiânia")
+                .build().toBrCode();
+        assertTrue(code.chars().allMatch(c -> c < 128), "BR Code deve ser ASCII puro");
+        assertTrue(code.contains("Jose da Silva"), "nome sem acento no payload");
+        assertTrue(code.contains("Goiania"), "cidade sem acento no payload");
+        assertFalse(code.contains("Goiânia"), "cidade não pode ter acento");
+        // CRC recomputável sobre os bytes do corpo.
+        String body = code.substring(0, code.length() - 4);
+        assertEquals(Crc16.hex4(body.getBytes(StandardCharsets.UTF_8)), code.substring(code.length() - 4));
     }
 
     @Test

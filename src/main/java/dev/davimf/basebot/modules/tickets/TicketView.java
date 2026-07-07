@@ -1,9 +1,35 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.tickets
+// 
+// Class: TicketView
+// 
+// Constructors:
+//   - `Constructor` : `private TicketView()`
+// 
+// Methods:
+//   - `Method` : `public static Container panel(int accent, List<TicketCategory> categories)`
+//   - `Method` : `public static Container dashboard(int accent, String ticketId, String headerMarkdown)`
+//   - `Method` : `public static Container dashboard(int accent, String ticketId, String headerMarkdown, String assignedStaffId)`
+//   - `Method` : `public static Modal openReasonModal(String categoryId)`
+//   - `Method` : `public static Modal closeReasonModal(String ticketId)`
+//   - `Method` : `public static Container notifyDm(int accent, String guildName, String channelUrl)`
+//   - `Method` : `public static Container addMemberPrompt(int accent, String ticketId)`
+//   - `Method` : `public static Modal renameModal(String ticketId, String currentSuffix)`
+//   - `Method` : `public static Container closure(int accent, String channelName, String creatorId, String closerId, String reason, String url, String password)`
+//   - `Method` : `private static String trim(String s, int max)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.tickets;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.TicketCategory;
-import net.dv8tion.jda.api.EmbedBuilder;
+import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
@@ -13,7 +39,7 @@ import net.dv8tion.jda.api.components.selections.EntitySelectMenu.SelectTarget;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
-import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.modals.Modal;
 
 import java.util.List;
@@ -35,8 +61,12 @@ public final class TicketView {
                     c.description() == null ? null : trim(c.description(), 100));
         }
         return Panels.container(accent,
-                Panels.text("## 🎫 Central de Tickets\nSelecione uma categoria abaixo para abrir um ticket."),
-                ActionRow.of(menu.build()));
+                Panels.text("## " + Emojis.of(Emojis.TICKET, "🎫") + " Central de Atendimento"),
+                Panels.divider(),
+                Panels.text("> Selecione abaixo a categoria que melhor descreve o seu atendimento. "
+                        + "Um canal privado será aberto somente para você e a equipe."),
+                ActionRow.of(menu.build()),
+                Panels.text("-# " + Emojis.of(Emojis.LOCK, "🔒") + " Apenas você e a equipe responsável terão acesso ao canal."));
     }
 
     /** In-channel dashboard posted as the first message of a new ticket. */
@@ -55,20 +85,31 @@ public final class TicketView {
         if (assignedStaffId == null) {
             return Panels.container(accent,
                     Panels.text(headerMarkdown),
+                    Panels.divider(),
+                    Panels.text("-# " + Emojis.of(Emojis.LOADING, "⏳") + " Aguardando um atendente assumir o seu ticket."),
                     ActionRow.of(
-                            Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir"),
-                            Button.danger(ComponentId.of(NS, "fechar", ticketId), "Fechar")));
+                            Button.primary(ComponentId.of(NS, "assumir", ticketId), "Assumir atendimento")
+                                    .withEmoji(Emojis.button(Emojis.RECRUIT)),
+                            Button.danger(ComponentId.of(NS, "fechar", ticketId), "Fechar")
+                                    .withEmoji(Emojis.button(Emojis.LOCK))));
         }
         return Panels.container(accent,
-                Panels.text(headerMarkdown + "\n\n🙋 **Atendimento assumido por** <@" + assignedStaffId + ">"),
+                Panels.text(headerMarkdown),
+                Panels.divider(),
+                Panels.text("" + Emojis.of(Emojis.RECRUIT, "🙋") + " **Responsável** · <@" + assignedStaffId + ">"),
                 Panels.divider(),
                 ActionRow.of(
-                        Button.secondary(ComponentId.of(NS, "call", ticketId), "Criar Call"),
-                        Button.secondary(ComponentId.of(NS, "membro", ticketId), "Membro"),
-                        Button.secondary(ComponentId.of(NS, "notificar", ticketId), "Notificar")),
+                        Button.secondary(ComponentId.of(NS, "call", ticketId), "Criar call")
+                                .withEmoji(Emojis.button(Emojis.VOLUME)),
+                        Button.secondary(ComponentId.of(NS, "membro", ticketId), "Adicionar membro")
+                                .withEmoji(Emojis.button(Emojis.MEMBER)),
+                        Button.secondary(ComponentId.of(NS, "notificar", ticketId), "Notificar autor")
+                                .withEmoji(Emojis.button(Emojis.BELL))),
                 ActionRow.of(
-                        Button.secondary(ComponentId.of(NS, "renomear", ticketId), "Renomear"),
-                        Button.danger(ComponentId.of(NS, "fechar", ticketId), "Fechar")));
+                        Button.secondary(ComponentId.of(NS, "renomear", ticketId), "Renomear")
+                                .withEmoji(Emojis.button(Emojis.EDIT)),
+                        Button.danger(ComponentId.of(NS, "fechar", ticketId), "Fechar")
+                                .withEmoji(Emojis.button(Emojis.LOCK))));
     }
 
     /** Modal asking the member why they are opening the ticket (shown before creation). */
@@ -79,11 +120,6 @@ public final class TicketView {
         return Modal.create(ComponentId.of(NS, "openform", categoryId), "Abrir ticket")
                 .addComponents(Label.of("Motivo", motivo))
                 .build();
-    }
-
-    /** A classic embed for an in-channel action notice (visible to all + saved in the transcript). */
-    public static MessageEmbed actionEmbed(int accent, String text) {
-        return new EmbedBuilder().setColor(accent).setDescription(text).build();
     }
 
     /** Closure-reason modal shown by the "Fechar" button before the transcript runs. */
@@ -99,8 +135,10 @@ public final class TicketView {
     /** DM sent by "Notificar": a link button that jumps back to the ticket channel. */
     public static Container notifyDm(int accent, String guildName, String channelUrl) {
         return Panels.container(accent,
-                Panels.text("🔔 A equipe de **" + guildName + "** solicita sua atenção no seu ticket."),
-                ActionRow.of(Button.link(channelUrl, "Ir para o canal")));
+                Panels.text("## " + Emojis.of(Emojis.BELL, "🔔") + " Atenção solicitada"),
+                Panels.divider(),
+                Panels.text("> A equipe de **" + guildName + "** solicita a sua presença no seu ticket."),
+                ActionRow.of(Button.link(channelUrl, "Ir para o canal").withEmoji(Emojis.button(Emojis.ARROW))));
     }
 
     /** Ephemeral picker for the "Membro" action — add a user to the ticket channel. */
@@ -111,7 +149,9 @@ public final class TicketView {
                 .setRequiredRange(1, 1)
                 .build();
         return Panels.container(accent,
-                Panels.text("Selecione o membro que deve ter acesso a este ticket."),
+                Panels.text("## " + Emojis.of(Emojis.MEMBER, "👤") + " Adicionar membro"),
+                Panels.divider(),
+                Panels.text("> Selecione quem deve passar a ter acesso a este atendimento."),
                 ActionRow.of(menu));
     }
 
@@ -128,16 +168,18 @@ public final class TicketView {
     /** Closure embed (sent to #log-tickets and the creator's DM): link + one-time password. */
     public static Container closure(int accent, String channelName, String creatorId,
                                     String closerId, String reason, String url, String password) {
-        String body = "## 🔒 Ticket fechado\n"
-                + "**Canal:** " + channelName + "\n"
-                + "**Aberto por:** <@" + creatorId + ">\n"
-                + "**Fechado por:** <@" + closerId + ">\n"
-                + "**Motivo:** " + (reason == null || reason.isBlank() ? "*não informado*" : reason) + "\n"
-                + "**Senha (uso único):** `" + password + "`\n"
-                + "-# A senha é necessária para abrir o transcript e não será exibida novamente.";
+        String details = "**Canal** · `" + channelName + "`\n"
+                + "" + Emojis.of(Emojis.MEMBER, "👤") + " **Aberto por** · <@" + creatorId + ">\n"
+                + "" + Emojis.of(Emojis.SHIELD, "🛡️") + " **Fechado por** · <@" + closerId + ">\n"
+                + "" + Emojis.of(Emojis.NOTE, "📝") + " **Motivo** · " + (reason == null || reason.isBlank() ? "*não informado*" : reason);
         return Panels.container(accent,
-                Panels.text(body),
-                ActionRow.of(Button.link(url, "Abrir transcript")));
+                Panels.text("## " + Emojis.of(Emojis.LOCK, "🔒") + " Ticket fechado"),
+                Panels.divider(),
+                Panels.text(details),
+                Panels.divider(),
+                Panels.text("" + Emojis.of(Emojis.KEY, "🔑") + " **Senha (uso único)** · `" + password + "`\n"
+                        + "-# A senha é necessária para abrir o transcript e não será exibida novamente."),
+                ActionRow.of(Button.link(url, "Abrir transcript").withEmoji(Emojis.button(Emojis.NOTE))));
     }
 
     private static String trim(String s, int max) {

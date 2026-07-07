@@ -1,3 +1,39 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.economy
+// 
+// Class: RecipeRepository
+// 
+// Constructors:
+//   - `Constructor` : `public RecipeRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public Optional<Recipe> findByProduct(String guildId, String product)`
+//   - `Method` : `public List<Recipe> list(String guildId)`
+//   - `Method` : `private static String recipeId(Connection c, String guildId, String product)`
+//   - `Method` : `private static List<Input> loadInputs(Connection c, String recipeId)`
+//   - `Method` : `private static String newId()`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// 
+// Record: Input
+// 
+// Record Components:
+//   - Record Component : public final String item
+//   - Record Component : public final long qty
+// 
+// Record: Recipe
+// 
+// Record Components:
+//   - Record Component : public final String id
+//   - Record Component : public final String guildId
+//   - Record Component : public final String product
+//   - Record Component : public final long outputQty
+//   - Record Component : public final List<Input> inputs
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;

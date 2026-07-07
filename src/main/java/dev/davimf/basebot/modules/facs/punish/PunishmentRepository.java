@@ -1,3 +1,29 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.punish
+// 
+// Class: PunishmentRepository
+// 
+// Constructors:
+//   - `Constructor` : `public PunishmentRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public String create(String guildId, String userId, String type, int level, String reason, String appliedBy, String expiresAtIso)`
+//   - `Method` : `public Optional<Punishment> find(String id)`
+//   - `Method` : `public List<Punishment> listByUser(String guildId, String userId)`
+//   - `Method` : `public List<Punishment> listActiveByUser(String guildId, String userId)`
+//   - `Method` : `public int highestActiveAdvLevel(String guildId, String userId)`
+//   - `Method` : `public List<Punishment> listExpiredAdvs(String nowIso)`
+//   - `Method` : `private List<Punishment> query(String sql, String... args)`
+//   - `Method` : `private Optional<Punishment> queryOne(String sql, String arg)`
+//   - `Method` : `private static Punishment map(ResultSet rs)`
+//   - `Method` : `private static String newId()`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.punish;
 
 import dev.davimf.basebot.database.model.Punishment;

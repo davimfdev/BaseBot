@@ -1,3 +1,15 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.base.listacargo
+// 
+// Class: ListaCargoComponentHandler
+// 
+// Methods:
+//   - `Method` : `public String namespace()`
+//   - `Method` : `private int parsePage(String raw)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.base.listacargo;
 
 import dev.davimf.basebot.core.BotContext;
@@ -5,6 +17,7 @@ import dev.davimf.basebot.core.component.ComponentHandler;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Paginator;
+import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -26,7 +39,7 @@ public final class ListaCargoComponentHandler implements ComponentHandler {
         }
         Role role = event.getGuild().getRoleById(id.arg(0));
         if (role == null) {
-            event.reply("Cargo não encontrado.").setEphemeral(true).queue();
+            Replies.ephemeral(event, ctx, "Cargo não encontrado.");
             return;
         }
         int requested = parsePage(id.arg(1));

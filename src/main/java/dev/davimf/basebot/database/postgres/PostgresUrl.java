@@ -1,3 +1,26 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.database.postgres
+// 
+// Class: PostgresUrl
+// 
+// Constructors:
+//   - `Constructor` : `private PostgresUrl()`
+// 
+// Methods:
+//   - `Method` : `public static Parsed normalize(String rawUrl, String userOverride, String passwordOverride)`
+//   - `Method` : `private static String blankToNull(String s)`
+//   - `Method` : `private static String firstNonBlank(String a, String b)`
+// 
+// Record: Parsed
+// 
+// Record Components:
+//   - Record Component : public final String jdbcUrl
+//   - Record Component : public final String user
+//   - Record Component : public final String password
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.database.postgres;
 
 import java.net.URI;

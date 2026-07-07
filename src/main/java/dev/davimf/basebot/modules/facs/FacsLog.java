@@ -1,3 +1,14 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs
+// 
+// Class: FacsLog
+// 
+// Constructors:
+//   - `Constructor` : `private FacsLog()`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs;
 
 import dev.davimf.basebot.core.BotContext;

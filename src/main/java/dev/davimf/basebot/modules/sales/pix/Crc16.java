@@ -1,3 +1,18 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.sales.pix
+// 
+// Class: Crc16
+// 
+// Constructors:
+//   - `Constructor` : `private Crc16()`
+// 
+// Methods:
+//   - `Method` : `public static int ccittFalse(byte[] data)`
+//   - `Method` : `public static String hex4(byte[] data)`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.sales.pix;
 
 /**

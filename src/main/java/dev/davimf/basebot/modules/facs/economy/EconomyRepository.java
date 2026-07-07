@@ -1,3 +1,27 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.economy
+// 
+// Class: EconomyRepository
+// 
+// Constructors:
+//   - `Constructor` : `public EconomyRepository(SqliteManager sqlite)`
+// 
+// Methods:
+//   - `Method` : `public long getBalance(String guildId)`
+//   - `Method` : `public long adjust(String guildId, String type, long deltaCents, String actorId, String note)`
+//   - `Method` : `public List<FacTransaction> listTransactions(String guildId, int days)`
+//   - `Method` : `public long addStock(String guildId, String item, long delta)`
+//   - `Method` : `public long getStock(String guildId, String item)`
+//   - `Method` : `public boolean deductStock(String guildId, String item, long qty)`
+//   - `Method` : `public List<StockEntry> listStock(String guildId)`
+//   - `Method` : `private static String newId()`
+// 
+// Fields:
+//   - `Field` : `private final SqliteManager sqlite`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.database.model.FacTransaction;

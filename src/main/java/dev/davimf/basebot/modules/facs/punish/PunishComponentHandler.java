@@ -1,3 +1,20 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.punish
+// 
+// Class: PunishComponentHandler
+// 
+// Constructors:
+//   - `Constructor` : `public PunishComponentHandler(PunishService service)`
+// 
+// Methods:
+//   - `Method` : `public String namespace()`
+// 
+// Fields:
+//   - `Field` : `private final PunishService service`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.punish;
 
 import dev.davimf.basebot.core.BotContext;

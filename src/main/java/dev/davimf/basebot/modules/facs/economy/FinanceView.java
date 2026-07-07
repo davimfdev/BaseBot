@@ -1,7 +1,28 @@
+// [OUTLINE START]
+// Package: dev.davimf.basebot.modules.facs.economy
+// 
+// Class: FinanceView
+// 
+// Constructors:
+//   - `Constructor` : `private FinanceView()`
+// 
+// Methods:
+//   - `Method` : `public static Container panel(int accent, long balanceCents, boolean lavagem, int lavagemPct, boolean desmanche, int desmanchePct)`
+//   - `Method` : `public static Modal amountModal(String action, String title, String label)`
+//   - `Method` : `public static Modal transferModal()`
+//   - `Method` : `public static Modal pctModal(int lavagemPct, int desmanchePct)`
+// 
+// Fields:
+//   - `Field` : `public static final String NS`
+// [OUTLINE END]
+
+
+
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
+import dev.davimf.basebot.util.Emojis;
 import dev.davimf.basebot.util.Money;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
@@ -22,21 +43,25 @@ public final class FinanceView {
 
     public static Container panel(int accent, long balanceCents,
                                   boolean lavagem, int lavagemPct, boolean desmanche, int desmanchePct) {
-        String body = "## 💰 Painel Financeiro\n"
-                + "**Saldo:** " + Money.format(balanceCents) + "\n"
-                + "🧼 **Lavagem:** " + (lavagem ? "Ativada" : "Desativada") + " (" + lavagemPct + "%)\n"
-                + "🔧 **Desmanche:** " + (desmanche ? "Ativado" : "Desativado") + " (" + desmanchePct + "%)";
+        String body = "" + Emojis.of(Emojis.BANK, "🏦") + " **Saldo** · `" + Money.format(balanceCents) + "`\n"
+                + "" + Emojis.of(Emojis.BROOM, "🧼") + " **Lavagem** · " + (lavagem ? Emojis.of(Emojis.CHECK_YES, "✅") + " ativada" : Emojis.of(Emojis.CHECK_NO, "❌") + " desativada")
+                + " · `" + lavagemPct + "%`\n"
+                + "" + Emojis.of(Emojis.WRENCH, "🔧") + " **Desmanche** · " + (desmanche ? Emojis.of(Emojis.CHECK_YES, "✅") + " ativado" : Emojis.of(Emojis.CHECK_NO, "❌") + " desativado")
+                + " · `" + desmanchePct + "%`";
         return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.MONEY, "💰") + " Painel Financeiro"),
+                Panels.divider(),
                 Panels.text(body),
+                Panels.divider(),
                 ActionRow.of(
                         Button.success(ComponentId.of(NS, "deposit"), "Depósito"),
                         Button.danger(ComponentId.of(NS, "withdraw"), "Saque"),
                         Button.primary(ComponentId.of(NS, "transfer"), "Transferência")),
                 ActionRow.of(
                         Button.secondary(ComponentId.of(NS, "togglelav"),
-                                "🧼 Lavagem: " + (lavagem ? "ON" : "OFF")),
+                                "Lavagem: " + (lavagem ? "ON" : "OFF")).withEmoji(Emojis.button(Emojis.BROOM)),
                         Button.secondary(ComponentId.of(NS, "toggledesm"),
-                                "🔧 Desmanche: " + (desmanche ? "ON" : "OFF")),
+                                "Desmanche: " + (desmanche ? "ON" : "OFF")).withEmoji(Emojis.button(Emojis.WRENCH)),
                         Button.secondary(ComponentId.of(NS, "setpct"), "Definir %")));
     }
 
