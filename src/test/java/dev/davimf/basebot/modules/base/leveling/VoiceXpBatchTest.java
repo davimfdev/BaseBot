@@ -114,4 +114,22 @@ class VoiceXpBatchTest {
         assertEquals(0, results.get(0).oldXp());
         assertEquals(10, results.get(0).newXp());
     }
+
+    @Test
+    void staleCreditIsSkippedSoConcurrentWritersCannotDoubleCount() {
+        long id = openSessionId("u1", 1000L);
+        long week = VoiceWeek.weekStart(1000L);
+
+        // Primeiro escritor credita [1000, 61000) e move a watermark para 61000.
+        VoiceXpBatch.apply(sqlite, List.of(
+                new VoiceXpBatch.Credit(id, "g1", "u1", 10, 1000L, 61_000L, 61_000L)));
+
+        // Segundo escritor tinha lido a watermark ANTIGA (1000) e tenta creditar a mesma janela.
+        List<VoiceXpBatch.Result> stale = VoiceXpBatch.apply(sqlite, List.of(
+                new VoiceXpBatch.Credit(id, "g1", "u1", 10, 1000L, 61_000L, 61_000L)));
+
+        assertTrue(stale.isEmpty(), "credito obsoleto nao deve reportar level-up");
+        assertEquals(10, users.xp("g1", "u1"), "XP nao pode ser creditado duas vezes");
+        assertEquals(60_000L, times.msOf("g1", "u1", week), "tempo nao pode ser creditado duas vezes");
+    }
 }

@@ -46,7 +46,8 @@ public final class VoiceXpBatch {
             boolean prevAuto = c.getAutoCommit();
             c.setAutoCommit(false);
             try (PreparedStatement advance = c.prepareStatement(
-                        "UPDATE voice_sessions SET xp_credited_until=?, time_credited_until=? WHERE id=?");
+                        "UPDATE voice_sessions SET xp_credited_until=?, time_credited_until=? "
+                        + "WHERE id=? AND time_credited_until=?");
                  PreparedStatement selXp = c.prepareStatement(
                         "SELECT xp FROM user_levels WHERE guild_id=? AND user_id=?");
                  PreparedStatement addXp = c.prepareStatement(
@@ -62,7 +63,12 @@ public final class VoiceXpBatch {
                     advance.setLong(1, cr.creditedUntil());
                     advance.setLong(2, cr.creditedUntil());
                     advance.setLong(3, cr.sessionId());
-                    advance.executeUpdate();
+                    advance.setLong(4, cr.timeFrom());
+                    if (advance.executeUpdate() == 0) {
+                        // Outro escritor (ticker ou settler) já creditou esta janela. Pular,
+                        // senão o tempo e o XP entrariam em dobro.
+                        continue;
+                    }
 
                     if (cr.xpDelta() > 0) {
                         long old = 0;
