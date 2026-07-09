@@ -58,7 +58,8 @@ public final class VoiceXpTicker {
                         delta = (Math.max(0, now - s.xpCreditedUntil()) * XP_PER_MIN) / 60_000L;
                     }
                 }
-                credits.add(new VoiceXpBatch.Credit(s.id(), guild.getId(), s.userId(), delta, now));
+                credits.add(new VoiceXpBatch.Credit(s.id(), guild.getId(), s.userId(), delta,
+                        s.timeCreditedUntil(), s.timeCreditedUntil(), now));
             }
             List<VoiceXpBatch.Result> results = VoiceXpBatch.apply(ctx.database().sqlite(), credits);
             // Efeitos de level-up FORA da transação (chamadas ao Discord).
