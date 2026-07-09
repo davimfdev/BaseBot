@@ -2,10 +2,7 @@ package dev.davimf.basebot.modules.base.leveling;
 
 import dev.davimf.basebot.database.model.GuildConfig;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /** Leitor puro da config de leveling (prefixo {@code level:}). */
 public final class LevelingConfig {
@@ -29,12 +26,6 @@ public final class LevelingConfig {
     public static String notifyChannelId(GuildConfig cfg) { return cfg.channel(KEY_NOTIFY_CHANNEL); }
 
     public static Set<String> ignoredChannels(GuildConfig cfg) {
-        String raw = cfg.setting(KEY_IGNORED);
-        if (raw == null || raw.isBlank()) {
-            return Set.of();
-        }
-        return Arrays.stream(raw.split(","))
-                .map(String::trim).filter(s -> !s.isEmpty())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        return dev.davimf.basebot.util.ConfigIds.parse(cfg.setting(KEY_IGNORED));
     }
 }
