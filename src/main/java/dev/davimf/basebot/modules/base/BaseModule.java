@@ -292,7 +292,8 @@ public final class BaseModule implements BotModule {
         registry.command(new dev.davimf.basebot.modules.base.commands.XpCommand(leveling));
         registry.component(new dev.davimf.basebot.modules.base.leveling.LevelingComponentHandler(leveling));
         // Leveling — voz (Plano 2): sessões persistidas para XP por tempo em call.
-        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx));
+        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling));
+        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling));
 
         // Economia por-usuário (Base) — separada do tesouro de facção.
         dev.davimf.basebot.modules.base.economy.EconomyService economy =

@@ -7,7 +7,9 @@ import net.dv8tion.jda.api.entities.Member;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Acerta as sessões de voz no boot: fecha órfãs, abre/reabre conforme quem está em call agora. */
+/** Acerta as sessões de voz no boot: fecha órfãs, abre/reabre conforme quem está em call agora,
+ *  e reancora as watermarks de quem continuou no mesmo canal. O período em que o bot esteve
+ *  offline NUNCA é creditado retroativamente. */
 public final class VoiceReconciler {
 
     private VoiceReconciler() {}
@@ -42,6 +44,10 @@ public final class VoiceReconciler {
                 } else if (!open.channelId().equals(e.getValue())) {
                     repo.closeOpen(guildId, e.getKey(), now);
                     repo.open(guildId, e.getKey(), e.getValue(), now);
+                } else {
+                    // Mesma sessão, mesmo canal: o bot pode ter ficado horas fora. Reancora as
+                    // watermarks para NÃO creditar o período offline no próximo tick.
+                    repo.reanchor(guildId, e.getKey(), now);
                 }
             }
             // fecha órfãs: banco achava aberto mas não está mais em call

@@ -50,4 +50,24 @@ class VoiceSessionRepositoryTest {
         repo.open("g2", "u2", "c2", 1000L);
         assertEquals(2, repo.openSessions().size());
     }
+
+    @Test
+    void reanchorMovesBothWatermarksAndCreditsNothing() {
+        repo.open("g1", "u1", "c1", 1_000L);
+        repo.reanchor("g1", "u1", 90_000_000L);
+
+        VoiceSessionRepository.Open s = repo.openSession("g1", "u1");
+        assertEquals(90_000_000L, s.xpCreditedUntil());
+        assertEquals(90_000_000L, s.timeCreditedUntil());
+        assertEquals(1_000L, s.joinTime(), "join_time nao muda: so as watermarks sao reancoradas");
+    }
+
+    @Test
+    void reanchorIgnoresClosedSessions() {
+        repo.open("g1", "u1", "c1", 1_000L);
+        repo.closeOpen("g1", "u1", 2_000L);
+        repo.reanchor("g1", "u1", 90_000_000L);
+
+        assertEquals(2_000L, repo.sessionsOf("g1", "u1").get(0)[1], "sessao fechada nao e tocada");
+    }
 }

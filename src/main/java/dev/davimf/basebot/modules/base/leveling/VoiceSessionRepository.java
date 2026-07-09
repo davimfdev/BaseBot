@@ -113,6 +113,23 @@ public final class VoiceSessionRepository {
         return found.isEmpty() ? null : found.get(0);
     }
 
+    /** Reancora as duas watermarks da sessão aberta em {@code now}, sem creditar nada.
+     *  Usado no boot: o período em que o bot esteve offline não deve ser creditado. */
+    public void reanchor(String guildId, String userId, long now) {
+        String sql = "UPDATE voice_sessions SET xp_credited_until=?, time_credited_until=? "
+                + "WHERE guild_id=? AND user_id=? AND leave_time IS NULL";
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, now);
+            ps.setLong(2, now);
+            ps.setString(3, guildId);
+            ps.setString(4, userId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RepositoryException("reanchor " + guildId + "/" + userId, e);
+        }
+    }
+
     /** Apaga sessões FECHADAS antigas. Sessões abertas nunca são tocadas. */
     public int purgeClosedBefore(long cutoff) {
         String sql = "DELETE FROM voice_sessions WHERE leave_time IS NOT NULL AND leave_time < ?";
