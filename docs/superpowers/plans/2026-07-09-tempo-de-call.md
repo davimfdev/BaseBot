@@ -419,11 +419,19 @@ class VoiceEligibilityTest {
         assertFalse(VoiceEligibility.timeEligible(s));
     }
 
+    /**
+     * Server-mute não pausa nada, e a garantia disso é ESTRUTURAL: o snapshot não modela
+     * {@code guildMuted}, então nenhum predicado consegue consultá-lo. Este teste falha se
+     * alguém acrescentar o campo — forçando a revisitar a decisão de produto em vez de
+     * silenciosamente passar a punir quem foi mutado por um moderador.
+     */
     @Test
-    void serverMuteBlocksNeither() {
-        // guildMuted nem existe no snapshot: server-mute é irrelevante por decisão de produto.
-        assertTrue(VoiceEligibility.xpEligible(active()));
-        assertTrue(VoiceEligibility.timeEligible(active()));
+    void serverMuteIsDeliberatelyNotModeled() {
+        boolean hasGuildMuted = java.util.Arrays.stream(VoiceStateSnapshot.class.getRecordComponents())
+                .anyMatch(rc -> rc.getName().equals("guildMuted"));
+        assertFalse(hasGuildMuted,
+                "server-mute nao deve pausar XP nem tempo; se este campo passou a existir, "
+                        + "revise VoiceEligibility e o spec antes de remover este teste");
     }
 
     @Test
@@ -2363,16 +2371,23 @@ git commit -m "feat(voice): poda diaria de 90 dias, preservando sessoes abertas 
 
 **Files:**
 - Create: `src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceFormat.java`
+- Create: `src/main/java/dev/davimf/basebot/core/component/RankingPanel.java`
 - Create: `src/main/java/dev/davimf/basebot/modules/base/leveling/TopCallView.java`
 - Create: `src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceTimeComponentHandler.java`
 - Create: `src/main/java/dev/davimf/basebot/modules/base/commands/TopCallCommand.java`
 - Create: `src/main/java/dev/davimf/basebot/modules/base/commands/TempoCallCommand.java`
+- Modify: `src/main/java/dev/davimf/basebot/modules/base/leveling/TopView.java` (passa a usar `RankingPanel`)
 - Modify: `src/main/java/dev/davimf/basebot/modules/base/BaseModule.java` (registro + agendamento)
 - Test: `src/test/java/dev/davimf/basebot/modules/base/leveling/VoiceFormatTest.java`
+- Test: `src/test/java/dev/davimf/basebot/core/component/RankingPanelTest.java`
 
 **Interfaces:**
 - Consumes: `VoiceTimeRepository.topPage` / `msOf` / `count` (T5), `VoiceWeek.weekStart` (T1), `VoiceTimeFlusher` (T9), `VoiceRetentionSweeper` (T10).
-- Produces: `VoiceFormat.duration(long ms) -> String`; `TopCallView.NS` (`"vtime"`), `TopCallView.PAGE` (10), `TopCallView.panel(int accent, List<VoiceTimeRepository.Entry> entries, int page, int total) -> Container`.
+- Produces:
+  - `VoiceFormat.duration(long ms) -> String`
+  - `RankingPanel.pageCount(int total, int pageSize) -> int`
+  - `RankingPanel.of(int accent, String heading, String emptyLine, List<String> lines, String namespace, int page, int total, int pageSize, String footerSuffix) -> Container`
+  - `TopCallView.NS` (`"vtime"`), `TopCallView.PAGE` (10), `TopCallView.panel(int accent, List<VoiceTimeRepository.Entry> entries, int page, int total) -> Container`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2452,20 +2467,155 @@ public final class VoiceFormat {
 Run: `./gradlew.bat test --tests "dev.davimf.basebot.modules.base.leveling.VoiceFormatTest"`
 Expected: PASS, 5 testes.
 
-- [ ] **Step 5: Write `TopCallView`** (espelha `TopView`)
+- [ ] **Step 5a: Write `RankingPanel` (paginador comum) com teste**
+
+`/top` e `/topcall` compartilham a moldura: cabeçalho, linhas numeradas, divisor, rodapé `Página x/y` e os botões ◀ ▶. Só o conteúdo das linhas difere. Extraia a moldura em vez de duplicá-la.
+
+`src/test/java/dev/davimf/basebot/core/component/RankingPanelTest.java`:
+
+```java
+package dev.davimf.basebot.core.component;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class RankingPanelTest {
+
+    @Test
+    void emptyRankingStillHasOnePage() {
+        assertEquals(1, RankingPanel.pageCount(0, 10));
+    }
+
+    @Test
+    void exactMultipleDoesNotAddATrailingEmptyPage() {
+        assertEquals(1, RankingPanel.pageCount(10, 10));
+        assertEquals(2, RankingPanel.pageCount(20, 10));
+    }
+
+    @Test
+    void remainderRoundsUp() {
+        assertEquals(2, RankingPanel.pageCount(11, 10));
+        assertEquals(3, RankingPanel.pageCount(21, 10));
+    }
+}
+```
+
+Run: `./gradlew.bat test --tests "dev.davimf.basebot.core.component.RankingPanelTest"` → FAIL (`RankingPanel` não existe).
+
+`src/main/java/dev/davimf/basebot/core/component/RankingPanel.java`:
+
+```java
+package dev.davimf.basebot.core.component;
+
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.container.ContainerChildComponent;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Moldura compartilhada dos leaderboards paginados (/top, /topcall): cabeçalho, linhas já
+ * formatadas pelo chamador, divisor, rodapé e os botões ◀ ▶.
+ *
+ * <p>Os botões usam a ação {@code "top"} no namespace do chamador, então cada ranking mantém o
+ * seu próprio {@code ComponentHandler}.
+ */
+public final class RankingPanel {
+
+    private RankingPanel() {}
+
+    /** Ao menos 1, mesmo com ranking vazio. */
+    public static int pageCount(int total, int pageSize) {
+        return Math.max(1, (total + pageSize - 1) / pageSize);
+    }
+
+    /**
+     * @param heading      título markdown, ex. {@code "## 🏆 Ranking de nível"}
+     * @param emptyLine    exibido quando {@code lines} está vazia
+     * @param lines        linhas já numeradas e formatadas
+     * @param namespace    namespace do {@code ComponentHandler} que pagina este painel
+     * @param footerSuffix acrescentado ao rodapé, ou {@code null}
+     */
+    public static Container of(int accent, String heading, String emptyLine, List<String> lines,
+                               String namespace, int page, int total, int pageSize, String footerSuffix) {
+        int pages = pageCount(total, pageSize);
+        StringBuilder sb = new StringBuilder(heading);
+        if (lines.isEmpty()) {
+            sb.append("\n").append(emptyLine);
+        } else {
+            lines.forEach(line -> sb.append("\n").append(line));
+        }
+
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text(sb.toString()));
+        kids.add(Panels.divider());
+        kids.add(Panels.text("-# Página " + (page + 1) + "/" + pages
+                + (footerSuffix == null ? "" : " · " + footerSuffix)));
+        if (pages > 1) {
+            kids.add(ActionRow.of(
+                    Button.secondary(ComponentId.of(namespace, "top", String.valueOf(page - 1)), "◀")
+                            .withDisabled(page <= 0),
+                    Button.secondary(ComponentId.of(namespace, "top", String.valueOf(page + 1)), "▶")
+                            .withDisabled(page >= pages - 1)));
+        }
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+}
+```
+
+Run: `./gradlew.bat test --tests "dev.davimf.basebot.core.component.RankingPanelTest"` → PASS.
+
+- [ ] **Step 5b: Refactor `TopView` onto `RankingPanel`**
+
+O `/top` já funciona; a refatoração é comportamentalmente neutra (o rodapé passa `null` como sufixo, gerando exatamente o texto atual). `TopView.java` inteiro:
+
+```java
+package dev.davimf.basebot.modules.base.leveling;
+
+import dev.davimf.basebot.core.component.RankingPanel;
+import dev.davimf.basebot.util.Emojis;
+import net.dv8tion.jda.api.components.container.Container;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** Leaderboard de nível, paginado (10/página). */
+public final class TopView {
+
+    public static final String NS = "lvl";
+    public static final int PAGE = 10;
+
+    private TopView() {}
+
+    public static Container panel(int accent, List<UserLevelRepository.Entry> entries, int page, int total) {
+        List<String> lines = new ArrayList<>();
+        int base = page * PAGE;
+        for (int i = 0; i < entries.size(); i++) {
+            UserLevelRepository.Entry e = entries.get(i);
+            lines.add("`" + (base + i + 1) + ".` <@" + e.userId() + "> · nível `"
+                    + LevelFormula.levelForXp(e.xp()) + "` · `" + e.xp() + " XP`");
+        }
+        return RankingPanel.of(accent, "## " + Emojis.of(Emojis.TROPHY, "🏆") + " Ranking de nível",
+                "-# Ninguém pontuou ainda.", lines, NS, page, total, PAGE, null);
+    }
+}
+```
+
+Run: `./gradlew.bat compileJava` → BUILD SUCCESSFUL. O `LevelingComponentHandler` não muda.
+
+- [ ] **Step 5c: Write `TopCallView` on top of it**
 
 `src/main/java/dev/davimf/basebot/modules/base/leveling/TopCallView.java`:
 
 ```java
 package dev.davimf.basebot.modules.base.leveling;
 
-import dev.davimf.basebot.core.component.ComponentId;
-import dev.davimf.basebot.core.component.Panels;
+import dev.davimf.basebot.core.component.RankingPanel;
 import dev.davimf.basebot.util.Emojis;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
-import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
-import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -2479,30 +2629,16 @@ public final class TopCallView {
     private TopCallView() {}
 
     public static Container panel(int accent, List<VoiceTimeRepository.Entry> entries, int page, int total) {
-        int pages = Math.max(1, (total + PAGE - 1) / PAGE);
-        StringBuilder sb = new StringBuilder("## " + Emojis.of(Emojis.TROPHY, "🏆") + " Ranking de call — esta semana\n");
-        if (entries.isEmpty()) {
-            sb.append("-# Ninguém entrou em call esta semana.");
-        } else {
-            int base = page * PAGE;
-            for (int i = 0; i < entries.size(); i++) {
-                VoiceTimeRepository.Entry e = entries.get(i);
-                sb.append("\n`").append(base + i + 1).append(".` <@").append(e.userId())
-                        .append("> — `").append(VoiceFormat.duration(e.ms())).append("`");
-            }
+        List<String> lines = new ArrayList<>();
+        int base = page * PAGE;
+        for (int i = 0; i < entries.size(); i++) {
+            VoiceTimeRepository.Entry e = entries.get(i);
+            lines.add("`" + (base + i + 1) + ".` <@" + e.userId() + "> — `"
+                    + VoiceFormat.duration(e.ms()) + "`");
         }
-        List<ContainerChildComponent> kids = new ArrayList<>();
-        kids.add(Panels.text(sb.toString()));
-        kids.add(Panels.divider());
-        kids.add(Panels.text("-# Página " + (page + 1) + "/" + pages + " · zera toda segunda 00:00"));
-        if (pages > 1) {
-            kids.add(ActionRow.of(
-                    Button.secondary(ComponentId.of(NS, "top", String.valueOf(page - 1)), "◀")
-                            .withDisabled(page <= 0),
-                    Button.secondary(ComponentId.of(NS, "top", String.valueOf(page + 1)), "▶")
-                            .withDisabled(page >= pages - 1)));
-        }
-        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+        return RankingPanel.of(accent, "## " + Emojis.of(Emojis.TROPHY, "🏆") + " Ranking de call — esta semana",
+                "-# Ninguém entrou em call esta semana.", lines, NS, page, total, PAGE,
+                "zera toda segunda 00:00");
     }
 }
 ```
@@ -2685,8 +2821,8 @@ Expected: BUILD SUCCESSFUL, todos os testes passam.
 - [ ] **Step 11: Commit**
 
 ```bash
-git add src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceFormat.java src/main/java/dev/davimf/basebot/modules/base/leveling/TopCallView.java src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceTimeComponentHandler.java src/main/java/dev/davimf/basebot/modules/base/commands/TopCallCommand.java src/main/java/dev/davimf/basebot/modules/base/commands/TempoCallCommand.java src/main/java/dev/davimf/basebot/modules/base/BaseModule.java src/test/java/dev/davimf/basebot/modules/base/leveling/VoiceFormatTest.java
-git commit -m "feat(voice): /topcall e /tempocall; agenda flusher e sweeper"
+git add src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceFormat.java src/main/java/dev/davimf/basebot/core/component/RankingPanel.java src/main/java/dev/davimf/basebot/modules/base/leveling/TopView.java src/main/java/dev/davimf/basebot/modules/base/leveling/TopCallView.java src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceTimeComponentHandler.java src/main/java/dev/davimf/basebot/modules/base/commands/TopCallCommand.java src/main/java/dev/davimf/basebot/modules/base/commands/TempoCallCommand.java src/main/java/dev/davimf/basebot/modules/base/BaseModule.java src/test/java/dev/davimf/basebot/modules/base/leveling/VoiceFormatTest.java src/test/java/dev/davimf/basebot/core/component/RankingPanelTest.java
+git commit -m "feat(voice): /topcall e /tempocall sobre RankingPanel comum; agenda flusher e sweeper"
 ```
 
 ---
