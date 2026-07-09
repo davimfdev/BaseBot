@@ -1247,8 +1247,8 @@ E ajustar os dois chamadores existentes: `openSessions()` passa a chamar `query(
 
 - [ ] **Step 8: Run the tests**
 
-Run: `./gradlew.bat test --tests "dev.davimf.basebot.modules.base.leveling.VoiceTimeRepositoryTest" --tests "dev.davimf.basebot.modules.base.leveling.VoiceSessionRepositoryTest" --tests "dev.davimf.basebot.modules.base.leveling.VoiceSessionTotalsTest"`
-Expected: PASS. `VoiceXpBatchTest` ainda não compila (usa a `Credit` antiga) — é a Task 6.
+Run: `./gradlew.bat test`
+Expected: **a suíte INTEIRA continua verde.** Esta task não altera `VoiceXpBatch.Credit`, e `new Open(...)` só é construído dentro do próprio `VoiceSessionRepository`, então acrescentar o 7º componente ao record não quebra nenhum chamador. Se algum teste falhar aqui, é um problema real — não descarte como esperado.
 
 - [ ] **Step 9: Commit**
 
