@@ -1,15 +1,21 @@
 package dev.davimf.basebot.modules.base.leveling;
 
 import dev.davimf.basebot.core.BotContext;
+import dev.davimf.basebot.database.model.GuildConfig;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/** Credita XP por voz a cada 60s. Todas as escritas do ciclo vão numa única transação (VoiceXpBatch). */
+/**
+ * A cada 60s, credita XP e tempo em call das sessões abertas. Todas as escritas do ciclo vão numa
+ * única transação ({@link VoiceXpBatch}).
+ *
+ * <p>A contagem de <b>tempo</b> não depende de {@code level:enabled} — desligar o XP não deve
+ * zerar o ranking de call. Só o XP é condicionado ao toggle.
+ */
 public final class VoiceXpTicker {
 
     private static final long XP_PER_MIN = 10;
@@ -30,37 +36,33 @@ public final class VoiceXpTicker {
         }
         long now = System.currentTimeMillis();
         for (Guild guild : ctx.jda().getGuilds()) {
-            if (!LevelingConfig.enabled(ctx.database().guildConfig().findOrEmpty(guild.getId()))) {
-                continue;
-            }
             List<VoiceSessionRepository.Open> open = sessions.openSessions(guild.getId());
             if (open.isEmpty()) {
                 continue;
             }
-            String afkId = guild.getAfkChannel() != null ? guild.getAfkChannel().getId() : null;
+            GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guild.getId());
+            boolean xpOn = LevelingConfig.enabled(cfg);
+
             List<VoiceXpBatch.Credit> credits = new ArrayList<>();
             for (VoiceSessionRepository.Open s : open) {
                 Member member = guild.getMemberById(s.userId());
                 AudioChannel channel = guild.getChannelById(AudioChannel.class, s.channelId());
-                long delta = 0;
+
+                long xpDelta = 0;
+                long timeTo = s.timeCreditedUntil(); // janela vazia = sem crédito
                 if (member != null && channel != null) {
-                    long humans = channel.getMembers().stream().filter(m -> !m.getUser().isBot()).count();
-                    GuildVoiceState vs = member.getVoiceState();
-                    boolean afk = afkId != null && afkId.equals(channel.getId());
-                    VoiceStateSnapshot snap = new VoiceStateSnapshot(
-                            member.getUser().isBot(), humans,
-                            vs != null && vs.isSelfMuted(),
-                            vs != null && vs.isSelfDeafened(),
-                            vs != null && vs.isGuildDeafened(),
-                            afk,
-                            true); // escopo entra na Task 7; irrelevante para XP
-                    if (VoiceEligibility.xpEligible(snap)) {
-                        delta = (Math.max(0, now - s.xpCreditedUntil()) * XP_PER_MIN) / 60_000L;
+                    VoiceStateSnapshot snap = VoiceSnapshots.of(member, channel, cfg, 0);
+                    if (xpOn && VoiceEligibility.xpEligible(snap)) {
+                        xpDelta = (Math.max(0, now - s.xpCreditedUntil()) * XP_PER_MIN) / 60_000L;
+                    }
+                    if (VoiceEligibility.timeEligible(snap)) {
+                        timeTo = now;
                     }
                 }
-                credits.add(new VoiceXpBatch.Credit(s.id(), guild.getId(), s.userId(), delta,
-                        s.timeCreditedUntil(), s.timeCreditedUntil(), now));
+                credits.add(new VoiceXpBatch.Credit(s.id(), guild.getId(), s.userId(),
+                        xpDelta, s.timeCreditedUntil(), timeTo, now));
             }
+
             List<VoiceXpBatch.Result> results = VoiceXpBatch.apply(ctx.database().sqlite(), credits);
             // Efeitos de level-up FORA da transação (chamadas ao Discord).
             for (VoiceXpBatch.Result r : results) {
