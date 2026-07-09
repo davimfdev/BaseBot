@@ -1950,15 +1950,86 @@ public final class VoiceSessionListener extends ListenerAdapter {
 }
 ```
 
-- [ ] **Step 4: Anchor the new watermark in `VoiceReconciler`**
+- [ ] **Step 4: Re-anchor watermarks in `VoiceReconciler` (corrige bug pré-existente)**
 
-`VoiceReconciler.run` já chama `repo.open(...)`, que agora grava as duas watermarks em `now` (Task 5, Step 7b). Nenhuma mudança de código é necessária — mas confirme lendo `VoiceReconciler.java:41` e `:44` que ambos os caminhos passam por `repo.open(guildId, ..., now)`. Acrescente ao Javadoc da classe:
+**A versão anterior deste plano dizia que nenhuma mudança era necessária. Estava errado.**
+
+`VoiceReconciler.run` só toca a sessão quando ela está órfã ou quando o membro trocou de canal. Se o membro ficou **no mesmo canal** durante a queda do bot, a sessão sobrevive com a watermark congelada de antes. O primeiro tick após o restart calcula então `xpDelta = (now - xpCreditedUntil) * 10 / 60000` sobre a **queda inteira**: um dia offline vira ~240 XP de uma vez, e agora também 24h de tempo em call. O bug de XP já existia antes desta feature; o tempo o tornaria muito mais visível.
+
+O spec exige: *"Bot offline: o tempo não é creditado. `VoiceReconciler` reancora as watermarks em `now`."*
+
+Acrescentar a `VoiceSessionRepository`:
 
 ```java
-/** Acerta as sessões de voz no boot: fecha órfãs, abre/reabre conforme quem está em call agora.
- *  As watermarks de XP e tempo são ancoradas em {@code now}, então o período em que o bot esteve
- *  offline NÃO é creditado retroativamente. */
+    /** Reancora as duas watermarks da sessão aberta em {@code now}, sem creditar nada.
+     *  Usado no boot: o período em que o bot esteve offline não deve ser creditado. */
+    public void reanchor(String guildId, String userId, long now) {
+        String sql = "UPDATE voice_sessions SET xp_credited_until=?, time_credited_until=? "
+                + "WHERE guild_id=? AND user_id=? AND leave_time IS NULL";
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, now);
+            ps.setLong(2, now);
+            ps.setString(3, guildId);
+            ps.setString(4, userId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RepositoryException("reanchor " + guildId + "/" + userId, e);
+        }
+    }
 ```
+
+Em `VoiceReconciler.run`, o ramo "mesma sessão, mesmo canal" passa a reancorar:
+
+```java
+            for (Map.Entry<String, String> e : current.entrySet()) {
+                VoiceSessionRepository.Open open = dbOpen.get(e.getKey());
+                if (open == null) {
+                    repo.open(guildId, e.getKey(), e.getValue(), now);
+                } else if (!open.channelId().equals(e.getValue())) {
+                    repo.closeOpen(guildId, e.getKey(), now);
+                    repo.open(guildId, e.getKey(), e.getValue(), now);
+                } else {
+                    // Mesma sessão, mesmo canal: o bot pode ter ficado horas fora. Reancora as
+                    // watermarks para NÃO creditar o período offline no próximo tick.
+                    repo.reanchor(guildId, e.getKey(), now);
+                }
+            }
+```
+
+E o Javadoc da classe:
+
+```java
+/** Acerta as sessões de voz no boot: fecha órfãs, abre/reabre conforme quem está em call agora,
+ *  e reancora as watermarks de quem continuou no mesmo canal. O período em que o bot esteve
+ *  offline NUNCA é creditado retroativamente. */
+```
+
+Teste novo em `src/test/java/dev/davimf/basebot/modules/base/leveling/VoiceSessionRepositoryTest.java` (acrescentar ao arquivo existente; não reescrevê-lo):
+
+```java
+    @Test
+    void reanchorMovesBothWatermarksAndCreditsNothing() {
+        repo.open("g1", "u1", "c1", 1_000L);
+        repo.reanchor("g1", "u1", 90_000_000L);
+
+        VoiceSessionRepository.Open s = repo.openSession("g1", "u1");
+        assertEquals(90_000_000L, s.xpCreditedUntil());
+        assertEquals(90_000_000L, s.timeCreditedUntil());
+        assertEquals(1_000L, s.joinTime(), "join_time nao muda: so as watermarks sao reancoradas");
+    }
+
+    @Test
+    void reanchorIgnoresClosedSessions() {
+        repo.open("g1", "u1", "c1", 1_000L);
+        repo.closeOpen("g1", "u1", 2_000L);
+        repo.reanchor("g1", "u1", 90_000_000L);
+
+        assertEquals(2_000L, repo.sessionsOf("g1", "u1").get(0)[1], "sessao fechada nao e tocada");
+    }
+```
+
+Rodar `./gradlew.bat test --tests "dev.davimf.basebot.modules.base.leveling.VoiceSessionRepositoryTest"` e ver os testes existentes mais estes dois passarem.
 
 - [ ] **Step 5: Update the `VoiceSessionListener` construction site**
 
