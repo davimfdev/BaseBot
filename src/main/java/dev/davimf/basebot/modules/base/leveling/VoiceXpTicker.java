@@ -46,9 +46,15 @@ public final class VoiceXpTicker {
                 if (member != null && channel != null) {
                     long humans = channel.getMembers().stream().filter(m -> !m.getUser().isBot()).count();
                     GuildVoiceState vs = member.getVoiceState();
-                    boolean deaf = vs != null && vs.isDeafened();
                     boolean afk = afkId != null && afkId.equals(channel.getId());
-                    if (VoiceEligibility.isEligible(member.getUser().isBot(), humans, deaf, afk)) {
+                    VoiceStateSnapshot snap = new VoiceStateSnapshot(
+                            member.getUser().isBot(), humans,
+                            vs != null && vs.isSelfMuted(),
+                            vs != null && vs.isSelfDeafened(),
+                            vs != null && vs.isGuildDeafened(),
+                            afk,
+                            true); // escopo entra na Task 7; irrelevante para XP
+                    if (VoiceEligibility.xpEligible(snap)) {
                         delta = (Math.max(0, now - s.xpCreditedUntil()) * XP_PER_MIN) / 60_000L;
                     }
                 }
