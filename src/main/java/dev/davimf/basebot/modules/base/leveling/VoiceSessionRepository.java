@@ -14,15 +14,16 @@ import java.util.List;
 public final class VoiceSessionRepository {
 
     public record Open(long id, String guildId, String userId, String channelId,
-                       long joinTime, long xpCreditedUntil) {}
+                       long joinTime, long xpCreditedUntil, long timeCreditedUntil) {}
 
     private final SqliteManager sqlite;
 
     public VoiceSessionRepository(SqliteManager sqlite) { this.sqlite = sqlite; }
 
     public void open(String guildId, String userId, String channelId, long now) {
-        String sql = "INSERT INTO voice_sessions (guild_id, user_id, channel_id, join_time, xp_credited_until) "
-                + "VALUES (?,?,?,?,?)";
+        String sql = "INSERT INTO voice_sessions "
+                + "(guild_id, user_id, channel_id, join_time, xp_credited_until, time_credited_until) "
+                + "VALUES (?,?,?,?,?,?)";
         try (Connection c = sqlite.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, guildId);
@@ -30,6 +31,7 @@ public final class VoiceSessionRepository {
             ps.setString(3, channelId);
             ps.setLong(4, now);
             ps.setLong(5, now);
+            ps.setLong(6, now);
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RepositoryException("open voice session " + guildId + "/" + userId, e);
@@ -50,7 +52,7 @@ public final class VoiceSessionRepository {
     }
 
     public List<Open> openSessions() {
-        return query("SELECT * FROM voice_sessions WHERE leave_time IS NULL", null);
+        return query("SELECT * FROM voice_sessions WHERE leave_time IS NULL");
     }
 
     /** Tempo total em call (soma das sessões; abertas contam até agora). */
@@ -103,17 +105,38 @@ public final class VoiceSessionRepository {
         return query("SELECT * FROM voice_sessions WHERE leave_time IS NULL AND guild_id=?", guildId);
     }
 
-    private List<Open> query(String sql, String guildId) {
+    /** A sessão aberta do usuário, ou {@code null} se ele não está em call. */
+    public Open openSession(String guildId, String userId) {
+        List<Open> found = query(
+                "SELECT * FROM voice_sessions WHERE leave_time IS NULL AND guild_id=? AND user_id=?",
+                guildId, userId);
+        return found.isEmpty() ? null : found.get(0);
+    }
+
+    /** Apaga sessões FECHADAS antigas. Sessões abertas nunca são tocadas. */
+    public int purgeClosedBefore(long cutoff) {
+        String sql = "DELETE FROM voice_sessions WHERE leave_time IS NOT NULL AND leave_time < ?";
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, cutoff);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RepositoryException("purgeClosedBefore", e);
+        }
+    }
+
+    private List<Open> query(String sql, String... args) {
         List<Open> out = new ArrayList<>();
         try (Connection c = sqlite.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            if (guildId != null) {
-                ps.setString(1, guildId);
+            for (int i = 0; i < args.length; i++) {
+                ps.setString(i + 1, args[i]);
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     out.add(new Open(rs.getLong("id"), rs.getString("guild_id"), rs.getString("user_id"),
-                            rs.getString("channel_id"), rs.getLong("join_time"), rs.getLong("xp_credited_until")));
+                            rs.getString("channel_id"), rs.getLong("join_time"),
+                            rs.getLong("xp_credited_until"), rs.getLong("time_credited_until")));
                 }
             }
             return out;
