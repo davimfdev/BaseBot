@@ -1693,6 +1693,70 @@ git commit -m "feat(voice): ticker credita tempo em call; XP condicionado ao tog
 - Consumes: `VoiceSnapshots.of` (T7), `VoiceXpBatch` (T6), `VoiceSessionRepository.openSession` (T5).
 - Produces: `VoiceSettler.settle(BotContext ctx, LevelingService leveling, Guild guild, Member member, VoiceStateSnapshot before, long now)`.
 
+### Step 0 (obrigatório antes de tudo): guarda otimista contra crédito duplo
+
+Até agora o `VoiceXpBatch` tinha **um único escritor**: o ticker, que o `scheduleAtFixedRate` garante não-reentrante. Esta task adiciona o **segundo**: o `VoiceSettler`, chamado das threads de evento da JDA, concorrente com o ticker.
+
+O `advance` é hoje incondicional (`WHERE id=?`). Com dois escritores, esta intercalação credita a mesma janela duas vezes:
+
+1. ticker lê a sessão, watermark `W`, monta `Credit(timeFrom=W, timeTo=agora)`;
+2. a pessoa muta → listener lê a MESMA sessão, watermark ainda `W`, monta `Credit(timeFrom=W, timeTo=agora)`;
+3. ambos aplicam. O tempo entre `W` e agora entra duas vezes no balde, e o XP também.
+
+Torne o `advance` condicional ao watermark esperado, e credite **apenas** se ele casou. As duas watermarks são sempre iguais (`open` grava as duas com `now`, `advance` grava as duas com `creditedUntil`, o backfill da 039 copia uma na outra), então basta guardar por uma delas. `cr.timeFrom()` **é** o watermark que o chamador leu.
+
+Em `VoiceXpBatch.apply`, trocar o statement e o corpo do laço:
+
+```java
+                 PreparedStatement advance = c.prepareStatement(
+                        "UPDATE voice_sessions SET xp_credited_until=?, time_credited_until=? "
+                        + "WHERE id=? AND time_credited_until=?");
+```
+
+```java
+                for (Credit cr : credits) {
+                    advance.setLong(1, cr.creditedUntil());
+                    advance.setLong(2, cr.creditedUntil());
+                    advance.setLong(3, cr.sessionId());
+                    advance.setLong(4, cr.timeFrom());
+                    if (advance.executeUpdate() == 0) {
+                        // Outro escritor (ticker ou settler) já creditou esta janela. Pular,
+                        // senão o tempo e o XP entrariam em dobro.
+                        continue;
+                    }
+                    // ... resto do corpo permanece igual (XP e fatias de tempo)
+                }
+```
+
+Acrescentar a `VoiceXpBatchTest`:
+
+```java
+    @Test
+    void staleCreditIsSkippedSoConcurrentWritersCannotDoubleCount() {
+        long id = openSessionId("u1", 1000L);
+        long week = VoiceWeek.weekStart(1000L);
+
+        // Primeiro escritor credita [1000, 61000) e move a watermark para 61000.
+        VoiceXpBatch.apply(sqlite, List.of(
+                new VoiceXpBatch.Credit(id, "g1", "u1", 10, 1000L, 61_000L, 61_000L)));
+
+        // Segundo escritor tinha lido a watermark ANTIGA (1000) e tenta creditar a mesma janela.
+        List<VoiceXpBatch.Result> stale = VoiceXpBatch.apply(sqlite, List.of(
+                new VoiceXpBatch.Credit(id, "g1", "u1", 10, 1000L, 61_000L, 61_000L)));
+
+        assertTrue(stale.isEmpty(), "credito obsoleto nao deve reportar level-up");
+        assertEquals(10, users.xp("g1", "u1"), "XP nao pode ser creditado duas vezes");
+        assertEquals(60_000L, times.msOf("g1", "u1", week), "tempo nao pode ser creditado duas vezes");
+    }
+```
+
+Rodar `./gradlew.bat test --tests "dev.davimf.basebot.modules.base.leveling.VoiceXpBatchTest"` e ver os 6 passarem. Commitar isto **separado**, antes do resto da task:
+
+```bash
+git add src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceXpBatch.java src/test/java/dev/davimf/basebot/modules/base/leveling/VoiceXpBatchTest.java
+git commit -m "fix(voice): guarda otimista no advance impede credito duplo entre ticker e settler"
+```
+
 - [ ] **Step 1: Write `VoiceSettler`**
 
 `src/main/java/dev/davimf/basebot/modules/base/leveling/VoiceSettler.java`:
