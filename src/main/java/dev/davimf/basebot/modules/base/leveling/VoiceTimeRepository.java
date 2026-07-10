@@ -94,6 +94,28 @@ public final class VoiceTimeRepository {
         }
     }
 
+    /**
+     * Todas as linhas da semana, inclusive as com {@code ms = 0}. O ranking soma o tempo pendente
+     * por cima, então filtrar aqui esconderia quem acabou de entrar na call.
+     */
+    public List<Entry> allOfWeek(String guildId, long weekStart) {
+        String sql = "SELECT user_id, ms FROM voice_weekly_time WHERE guild_id=? AND week_start=?";
+        List<Entry> out = new ArrayList<>();
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, guildId);
+            ps.setLong(2, weekStart);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new Entry(rs.getString("user_id"), rs.getLong("ms")));
+                }
+            }
+            return out;
+        } catch (SQLException e) {
+            throw new RepositoryException("allOfWeek " + guildId, e);
+        }
+    }
+
     public List<DirtyRow> dirtyRows(int limit) {
         String sql = "SELECT guild_id, user_id, week_start, ms FROM voice_weekly_time "
                 + "WHERE dirty = 1 LIMIT ?";

@@ -86,4 +86,18 @@ class VoiceTimeRepositoryTest {
         assertEquals(10, repo.msOf("g1", "old-dirty", W1));
         assertEquals(0, repo.msOf("g1", "old-clean", W1));
     }
+
+    @Test
+    void allOfWeekReturnsEveryRowIncludingZeroes() {
+        repo.addMs("g1", "u1", W1, 100);
+        repo.addMs("g1", "zero", W1, 0);
+        repo.addMs("g1", "outra-semana", W2, 50);
+        repo.addMs("g2", "outra-guild", W1, 70);
+
+        List<VoiceTimeRepository.Entry> rows = repo.allOfWeek("g1", W1);
+
+        assertEquals(2, rows.size(), "linhas com ms=0 tambem voltam: quem tem pendente pode somar");
+        assertTrue(rows.stream().anyMatch(e -> e.userId().equals("u1") && e.ms() == 100));
+        assertTrue(rows.stream().anyMatch(e -> e.userId().equals("zero") && e.ms() == 0));
+    }
 }
