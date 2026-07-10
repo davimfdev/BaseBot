@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -53,13 +54,23 @@ class VoiceTimeBackfillTest {
             throw new AssertionError("Falha ao ler " + MIGRATION_RESOURCE, e);
         }
 
-        return Arrays.stream(migrationSql.split(";"))
+        List<String> matches = Arrays.stream(migrationSql.split(";"))
                 .map(String::trim)
                 .filter(stmt -> stmt.regionMatches(true, 0, "UPDATE voice_sessions", 0, "UPDATE voice_sessions".length()))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError(
-                        "Nenhum UPDATE voice_sessions encontrado em " + MIGRATION_RESOURCE
-                                + " — a migration mudou? Atualize este teste."));
+                .toList();
+
+        if (matches.isEmpty()) {
+            throw new AssertionError(
+                    "Nenhum UPDATE voice_sessions encontrado em " + MIGRATION_RESOURCE
+                            + " — a migration mudou? Atualize este teste.");
+        }
+        if (matches.size() > 1) {
+            throw new AssertionError(
+                    "Esperava exatamente um UPDATE voice_sessions em " + MIGRATION_RESOURCE
+                            + ", encontrou " + matches.size() + " — este teste testa só o findFirst();"
+                            + " atualize-o para cobrir todos.");
+        }
+        return matches.get(0);
     }
 
     @BeforeEach
