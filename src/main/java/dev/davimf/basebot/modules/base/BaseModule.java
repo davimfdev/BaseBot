@@ -96,6 +96,9 @@ public final class BaseModule implements BotModule {
     private dev.davimf.basebot.modules.base.economy.JailService jail;
     private dev.davimf.basebot.modules.base.economy.EquipmentService equipment;
     private dev.davimf.basebot.modules.base.snapshot.GuildSnapshotSync guildSnapshot;
+    // Trava de reconciliação de voz: criada aqui (não em register/onReady) para existir nos dois.
+    private final dev.davimf.basebot.modules.base.leveling.VoiceGate voiceGate =
+            new dev.davimf.basebot.modules.base.leveling.VoiceGate();
 
     @Override
     public String name() {
@@ -118,10 +121,13 @@ public final class BaseModule implements BotModule {
         // Leveling — voz: ticker de XP a cada 60s + reconciliação das sessões no boot.
         if (leveling != null) {
             dev.davimf.basebot.modules.base.leveling.VoiceXpTicker ticker =
-                    new dev.davimf.basebot.modules.base.leveling.VoiceXpTicker(ctx, leveling);
+                    new dev.davimf.basebot.modules.base.leveling.VoiceXpTicker(ctx, leveling, voiceGate);
             ctx.scheduler().repeating(ticker::tick, 60, 60, TimeUnit.SECONDS);
+            // Delay de 5s: dá tempo do cache de guild/member da JDA assentar após o READY. A
+            // trava (voiceGate), não este timing, é o que garante que nada credita o período
+            // offline — os listeners de voz já estão vivos desde o register(), antes disto rodar.
             ctx.scheduler().once(() ->
-                    dev.davimf.basebot.modules.base.leveling.VoiceReconciler.run(ctx), 5, TimeUnit.SECONDS);
+                    dev.davimf.basebot.modules.base.leveling.VoiceReconciler.run(ctx, voiceGate), 5, TimeUnit.SECONDS);
         }
         // Tempo em call: sobe os baldes sujos pro Neon a cada 5 min; poda de 90 dias 1x/dia.
         // O sweeper roda DEPOIS do flusher (initialDelay maior) para que uma linha suja
@@ -301,8 +307,8 @@ public final class BaseModule implements BotModule {
         registry.command(new dev.davimf.basebot.modules.base.commands.XpCommand(leveling));
         registry.component(new dev.davimf.basebot.modules.base.leveling.LevelingComponentHandler(leveling));
         // Leveling — voz (Plano 2): sessões persistidas para XP por tempo em call.
-        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling));
-        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling));
+        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling, voiceGate));
+        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling, voiceGate));
         registry.command(new dev.davimf.basebot.modules.base.commands.TopCallCommand());
         registry.command(new dev.davimf.basebot.modules.base.commands.TempoCallCommand());
         registry.component(new dev.davimf.basebot.modules.base.leveling.VoiceTimeComponentHandler());

@@ -23,15 +23,22 @@ public final class VoiceXpTicker {
     private final BotContext ctx;
     private final LevelingService leveling;
     private final VoiceSessionRepository sessions;
+    private final VoiceGate gate;
 
-    public VoiceXpTicker(BotContext ctx, LevelingService leveling) {
+    public VoiceXpTicker(BotContext ctx, LevelingService leveling, VoiceGate gate) {
         this.ctx = ctx;
         this.leveling = leveling;
         this.sessions = new VoiceSessionRepository(ctx.database().sqlite());
+        this.gate = gate;
     }
 
     public void tick() {
         if (ctx.jda() == null) {
+            return;
+        }
+        if (!gate.isReconciled()) {
+            // O reconciler ainda não rodou (ou falhou): creditar agora lançaria o período
+            // offline inteiro de uma vez para todo mundo em call.
             return;
         }
         long now = System.currentTimeMillis();

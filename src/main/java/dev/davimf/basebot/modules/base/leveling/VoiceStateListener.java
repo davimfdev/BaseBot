@@ -27,10 +27,12 @@ public final class VoiceStateListener extends ListenerAdapter {
 
     private final BotContext ctx;
     private final LevelingService leveling;
+    private final VoiceGate gate;
 
-    public VoiceStateListener(BotContext ctx, LevelingService leveling) {
+    public VoiceStateListener(BotContext ctx, LevelingService leveling, VoiceGate gate) {
         this.ctx = ctx;
         this.leveling = leveling;
+        this.gate = gate;
     }
 
     @Override
@@ -64,6 +66,6 @@ public final class VoiceStateListener extends ListenerAdapter {
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(member.getGuild().getId());
         VoiceStateSnapshot current = VoiceSnapshots.of(member, channel, cfg, 0);
         VoiceSettler.settle(ctx, leveling, member.getGuild(), member,
-                toPrevious.apply(current), System.currentTimeMillis());
+                toPrevious.apply(current), System.currentTimeMillis(), gate);
     }
 }

@@ -21,11 +21,13 @@ public final class VoiceSessionListener extends ListenerAdapter {
     private final BotContext ctx;
     private final LevelingService leveling;
     private final VoiceSessionRepository sessions;
+    private final VoiceGate gate;
 
-    public VoiceSessionListener(BotContext ctx, LevelingService leveling) {
+    public VoiceSessionListener(BotContext ctx, LevelingService leveling, VoiceGate gate) {
         this.ctx = ctx;
         this.leveling = leveling;
         this.sessions = new VoiceSessionRepository(ctx.database().sqlite());
+        this.gate = gate;
     }
 
     @Override
@@ -53,6 +55,6 @@ public final class VoiceSessionListener extends ListenerAdapter {
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(member.getGuild().getId());
         // +1: o membro já não está mais em oldChannel.getMembers().
         VoiceStateSnapshot before = VoiceSnapshots.of(member, oldChannel, cfg, 1);
-        VoiceSettler.settle(ctx, leveling, member.getGuild(), member, before, now);
+        VoiceSettler.settle(ctx, leveling, member.getGuild(), member, before, now, gate);
     }
 }

@@ -9,12 +9,17 @@ import java.util.Map;
 
 /** Acerta as sessões de voz no boot: fecha órfãs, abre/reabre conforme quem está em call agora,
  *  e reancora as watermarks de quem continuou no mesmo canal. O período em que o bot esteve
- *  offline NUNCA é creditado retroativamente. */
+ *  offline NUNCA é creditado retroativamente.
+ *
+ * <p>Ao terminar com sucesso, abre a {@link VoiceGate} — só então ticker e settler passam a
+ * creditar. Se este método lançar, a trava permanece fechada de propósito: NÃO usamos
+ * {@code finally} para marcar reconciliado, porque uma reconciliação parcial/falha não deve
+ * liberar o crédito. */
 public final class VoiceReconciler {
 
     private VoiceReconciler() {}
 
-    public static void run(BotContext ctx) {
+    public static void run(BotContext ctx, VoiceGate gate) {
         if (ctx.jda() == null) {
             return;
         }
@@ -57,5 +62,7 @@ public final class VoiceReconciler {
                 }
             }
         }
+        // Só chega aqui se nada acima lançou: agora é seguro creditar.
+        gate.markReconciled();
     }
 }
