@@ -48,7 +48,10 @@ public final class PostgresMigrator {
             "/db/postgres/004_config_tables.sql",
             "/db/postgres/005_snapshots.sql",
             "/db/postgres/006_dashboard_access.sql",
-            "/db/postgres/007_updated_by.sql"
+            "/db/postgres/007_updated_by.sql",
+            "/db/postgres/008_dashboard_audit.sql",
+            "/db/postgres/009_verification_questions.sql",
+            "/db/postgres/010_voice_weekly_time.sql"
     );
 
     private PostgresMigrator() {}
