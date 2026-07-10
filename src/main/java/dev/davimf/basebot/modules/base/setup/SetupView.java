@@ -85,6 +85,14 @@ public final class SetupView {
 
     public static final String NS = "setup";
 
+    // Tetos dos EntitySelectMenu. Cada constante alimenta o setRequiredRange E o clamp do
+    // setDefaultValues do mesmo select: guild_config é compartilhado com o dashboard (Neon), que
+    // não impõe o limite do Discord, e a JDA LANÇA em vez de truncar quando defaultValues excede
+    // maxValues — a tela inteira ficaria impossível de abrir. Manter os dois usos casados.
+    private static final int SCOPE_SELECT_MAX = 25;
+    private static final int IGNORED_SELECT_MAX = 25;
+    private static final int STAFF_SELECT_MAX = 20;
+
     /** Max selects per screen — kept within Discord's component limit (matches the target UI). */
     private static final int PER_PAGE = 8;
 
@@ -263,9 +271,10 @@ public final class SetupView {
         EntitySelectMenu.Builder cargos = EntitySelectMenu
                 .create("cargos", SelectTarget.ROLE)
                 .setPlaceholder("Cargos que podem atender")
-                .setRequiredRange(1, 20);
+                .setRequiredRange(1, STAFF_SELECT_MAX);
         if (existing != null && !existing.staffRoleIds().isEmpty()) {
-            cargos.setDefaultValues(existing.staffRoleIds().stream().map(DefaultValue::role).toList());
+            cargos.setDefaultValues(
+                    existing.staffRoleIds().stream().limit(STAFF_SELECT_MAX).map(DefaultValue::role).toList());
         }
 
         return Modal.create(ComponentId.of(NS, "ticketform", id),
@@ -629,9 +638,9 @@ public final class SetupView {
         EntitySelectMenu.Builder ign = EntitySelectMenu.create(ComponentId.of(NS, "nivelignored"), SelectTarget.CHANNEL)
                 .setChannelTypes(ChannelType.TEXT)
                 .setPlaceholder("Canais sem XP (ignorados)…")
-                .setRequiredRange(0, 25);
+                .setRequiredRange(0, IGNORED_SELECT_MAX);
         if (!ignored.isEmpty()) {
-            ign.setDefaultValues(ignored.stream().map(DefaultValue::channel).toList());
+            ign.setDefaultValues(ignored.stream().limit(IGNORED_SELECT_MAX).map(DefaultValue::channel).toList());
         }
 
         java.util.List<ContainerChildComponent> kids = new java.util.ArrayList<>();
@@ -707,8 +716,6 @@ public final class SetupView {
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
 
-    private static final int SCOPE_SELECT_MAX = 25;
-
     private static EntitySelectMenu voiceScopeSelect(String action, ChannelType type,
                                                       String placeholder, java.util.Set<String> selected) {
         EntitySelectMenu.Builder b = EntitySelectMenu.create(ComponentId.of(NS, action), SelectTarget.CHANNEL)
@@ -716,9 +723,6 @@ public final class SetupView {
                 .setPlaceholder(placeholder)
                 .setRequiredRange(0, SCOPE_SELECT_MAX);
         if (!selected.isEmpty()) {
-            // guild_config is shared with the web dashboard (Neon), which does not enforce
-            // Discord's 25-item select cap on these keys. JDA throws instead of truncating
-            // defaultValues, so clamp here or the whole screen becomes unopenable.
             b.setDefaultValues(selected.stream().limit(SCOPE_SELECT_MAX).map(DefaultValue::channel).toList());
         }
         return b.build();
