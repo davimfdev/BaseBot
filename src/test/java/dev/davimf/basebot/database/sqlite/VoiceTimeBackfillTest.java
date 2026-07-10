@@ -6,10 +6,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -25,13 +29,38 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * epoch Unix ate agora, creditando decadas de tempo de call fictício. Este teste prova
  * que o UPDATE de backfill copia xp_credited_until para as linhas zeradas e nao mexe
  * nas linhas que ja tinham um watermark de tempo definido.
+ *
+ * <p>O SQL do backfill NAO e duplicado aqui: e lido diretamente de 039_voice_time.sql no
+ * classpath, para que uma mudanca na migration quebre este teste em vez de deixa-lo testando
+ * um UPDATE que ja nao existe mais.
  */
 class VoiceTimeBackfillTest {
 
-    private static final String BACKFILL_SQL =
-            "UPDATE voice_sessions SET time_credited_until = xp_credited_until WHERE time_credited_until = 0";
+    private static final String MIGRATION_RESOURCE = "/db/sqlite/039_voice_time.sql";
+
+    private static final String BACKFILL_SQL = loadBackfillSqlFromMigration();
 
     private SqliteManager sqlite;
+
+    private static String loadBackfillSqlFromMigration() {
+        String migrationSql;
+        try (InputStream in = VoiceTimeBackfillTest.class.getResourceAsStream(MIGRATION_RESOURCE)) {
+            if (in == null) {
+                throw new AssertionError("Migration nao encontrada no classpath: " + MIGRATION_RESOURCE);
+            }
+            migrationSql = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new AssertionError("Falha ao ler " + MIGRATION_RESOURCE, e);
+        }
+
+        return Arrays.stream(migrationSql.split(";"))
+                .map(String::trim)
+                .filter(stmt -> stmt.regionMatches(true, 0, "UPDATE voice_sessions", 0, "UPDATE voice_sessions".length()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "Nenhum UPDATE voice_sessions encontrado em " + MIGRATION_RESOURCE
+                                + " — a migration mudou? Atualize este teste."));
+    }
 
     @BeforeEach
     void setUp(@TempDir Path dir) {
