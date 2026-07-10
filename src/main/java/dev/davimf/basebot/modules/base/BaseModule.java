@@ -309,9 +309,9 @@ public final class BaseModule implements BotModule {
         // Leveling — voz (Plano 2): sessões persistidas para XP por tempo em call.
         registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling, voiceGate));
         registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling, voiceGate));
-        registry.command(new dev.davimf.basebot.modules.base.commands.TopCallCommand());
-        registry.command(new dev.davimf.basebot.modules.base.commands.TempoCallCommand());
-        registry.component(new dev.davimf.basebot.modules.base.leveling.VoiceTimeComponentHandler());
+        registry.command(new dev.davimf.basebot.modules.base.commands.TopCallCommand(voiceGate));
+        registry.command(new dev.davimf.basebot.modules.base.commands.TempoCallCommand(voiceGate));
+        registry.component(new dev.davimf.basebot.modules.base.leveling.VoiceTimeComponentHandler(voiceGate));
 
         // Economia por-usuário (Base) — separada do tesouro de facção.
         dev.davimf.basebot.modules.base.economy.EconomyService economy =

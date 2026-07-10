@@ -2,7 +2,11 @@ package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
+import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.base.leveling.TopCallView;
+import dev.davimf.basebot.modules.base.leveling.VoiceGate;
+import dev.davimf.basebot.modules.base.leveling.VoiceLive;
+import dev.davimf.basebot.modules.base.leveling.VoiceSessionRepository;
 import dev.davimf.basebot.modules.base.leveling.VoiceTimeRepository;
 import dev.davimf.basebot.modules.base.leveling.VoiceWeek;
 import dev.davimf.basebot.util.EmbedColor;
@@ -11,8 +15,14 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 
-/** /topcall — ranking semanal de tempo em call (paginado). */
+import java.util.List;
+
+/** /topcall — ranking semanal de tempo em call, já com a sessão em curso somada. */
 public final class TopCallCommand implements SlashCommand {
+
+    private final VoiceGate gate;
+
+    public TopCallCommand(VoiceGate gate) { this.gate = gate; }
 
     @Override public String name() { return "topcall"; }
 
@@ -28,12 +38,16 @@ public final class TopCallCommand implements SlashCommand {
             return;
         }
         String guildId = event.getGuild().getId();
-        long week = VoiceWeek.weekStart(System.currentTimeMillis());
-        VoiceTimeRepository repo = new VoiceTimeRepository(ctx.database().sqlite());
-        int total = repo.count(guildId, week);
-        var entries = repo.topPage(guildId, week, TopCallView.PAGE, 0);
-        int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(guildId));
-        event.replyComponents(TopCallView.panel(accent, entries, 0, total))
+        long now = System.currentTimeMillis();
+        long week = VoiceWeek.weekStart(now);
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guildId);
+
+        List<VoiceTimeRepository.Entry> all = VoiceLive.ranking(event.getGuild(), cfg, gate,
+                new VoiceSessionRepository(ctx.database().sqlite()),
+                new VoiceTimeRepository(ctx.database().sqlite()), now, week);
+        List<VoiceTimeRepository.Entry> page = all.subList(0, Math.min(TopCallView.PAGE, all.size()));
+
+        event.replyComponents(TopCallView.panel(EmbedColor.resolve(cfg), page, 0, all.size()))
                 .useComponentsV2().setEphemeral(true).queue();
     }
 }
