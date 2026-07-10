@@ -378,10 +378,7 @@ public final class BaseModule implements BotModule {
         registry.command(new dev.davimf.basebot.modules.base.commands.JokenpoCommand(jokenpo));
         registry.component(new dev.davimf.basebot.modules.base.fun.JokenpoComponentHandler(jokenpo));
         dev.davimf.basebot.modules.base.fun.GifClient gifClient = new dev.davimf.basebot.modules.base.fun.GifClient();
-        for (dev.davimf.basebot.modules.base.fun.GifInteractions.Spec spec
-                : dev.davimf.basebot.modules.base.fun.GifInteractions.CATALOG) {
-            registry.command(new dev.davimf.basebot.modules.base.commands.GifInteractionCommand(spec, gifClient));
-        }
+        registry.command(new dev.davimf.basebot.modules.base.commands.InteragirCommand(gifClient));
         dev.davimf.basebot.modules.base.fun.MemeService memes =
                 new dev.davimf.basebot.modules.base.fun.MemeService(ctx);
         registry.command(new dev.davimf.basebot.modules.base.commands.ProcuradoCommand(memes));

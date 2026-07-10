@@ -29,13 +29,13 @@ import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInterac
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -46,10 +46,18 @@ import java.util.stream.Collectors;
  * whenever the bot joins a new server. The one exception is the attachment-vault guild
  * ({@code vaultGuildId}), which is storage-only and never gets slash commands. Every
  * handler runs inside a try/catch so one failing command never tears down the listener.
+ *
+ * <p>Registration is a <b>full overwrite</b> ({@code guild.updateCommands()}): the guild's
+ * command set is replaced by exactly the current set, so commands removed or renamed in code
+ * are pruned instead of lingering forever. Discord caps this at 100 commands per guild — a
+ * command with subcommands counts as one — and the whole batch is rejected if it exceeds that.
  */
 public final class CommandManager extends ListenerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(CommandManager.class);
+
+    /** Discord's hard cap on slash commands per guild. A command with subcommands counts as one. */
+    private static final int MAX_GUILD_COMMANDS = 100;
 
     private final Map<String, SlashCommand> commands = new LinkedHashMap<>();
     private final BotContext context;
@@ -74,8 +82,12 @@ public final class CommandManager extends ListenerAdapter {
     @Override
     public void onReady(ReadyEvent event) {
         JDA jda = event.getJDA();
-
-        log.info("Reconciling {} commands across {} guild(s)...", commands.size(), jda.getGuilds().size());
+        if (commands.size() > MAX_GUILD_COMMANDS) {
+            log.error("{} commands exceeds Discord's {}-per-guild limit; the whole sync is rejected. "
+                            + "Group related commands as subcommands to fit.",
+                    commands.size(), MAX_GUILD_COMMANDS);
+        }
+        log.info("Syncing {} commands across {} guild(s)...", commands.size(), jda.getGuilds().size());
         jda.getGuilds().forEach(this::registerTo);
     }
 
@@ -90,29 +102,12 @@ public final class CommandManager extends ListenerAdapter {
             log.info("Skipped vault guild {} ({}).", guild.getName(), guild.getId());
             return;
         }
-        guild.retrieveCommands().queue(existing -> {
-            Set<String> existingNames = existing.stream()
-                    .map(net.dv8tion.jda.api.interactions.commands.Command::getName)
-                    .collect(Collectors.toSet());
-            Set<String> missing = missingCommandNames(existingNames, commands.keySet());
-            if (missing.isEmpty()) {
-                log.info("Guild {} already has all {} commands.", guild.getId(), commands.size());
-                return;
-            }
-            log.info("Registering {} missing command(s) to guild {}.", missing.size(), guild.getId());
-            for (String name : missing) {
-                SlashCommand command = commands.get(name);
-                guild.upsertCommand(command.data()).queue(
-                        ok -> log.info("Registered /{} to guild {}.", name, guild.getId()),
-                        err -> log.error("Failed to register /{} to guild {}", name, guild.getId(), err));
-            }
-        }, err -> log.error("Failed to retrieve commands from guild {}", guild.getId(), err));
-    }
-
-    static Set<String> missingCommandNames(Set<String> existing, Set<String> desired) {
-        Set<String> missing = new LinkedHashSet<>(desired);
-        missing.removeAll(existing);
-        return missing;
+        List<CommandData> desired = commands.values().stream()
+                .map(SlashCommand::data)
+                .collect(Collectors.toList());
+        guild.updateCommands().addCommands(desired).queue(
+                ok -> log.info("Synced {} commands to guild {}.", desired.size(), guild.getId()),
+                err -> log.error("Failed to sync commands to guild {}", guild.getId(), err));
     }
 
     /** True for the central attachment-vault guild, which never receives slash commands. */

@@ -14,33 +14,41 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 
 /**
- * Comando de interação com GIF (nekos.best), parametrizado por uma {@link GifInteractions.Spec}.
- * Um mesmo código serve /abracar, /beijo, /soco, etc. — só muda a spec no {@code BaseModule}.
+ * {@code /interagir <ação> @u} — beijo, abraço, soco, peteco, etc., cada um com GIF do nekos.best.
+ *
+ * <p>É um único comando com um subcomando por ação (do {@link GifInteractions#CATALOG}). Fica assim,
+ * e não como 12 comandos separados, porque o Discord limita 100 comandos por servidor e o bot já
+ * está perto do teto — um comando com subcomandos ocupa <b>um</b> slot.
  *
  * <p>O alvo é obrigatório e não pode ser você mesmo (regra dos comandos de fun).
  */
-public final class GifInteractionCommand implements SlashCommand {
+public final class InteragirCommand implements SlashCommand {
 
-    private final GifInteractions.Spec spec;
     private final GifClient gif;
 
-    public GifInteractionCommand(GifInteractions.Spec spec, GifClient gif) {
-        this.spec = spec;
-        this.gif = gif;
-    }
+    public InteragirCommand(GifClient gif) { this.gif = gif; }
 
-    @Override public String name() { return spec.name(); }
+    @Override public String name() { return "interagir"; }
 
     @Override public SlashCommandData data() {
-        return Commands.slash(spec.name(), spec.description())
-                .addOptions(new OptionData(OptionType.USER, "usuario", "Quem recebe a ação", true));
+        SlashCommandData cmd = Commands.slash("interagir", "Interaja com alguém: beijo, abraço, soco e mais.");
+        for (GifInteractions.Spec spec : GifInteractions.CATALOG) {
+            cmd.addSubcommands(new SubcommandData(spec.name(), spec.description())
+                    .addOption(OptionType.USER, "usuario", "Quem recebe a ação", true));
+        }
+        return cmd;
     }
 
     @Override public void execute(SlashCommandInteractionEvent event, BotContext ctx) {
+        GifInteractions.Spec spec = GifInteractions.byName(event.getSubcommandName());
+        if (spec == null) {
+            Replies.ephemeral(event, ctx, "Ação desconhecida.");
+            return;
+        }
         User alvo = event.getOption("usuario", OptionMapping::getAsUser);
         if (alvo == null) {
             Replies.ephemeral(event, ctx, "Escolha alguém.");

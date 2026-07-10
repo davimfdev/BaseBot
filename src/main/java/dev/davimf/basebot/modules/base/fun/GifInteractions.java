@@ -3,11 +3,11 @@ package dev.davimf.basebot.modules.base.fun;
 import java.util.List;
 
 /**
- * Catálogo dos comandos de interação com GIF (nekos.best): abraçar, beijar, socar, etc. Cada
- * {@link Spec} vira um {@code GifInteractionCommand} registrado no {@code BaseModule}.
+ * Catálogo das ações de interação com GIF (nekos.best): abraçar, beijar, socar, etc. Cada
+ * {@link Spec} vira um subcomando de {@code /interagir}.
  *
  * <p>Puro, sem JDA — a frase da ação é testável sem mocks. O comando em si (que resolve o alvo,
- * bloqueia usar em si mesmo e busca o GIF) fica em {@code commands/GifInteractionCommand}.
+ * bloqueia usar em si mesmo e busca o GIF) fica em {@code commands/InteragirCommand}.
  */
 public final class GifInteractions {
 
@@ -39,6 +39,16 @@ public final class GifInteractions {
             new Spec("paulada", "Dá uma paulada em alguém.", "bonk", "deu uma paulada em", "🔨"),
             new Spec("selinho", "Dá um selinho em alguém.", "peck", "deu um selinho em", "😚"),
             new Spec("chute", "Dá um chute em alguém.", "kick", "deu um chute em", "🦵"));
+
+    /** A spec cujo {@link Spec#name()} casa com {@code name}, ou {@code null}. */
+    public static Spec byName(String name) {
+        for (Spec s : CATALOG) {
+            if (s.name().equals(name)) {
+                return s;
+            }
+        }
+        return null;
+    }
 
     private GifInteractions() {}
 }

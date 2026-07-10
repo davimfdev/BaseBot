@@ -42,6 +42,12 @@ class GifInteractionsTest {
     }
 
     @Test
+    void byNameFindsAKnownActionAndReturnsNullOtherwise() {
+        assertEquals("kiss", GifInteractions.byName("beijo").category());
+        assertEquals(null, GifInteractions.byName("naoexiste"));
+    }
+
+    @Test
     void commandNamesAreDiscordSafe() {
         // Discord: minúsculas, sem espaço; letras/números/hífen/underscore, 1-32 chars.
         for (GifInteractions.Spec s : GifInteractions.CATALOG) {
