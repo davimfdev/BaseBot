@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Sobe os baldes semanais sujos do SQLite para o Postgres, de onde o site lê o ranking.
@@ -24,6 +25,13 @@ public final class VoiceTimeFlusher {
 
     /** Quantas linhas sujas por rodada. */
     public static final int BATCH = 500;
+
+    /**
+     * Tetos de rodadas por invocacao de {@link #flushOnce}, para drenar o conjunto sujo em
+     * lotes sucessivos sem rodar sem limite: uma invocacao processa no maximo
+     * {@code BATCH * MAX_ROUNDS} linhas.
+     */
+    private static final int MAX_ROUNDS = 20;
 
     /** Destino do flush. Extraído para testar a reconciliação sem um Postgres de verdade. */
     public interface Upstream {
@@ -42,15 +50,36 @@ public final class VoiceTimeFlusher {
         flushOnce(repo, upstream);
     }
 
-    /** Uma rodada. Cada linha é independente: uma falha não impede as outras. */
+    /**
+     * Drena o conjunto sujo em lotes sucessivos de {@code BATCH}, nao so o primeiro: com
+     * {@code dirtyRows} sem {@code ORDER BY}, um unico lote sempre pegaria as mesmas linhas de
+     * rowid baixo e as de rowid alto nunca subiriam. Cada linha e independente: uma falha nao
+     * impede as outras. Para quando o lote vem vazio, vem menor que {@code BATCH} (conjunto
+     * esgotado), quando nenhuma linha do lote foi limpa (nada progride, evita girar em vao), ou
+     * ao atingir {@link #MAX_ROUNDS} rodadas.
+     */
     public static void flushOnce(VoiceTimeRepository repo, Upstream upstream) {
-        for (VoiceTimeRepository.DirtyRow row : repo.dirtyRows(BATCH)) {
-            try {
-                upstream.upsert(row.guildId(), row.userId(), row.weekStart(), row.ms());
-                repo.clearDirty(row.guildId(), row.userId(), row.weekStart(), row.ms());
-            } catch (Exception e) {
-                log.warn("Falha ao sincronizar voice_weekly_time {}/{} semana {}: {}",
-                        row.guildId(), row.userId(), row.weekStart(), e.toString());
+        for (int round = 0; round < MAX_ROUNDS; round++) {
+            List<VoiceTimeRepository.DirtyRow> batch = repo.dirtyRows(BATCH);
+            if (batch.isEmpty()) {
+                return;
+            }
+
+            int cleared = 0;
+            for (VoiceTimeRepository.DirtyRow row : batch) {
+                try {
+                    upstream.upsert(row.guildId(), row.userId(), row.weekStart(), row.ms());
+                    if (repo.clearDirty(row.guildId(), row.userId(), row.weekStart(), row.ms())) {
+                        cleared++;
+                    }
+                } catch (Exception e) {
+                    log.warn("Falha ao sincronizar voice_weekly_time {}/{} semana {}",
+                            row.guildId(), row.userId(), row.weekStart(), e);
+                }
+            }
+
+            if (batch.size() < BATCH || cleared == 0) {
+                return;
             }
         }
     }

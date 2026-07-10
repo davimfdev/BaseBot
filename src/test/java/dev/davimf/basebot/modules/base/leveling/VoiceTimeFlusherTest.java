@@ -91,4 +91,19 @@ class VoiceTimeFlusherTest {
 
         assertEquals(1, repo.dirtyRows(10).size());
     }
+
+    @Test
+    void flushDrainsMoreRowsThanOneBatch() {
+        int total = VoiceTimeFlusher.BATCH + 50;
+        for (int i = 0; i < total; i++) {
+            repo.addMs("g1", "u" + i, WEEK, 1000);
+        }
+        FakeUpstream up = new FakeUpstream();
+
+        VoiceTimeFlusher.flushOnce(repo, up);
+
+        assertEquals(total, up.received.size(),
+                "uma unica rodada de flushOnce deve drenar todas as linhas sujas, nao so um batch");
+        assertTrue(repo.dirtyRows(VoiceTimeFlusher.BATCH + 100).isEmpty());
+    }
 }
