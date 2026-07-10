@@ -21,7 +21,7 @@ public final class TopCallView {
         for (int i = 0; i < entries.size(); i++) {
             VoiceTimeRepository.Entry e = entries.get(i);
             lines.add("`" + (base + i + 1) + ".` <@" + e.userId() + "> — `"
-                    + VoiceFormat.duration(e.ms()) + "`");
+                    + VoiceFormat.precise(e.ms()) + "`");
         }
         return RankingPanel.of(accent, "## " + Emojis.of(Emojis.TROPHY, "🏆") + " Ranking de call — esta semana",
                 "-# Ninguém entrou em call esta semana.", lines, NS, page, total, PAGE,

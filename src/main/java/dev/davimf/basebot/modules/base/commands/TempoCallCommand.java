@@ -43,7 +43,7 @@ public final class TempoCallCommand implements SlashCommand {
 
         String body = "## " + Emojis.of(Emojis.CLOCK, "🕒") + " Tempo em call\n"
                 + "> " + target.getAsMention() + "\n"
-                + "**Esta semana** · `" + VoiceFormat.duration(ms) + "`\n"
+                + "**Esta semana** · `" + VoiceFormat.precise(ms) + "`\n"
                 + "-# Zera toda segunda 00:00.";
         event.replyComponents(Panels.container(accent, Panels.text(body)))
                 .useComponentsV2().setEphemeral(true).queue();
