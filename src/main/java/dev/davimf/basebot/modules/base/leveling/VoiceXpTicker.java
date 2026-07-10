@@ -36,13 +36,14 @@ public final class VoiceXpTicker {
         if (ctx.jda() == null) {
             return;
         }
-        if (!gate.isReconciled()) {
-            // O reconciler ainda não rodou (ou falhou): creditar agora lançaria o período
-            // offline inteiro de uma vez para todo mundo em call.
-            return;
-        }
         long now = System.currentTimeMillis();
         for (Guild guild : ctx.jda().getGuilds()) {
+            if (!gate.isReconciled(guild.getId())) {
+                // O reconciler ainda não rodou para esta guild (ou falhou): creditar agora
+                // lançaria o período offline inteiro de uma vez para todo mundo em call. As
+                // outras guilds, já reconciliadas, continuam sendo processadas normalmente.
+                continue;
+            }
             List<VoiceSessionRepository.Open> open = sessions.openSessions(guild.getId());
             if (open.isEmpty()) {
                 continue;

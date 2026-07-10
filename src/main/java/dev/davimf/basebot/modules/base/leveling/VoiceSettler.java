@@ -21,7 +21,7 @@ public final class VoiceSettler {
     /** @param before estado de voz ANTERIOR ao evento que disparou o settle */
     public static void settle(BotContext ctx, LevelingService leveling, Guild guild, Member member,
                               VoiceStateSnapshot before, long now, VoiceGate gate) {
-        if (!gate.isReconciled()) {
+        if (!gate.isReconciled(guild.getId())) {
             // Boot ainda não reancorou as watermarks: creditar agora lançaria o período offline
             // inteiro no ranking. O caller ainda fecha/abre a sessão normalmente; só o crédito
             // é suprimido aqui.
