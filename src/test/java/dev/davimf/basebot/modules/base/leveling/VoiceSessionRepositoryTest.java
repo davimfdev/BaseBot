@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -63,11 +66,25 @@ class VoiceSessionRepositoryTest {
     }
 
     @Test
-    void reanchorIgnoresClosedSessions() {
+    void reanchorIgnoresClosedSessions() throws Exception {
         repo.open("g1", "u1", "c1", 1_000L);
         repo.closeOpen("g1", "u1", 2_000L);
+        // Watermarks da sessao fechada sao ambas 1_000L (setadas por open()).
         repo.reanchor("g1", "u1", 90_000_000L);
 
-        assertEquals(2_000L, repo.sessionsOf("g1", "u1").get(0)[1], "sessao fechada nao e tocada");
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT xp_credited_until, time_credited_until FROM voice_sessions "
+                             + "WHERE guild_id=? AND user_id=? AND leave_time IS NOT NULL")) {
+            ps.setString(1, "g1");
+            ps.setString(2, "u1");
+            try (ResultSet rs = ps.executeQuery()) {
+                assertTrue(rs.next(), "sessao fechada deve continuar existindo na tabela");
+                assertEquals(1_000L, rs.getLong("xp_credited_until"),
+                        "sessao fechada nunca deve ser reancorada: xp_credited_until precisa continuar em 1000");
+                assertEquals(1_000L, rs.getLong("time_credited_until"),
+                        "sessao fechada nunca deve ser reancorada: time_credited_until precisa continuar em 1000");
+            }
+        }
     }
 }
