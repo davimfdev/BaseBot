@@ -34,15 +34,9 @@ public final class RankingPanel {
     public static Container of(int accent, String heading, String emptyLine, List<String> lines,
                                String namespace, int page, int total, int pageSize, String footerSuffix) {
         int pages = pageCount(total, pageSize);
-        StringBuilder sb = new StringBuilder(heading);
-        if (lines.isEmpty()) {
-            sb.append("\n").append(emptyLine);
-        } else {
-            lines.forEach(line -> sb.append("\n").append(line));
-        }
 
         List<ContainerChildComponent> kids = new ArrayList<>();
-        kids.add(Panels.text(sb.toString()));
+        kids.add(Panels.text(body(heading, emptyLine, lines)));
         kids.add(Panels.divider());
         kids.add(Panels.text("-# Página " + (page + 1) + "/" + pages
                 + (footerSuffix == null ? "" : " · " + footerSuffix)));
@@ -54,5 +48,17 @@ public final class RankingPanel {
                             .withDisabled(page >= pages - 1)));
         }
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    /** Corpo do painel: cabeçalho, linha em branco, e as linhas já formatadas. Puro, para teste. */
+    static String body(String heading, String emptyLine, List<String> lines) {
+        StringBuilder sb = new StringBuilder(heading);
+        sb.append("\n");
+        if (lines.isEmpty()) {
+            sb.append(emptyLine);
+        } else {
+            lines.forEach(line -> sb.append("\n").append(line));
+        }
+        return sb.toString();
     }
 }
