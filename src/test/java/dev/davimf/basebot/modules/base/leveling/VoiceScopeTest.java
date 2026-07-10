@@ -17,7 +17,7 @@ class VoiceScopeTest {
     private static final GuildConfig EMPTY = cfg(Map.of());
 
     @Test
-    void withoutListsFallsBackToPublicDefault() {
+    void withoutListsFallsBackToTheOpenByDefaultFlag() {
         assertTrue(VoiceScope.counts("chan", "cat", true, EMPTY));
         assertFalse(VoiceScope.counts("chan", "cat", false, EMPTY));
     }
