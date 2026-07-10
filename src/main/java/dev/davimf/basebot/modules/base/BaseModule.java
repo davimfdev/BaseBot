@@ -208,7 +208,6 @@ public final class BaseModule implements BotModule {
         registry.command(new CasoCommand(moderation));
         registry.command(new RevogarCommand(moderation));
         registry.command(new PurgeCommand());
-        registry.command(new SlowmodeCommand());
         registry.command(new NukeCommand());
 
         // Message purging (BOTSPECS Module 1): /clear deletes anyone's messages,
@@ -220,18 +219,51 @@ public final class BaseModule implements BotModule {
         registry.command(new AddCargoCommand());
         registry.command(new RemoveCargoCommand());
 
-        // Channel utilities (BOTSPECS Module 1).
-        registry.command(new LockCommand());
-        registry.command(new UnlockCommand());
+        // Controle de canal agrupado em /canal (trancar, destrancar, lento).
+        registry.command(new dev.davimf.basebot.core.command.GroupCommand("canal",
+                "Controle do canal: trancar, destrancar e modo lento.",
+                net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions.enabledFor(
+                        net.dv8tion.jda.api.Permission.MANAGE_CHANNEL),
+                java.util.List.of(
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("trancar",
+                                "Tranca o canal atual (impede @everyone de enviar).",
+                                new LockCommand(),
+                                net.dv8tion.jda.api.Permission.MANAGE_CHANNEL),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("destrancar",
+                                "Destranca o canal atual.",
+                                new UnlockCommand(),
+                                net.dv8tion.jda.api.Permission.MANAGE_CHANNEL),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("lento",
+                                "Define o modo lento do canal (0 desativa).",
+                                new SlowmodeCommand(),
+                                net.dv8tion.jda.api.Permission.MANAGE_CHANNEL))));
         registry.command(new AddEmojiCommand());
         registry.command(new ListaCargoCommand());
         registry.component(new ListaCargoComponentHandler());
 
-        // Voice moderation (BOTSPECS Module 1).
-        registry.command(new DisconnectCommand());
-        registry.command(new VoiceMoveCommand());
-        registry.command(new MuteCallCommand(moderation));
-        registry.command(new UnmuteCallCommand(moderation));
+        // Moderação de voz agrupada em /voz (mutar, desmutar, mover, desconectar).
+        // O Discord só gateia permissão no comando de topo; cada subcomando checa a sua no execute.
+        registry.command(new dev.davimf.basebot.core.command.GroupCommand("voz",
+                "Moderação de voz: mutar, mover e desconectar membros.",
+                net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions.enabledFor(
+                        net.dv8tion.jda.api.Permission.VOICE_MOVE_OTHERS),
+                java.util.List.of(
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("mutar",
+                                "Silencia um membro na call por um tempo.",
+                                new MuteCallCommand(moderation),
+                                net.dv8tion.jda.api.Permission.VOICE_MUTE_OTHERS),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("desmutar",
+                                "Remove o silêncio de call de um membro.",
+                                new UnmuteCallCommand(moderation),
+                                net.dv8tion.jda.api.Permission.VOICE_MUTE_OTHERS),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("mover",
+                                "Move um membro para outro canal de voz.",
+                                new VoiceMoveCommand(),
+                                net.dv8tion.jda.api.Permission.VOICE_MOVE_OTHERS),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("desconectar",
+                                "Desconecta um membro do canal de voz.",
+                                new DisconnectCommand(),
+                                net.dv8tion.jda.api.Permission.VOICE_MOVE_OTHERS))));
         // Re-apply persistent call mutes when a flagged member joins voice / is un-muted.
         registry.listener(new VoiceMutePersistenceListener(ctx));
         // Sweeper that lifts text/voice mutes once their timer expires (scheduled onReady).
@@ -241,10 +273,24 @@ public final class BaseModule implements BotModule {
         registry.command(new MuteCommand(moderation));
         registry.command(new UnmuteCommand(moderation));
 
-        // Bot profile (BOTSPECS Module 1) — /bot-name + /bot-icon are GLOBAL (2x/hour cap).
-        registry.command(new BotNameCommand());
-        registry.command(new BotIconCommand());
-        registry.command(new BotNickCommand());
+        // Perfil do bot agrupado em /bot (icone, nome, apelido). Ícone/nome são globais (2x/hora).
+        registry.command(new dev.davimf.basebot.core.command.GroupCommand("bot",
+                "Perfil do bot: ícone, nome e apelido.",
+                net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions.enabledFor(
+                        net.dv8tion.jda.api.Permission.MANAGE_SERVER),
+                java.util.List.of(
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("icone",
+                                "Altera o avatar global do bot (limite: 2x por hora).",
+                                new BotIconCommand(),
+                                net.dv8tion.jda.api.Permission.MANAGE_SERVER),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("nome",
+                                "Altera o nome global do bot (limite: 2x por hora).",
+                                new BotNameCommand(),
+                                net.dv8tion.jda.api.Permission.MANAGE_SERVER),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.gated("apelido",
+                                "Altera o apelido do bot apenas neste servidor.",
+                                new BotNickCommand(),
+                                net.dv8tion.jda.api.Permission.NICKNAME_MANAGE))));
 
         // Configuration hub (BOTSPECS Module 1).
         registry.command(new SetupCommand());
@@ -303,13 +349,11 @@ public final class BaseModule implements BotModule {
         this.leveling = new dev.davimf.basebot.modules.base.leveling.LevelingService(ctx);
         registry.listener(new dev.davimf.basebot.modules.base.leveling.MessageXpListener(ctx, leveling));
         registry.command(new dev.davimf.basebot.modules.base.commands.RankCommand(leveling));
-        registry.command(new dev.davimf.basebot.modules.base.commands.TopCommand(leveling));
         registry.command(new dev.davimf.basebot.modules.base.commands.XpCommand(leveling));
         registry.component(new dev.davimf.basebot.modules.base.leveling.LevelingComponentHandler(leveling));
         // Leveling — voz (Plano 2): sessões persistidas para XP por tempo em call.
         registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling, voiceGate));
         registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling, voiceGate));
-        registry.command(new dev.davimf.basebot.modules.base.commands.TopCallCommand(voiceGate));
         registry.command(new dev.davimf.basebot.modules.base.commands.TempoCallCommand(voiceGate));
         registry.component(new dev.davimf.basebot.modules.base.leveling.VoiceTimeComponentHandler(voiceGate));
 
@@ -332,7 +376,20 @@ public final class BaseModule implements BotModule {
         registry.command(new dev.davimf.basebot.modules.base.commands.PagarCommand(economy));
         registry.command(new dev.davimf.basebot.modules.base.commands.DepositarCommand(economy));
         registry.command(new dev.davimf.basebot.modules.base.commands.SacarCommand(economy));
-        registry.command(new dev.davimf.basebot.modules.base.commands.RicoCommand(economy));
+        // Rankings agrupados em /top (rico, xp, call) — 3 comandos num slot só; acesso livre.
+        registry.command(new dev.davimf.basebot.core.command.GroupCommand("top",
+                "Rankings do servidor: riqueza, nível e tempo em call.",
+                net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions.ENABLED,
+                java.util.List.of(
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.open("rico",
+                                "Ranking dos mais ricos do servidor.",
+                                new dev.davimf.basebot.modules.base.commands.RicoCommand(economy)),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.open("xp",
+                                "Ranking de nível do servidor.",
+                                new dev.davimf.basebot.modules.base.commands.TopCommand(leveling)),
+                        dev.davimf.basebot.core.command.GroupCommand.Sub.open("call",
+                                "Ranking de tempo em call desta semana.",
+                                new dev.davimf.basebot.modules.base.commands.TopCallCommand(voiceGate)))));
         registry.command(new dev.davimf.basebot.modules.base.commands.EcoCommand(economy));
         registry.component(new dev.davimf.basebot.modules.base.economy.EconomyComponentHandler(economy));
 
