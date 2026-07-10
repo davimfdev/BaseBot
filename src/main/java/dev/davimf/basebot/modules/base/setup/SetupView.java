@@ -707,14 +707,19 @@ public final class SetupView {
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
 
+    private static final int SCOPE_SELECT_MAX = 25;
+
     private static EntitySelectMenu voiceScopeSelect(String action, ChannelType type,
                                                       String placeholder, java.util.Set<String> selected) {
         EntitySelectMenu.Builder b = EntitySelectMenu.create(ComponentId.of(NS, action), SelectTarget.CHANNEL)
                 .setChannelTypes(type)
                 .setPlaceholder(placeholder)
-                .setRequiredRange(0, 25);
+                .setRequiredRange(0, SCOPE_SELECT_MAX);
         if (!selected.isEmpty()) {
-            b.setDefaultValues(selected.stream().map(DefaultValue::channel).toList());
+            // guild_config is shared with the web dashboard (Neon), which does not enforce
+            // Discord's 25-item select cap on these keys. JDA throws instead of truncating
+            // defaultValues, so clamp here or the whole screen becomes unopenable.
+            b.setDefaultValues(selected.stream().limit(SCOPE_SELECT_MAX).map(DefaultValue::channel).toList());
         }
         return b.build();
     }
