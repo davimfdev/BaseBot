@@ -69,7 +69,16 @@ public final class VoiceScope {
         if (memberRoleId == null || memberRoleId.isBlank()) {
             return false;
         }
-        Role member = guild.getRoleById(memberRoleId);
+        Role member;
+        try {
+            member = guild.getRoleById(memberRoleId);
+        } catch (NumberFormatException malformedId) {
+            // guild_config também é escrito pelo dashboard, que pode gravar um id inválido.
+            // getRoleById -> parseSnowflake LANÇA nesse caso, e a exceção subiria até o
+            // VoiceXpTicker, que não tem try/catch por guild: uma guild com lixo nesta chave
+            // derrubaria o tick de TODAS as guilds, a cada 60s.
+            return false;
+        }
         return member != null
                 && member.hasPermission(channel, Permission.VIEW_CHANNEL, Permission.VOICE_CONNECT);
     }
