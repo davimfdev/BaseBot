@@ -48,20 +48,6 @@ class VoiceTimeRepositoryTest {
     }
 
     @Test
-    void topPageOrdersDescendingAndSkipsZero() {
-        repo.addMs("g1", "u1", W1, 100);
-        repo.addMs("g1", "u2", W1, 900);
-        repo.addMs("g1", "u3", W1, 0);
-
-        List<VoiceTimeRepository.Entry> top = repo.topPage("g1", W1, 10, 0);
-        assertEquals(2, top.size());
-        assertEquals("u2", top.get(0).userId());
-        assertEquals(900, top.get(0).ms());
-        assertEquals("u1", top.get(1).userId());
-        assertEquals(2, repo.count("g1", W1));
-    }
-
-    @Test
     void clearDirtySucceedsOnlyWhenMsIsUnchanged() {
         repo.addMs("g1", "u1", W1, 1000);
 

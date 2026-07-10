@@ -57,43 +57,6 @@ public final class VoiceTimeRepository {
         }
     }
 
-    /** Ranking da semana. Quem tem {@code ms = 0} não aparece. */
-    public List<Entry> topPage(String guildId, long weekStart, int limit, int offset) {
-        String sql = "SELECT user_id, ms FROM voice_weekly_time "
-                + "WHERE guild_id=? AND week_start=? AND ms > 0 "
-                + "ORDER BY ms DESC, user_id LIMIT ? OFFSET ?";
-        List<Entry> out = new ArrayList<>();
-        try (Connection c = sqlite.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, guildId);
-            ps.setLong(2, weekStart);
-            ps.setInt(3, limit);
-            ps.setInt(4, offset);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    out.add(new Entry(rs.getString("user_id"), rs.getLong("ms")));
-                }
-            }
-            return out;
-        } catch (SQLException e) {
-            throw new RepositoryException("topPage " + guildId, e);
-        }
-    }
-
-    public int count(String guildId, long weekStart) {
-        String sql = "SELECT COUNT(*) FROM voice_weekly_time WHERE guild_id=? AND week_start=? AND ms > 0";
-        try (Connection c = sqlite.getConnection();
-             PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, guildId);
-            ps.setLong(2, weekStart);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt(1) : 0;
-            }
-        } catch (SQLException e) {
-            throw new RepositoryException("count " + guildId, e);
-        }
-    }
-
     /**
      * Todas as linhas da semana, inclusive as com {@code ms = 0}. O ranking soma o tempo pendente
      * por cima, então filtrar aqui esconderia quem acabou de entrar na call.
