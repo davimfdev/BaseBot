@@ -235,6 +235,7 @@ public final class SetupComponentHandler implements ComponentHandler {
                 edit(event, SetupView.levelingScreen(updated, levelRewards(ctx).all(guildId)));
             }
             case "nivelreward" -> event.replyModal(SetupView.levelRewardModal()).queue();
+            case "vtscope" -> edit(event, SetupView.voiceTimeScreen(config(ctx, guildId)));
             case "ecotoggle" -> {
                 GuildConfig cfg = config(ctx, guildId);
                 GuildConfig updated = GuildConfigEdits.withToggle(cfg,
@@ -442,6 +443,14 @@ public final class SetupComponentHandler implements ComponentHandler {
                 ctx.database().guildConfig().save(updated);
                 edit(event, SetupView.levelingScreen(updated, levelRewards(ctx).all(guildId)));
             }
+            case "vtincch" -> saveVoiceScope(event, ctx,
+                    dev.davimf.basebot.modules.base.leveling.VoiceTimeConfig.KEY_INCLUDE_CHANNELS);
+            case "vtexcch" -> saveVoiceScope(event, ctx,
+                    dev.davimf.basebot.modules.base.leveling.VoiceTimeConfig.KEY_EXCLUDE_CHANNELS);
+            case "vtinccat" -> saveVoiceScope(event, ctx,
+                    dev.davimf.basebot.modules.base.leveling.VoiceTimeConfig.KEY_INCLUDE_CATEGORIES);
+            case "vtexccat" -> saveVoiceScope(event, ctx,
+                    dev.davimf.basebot.modules.base.leveling.VoiceTimeConfig.KEY_EXCLUDE_CATEGORIES);
             case "permrole" -> {
                 String principal = "role:" + firstRoleId(event);
                 edit(event, SetupView.permissionsDetail(config(ctx, event.getGuild().getId()), principal,
@@ -844,6 +853,19 @@ public final class SetupComponentHandler implements ComponentHandler {
                 ctx.database().guildConfig().findOrEmpty(guildId), key, roleId);
         ctx.database().guildConfig().save(updated);
         ctx.database().actionLogs().log(guildId, event.getUser().getId(), roleId, "SETUP_ROLE", key);
+    }
+
+    private void saveVoiceScope(EntitySelectInteractionEvent event, BotContext ctx, String key) {
+        if (event.getGuild() == null) {
+            return;
+        }
+        String guildId = event.getGuild().getId();
+        String csv = event.getMentions().getChannels().stream()
+                .map(GuildChannel::getId)
+                .collect(java.util.stream.Collectors.joining(","));
+        GuildConfig updated = GuildConfigEdits.withSetting(config(ctx, guildId), key, csv);
+        ctx.database().guildConfig().save(updated);
+        edit(event, SetupView.voiceTimeScreen(updated));
     }
 
     private dev.davimf.basebot.modules.base.leveling.LevelRewardRepository levelRewards(BotContext ctx) {

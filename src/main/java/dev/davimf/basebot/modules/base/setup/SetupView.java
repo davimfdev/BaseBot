@@ -60,6 +60,7 @@ import net.dv8tion.jda.api.components.selections.EntitySelectMenu.SelectTarget;
 import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import dev.davimf.basebot.modules.base.leveling.LevelingConfig;
+import dev.davimf.basebot.modules.base.leveling.VoiceTimeConfig;
 import dev.davimf.basebot.modules.base.economy.EconomyConfig;
 import dev.davimf.basebot.modules.base.events.ChatEventConfig;
 import dev.davimf.basebot.modules.base.fun.QuizQuestion;
@@ -655,6 +656,8 @@ public final class SetupView {
                 Button.primary(ComponentId.of(NS, "nivelreward"), "Cargo por nível")
                         .withEmoji(Emojis.button(Emojis.ROLES)),
                 Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
+        kids.add(ActionRow.of(Button.secondary(ComponentId.of(NS, "vtscope"),
+                "Tempo de call — escopo de canais")));
         kids.add(moduleNav("nivel"));
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
@@ -667,6 +670,53 @@ public final class SetupView {
         return Modal.create(ComponentId.of(NS, "nivelrewardform"), "Cargo por nível")
                 .addComponents(Label.of("Nível", nivel.build()), Label.of("Cargo", cargo.build()))
                 .build();
+    }
+
+    // --- Tempo de call -----------------------------------------------------------
+
+    public static Container voiceTimeScreen(GuildConfig cfg) {
+        int accent = EmbedColor.resolve(cfg);
+        java.util.Set<String> incCh = VoiceTimeConfig.includeChannels(cfg);
+        java.util.Set<String> excCh = VoiceTimeConfig.excludeChannels(cfg);
+        java.util.Set<String> incCat = VoiceTimeConfig.includeCategories(cfg);
+        java.util.Set<String> excCat = VoiceTimeConfig.excludeCategories(cfg);
+
+        String overview = Emojis.of(Emojis.CLOCK, "🕒") + " **Padrão** · só canais públicos contam tempo\n"
+                + "-# Público = `@everyone` pode ver e entrar no canal.\n"
+                + Emojis.of(Emojis.HASH, "#") + " **Canais** · `" + incCh.size() + "` incluídos · `"
+                + excCh.size() + "` excluídos\n"
+                + Emojis.of(Emojis.FOLDER, "📁") + " **Categorias** · `" + incCat.size() + "` incluídas · `"
+                + excCat.size() + "` excluídas\n"
+                + "-# Precedência: canal > categoria > padrão. Exclusão vence inclusão no mesmo nível.";
+
+        java.util.List<ContainerChildComponent> kids = new java.util.ArrayList<>();
+        kids.add(Panels.text("## " + Emojis.of(Emojis.CLOCK, "🕒") + " Tempo de call"));
+        kids.add(Panels.divider());
+        kids.add(Panels.text(overview));
+        kids.add(Panels.divider());
+        kids.add(ActionRow.of(voiceScopeSelect("vtincch", ChannelType.VOICE,
+                "Canais que SEMPRE contam…", incCh)));
+        kids.add(ActionRow.of(voiceScopeSelect("vtexcch", ChannelType.VOICE,
+                "Canais que NUNCA contam…", excCh)));
+        kids.add(ActionRow.of(voiceScopeSelect("vtinccat", ChannelType.CATEGORY,
+                "Categorias que SEMPRE contam…", incCat)));
+        kids.add(ActionRow.of(voiceScopeSelect("vtexccat", ChannelType.CATEGORY,
+                "Categorias que NUNCA contam…", excCat)));
+        kids.add(ActionRow.of(Button.secondary(ComponentId.of(NS, "nav", "nivel"), "◀ Voltar")));
+        kids.add(moduleNav("nivel"));
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    private static EntitySelectMenu voiceScopeSelect(String action, ChannelType type,
+                                                      String placeholder, java.util.Set<String> selected) {
+        EntitySelectMenu.Builder b = EntitySelectMenu.create(ComponentId.of(NS, action), SelectTarget.CHANNEL)
+                .setChannelTypes(type)
+                .setPlaceholder(placeholder)
+                .setRequiredRange(0, 25);
+        if (!selected.isEmpty()) {
+            b.setDefaultValues(selected.stream().map(DefaultValue::channel).toList());
+        }
+        return b.build();
     }
 
     // --- Fun (quiz personalizado) ----------------------------------------------
