@@ -48,13 +48,18 @@ public final class VoiceRetentionSweeper {
 
     private static void sweepPostgres(PostgresPool pool, long cutoff) {
         try (Connection c = pool.getConnection();
+             // O Postgres não tem coluna `dirty` (isso só existe no SQLite), então este DELETE
+             // não sabe distinguir um balde antigo já sincronizado de um antigo mas ainda sujo
+             // localmente: um balde sujo e velho sobrevive no SQLite mas É apagado aqui. Sem
+             // problema: o VoiceTimeFlusher reenvia (re-upsert) essa linha na próxima rodada, e a
+             // cópia do site se autocura dentro de um intervalo de flush, sem perda de dado.
              PreparedStatement ps = c.prepareStatement(
                      "DELETE FROM voice_weekly_time WHERE week_start < ?")) {
             ps.setLong(1, VoiceWeek.weekStart(cutoff));
             ps.executeUpdate();
         } catch (Exception e) {
             // Neon fora do ar: tenta de novo amanhã. Nunca bloqueia a poda local.
-            log.warn("Falha ao podar voice_weekly_time no Postgres: {}", e.toString());
+            log.warn("Falha ao podar voice_weekly_time no Postgres", e);
         }
     }
 }

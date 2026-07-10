@@ -47,6 +47,18 @@ class VoiceRetentionSweeperTest {
     }
 
     @Test
+    void sessionClosedExactlyAtTheCutoffIsKept() {
+        long cutoff = VoiceRetention.cutoff(NOW);
+        sessions.open("g1", "edge", "c1", cutoff - DAY);
+        sessions.closeOpen("g1", "edge", cutoff);
+
+        VoiceRetentionSweeper.sweepLocal(sessions, times, NOW);
+
+        assertEquals(1, sessions.sessionsOf("g1", "edge").size(),
+                "'mais velho que 90 dias' e estrito (<); fechada exatamente no corte tem exatamente 90 dias e deve ser mantida");
+    }
+
+    @Test
     void neverDeletesAnOpenSessionNoMatterHowOld() {
         sessions.open("g1", "marathon", "c1", NOW - 200 * DAY);
 
