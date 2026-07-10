@@ -123,6 +123,15 @@ public final class BaseModule implements BotModule {
             ctx.scheduler().once(() ->
                     dev.davimf.basebot.modules.base.leveling.VoiceReconciler.run(ctx), 5, TimeUnit.SECONDS);
         }
+        // Tempo em call: sobe os baldes sujos pro Neon a cada 5 min; poda de 90 dias 1x/dia.
+        // O sweeper roda DEPOIS do flusher (initialDelay maior) para que uma linha suja
+        // recém-criada tenha chance de subir antes de ser considerada para poda.
+        dev.davimf.basebot.modules.base.leveling.VoiceTimeFlusher voiceFlusher =
+                new dev.davimf.basebot.modules.base.leveling.VoiceTimeFlusher(ctx);
+        ctx.scheduler().repeating(voiceFlusher::flush, 90, 300, TimeUnit.SECONDS);
+        dev.davimf.basebot.modules.base.leveling.VoiceRetentionSweeper voiceSweeper =
+                new dev.davimf.basebot.modules.base.leveling.VoiceRetentionSweeper(ctx);
+        ctx.scheduler().repeating(voiceSweeper::sweep, 600, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
         // Eventos de chat: verifica/dispara a cada 60s.
         if (chatEvents != null) {
             ctx.scheduler().repeating(chatEvents::tick, 60, 60, TimeUnit.SECONDS);
@@ -294,6 +303,9 @@ public final class BaseModule implements BotModule {
         // Leveling — voz (Plano 2): sessões persistidas para XP por tempo em call.
         registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling));
         registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling));
+        registry.command(new dev.davimf.basebot.modules.base.commands.TopCallCommand());
+        registry.command(new dev.davimf.basebot.modules.base.commands.TempoCallCommand());
+        registry.component(new dev.davimf.basebot.modules.base.leveling.VoiceTimeComponentHandler());
 
         // Economia por-usuário (Base) — separada do tesouro de facção.
         dev.davimf.basebot.modules.base.economy.EconomyService economy =
