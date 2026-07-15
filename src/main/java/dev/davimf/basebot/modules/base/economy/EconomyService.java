@@ -44,14 +44,16 @@ public final class EconomyService {
     }
 
     public String daily(Guild g, Member m) {
-        String cd = onCooldown(g, m.getId(), "daily", EconomyDefaults.DAILY_COOLDOWN_S);
-        if (cd != null) {
-            return cd;
+        long now = System.currentTimeMillis();
+        long lastTs = cooldowns.lastTs(g.getId(), m.getId(), "daily");
+        if (!DailyReset.available(lastTs, now)) {
+            long readyAt = DailyReset.nextMidnightMillis(now);
+            return "Você já coletou o `/economia daily` hoje — volta <t:" + (readyAt / 1000) + ":R>.";
         }
         int level = LevelFormula.levelForXp(userLevels.xp(g.getId(), m.getId()));
         long amount = LevelBonus.scale(EconomyConfig.daily(cfg(g)), level);
         wallets.addCash(g.getId(), m.getId(), amount);
-        cooldowns.stamp(g.getId(), m.getId(), "daily", System.currentTimeMillis());
+        cooldowns.stamp(g.getId(), m.getId(), "daily", now);
         return "Recompensa diária: **+" + EconomyFormat.formatNamed(amount, cfg(g)) + "** na carteira.";
     }
 
