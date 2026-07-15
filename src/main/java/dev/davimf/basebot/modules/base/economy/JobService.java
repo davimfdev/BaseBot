@@ -42,6 +42,21 @@ public final class JobService {
     public String runCooking(Guild g, Member m) { return runTool(g, m, Slot.COOKING, "cozinhar",
             EconomyDefaults.COOK_COOLDOWN_S, "utensílio de cozinha", Emojis.of(Emojis.GEAR, "🍳")); }
 
+    public String runProgram(Guild g, Member m) { return runTool(g, m, Slot.TECH, "programar",
+            EconomyDefaults.PROGRAM_COOLDOWN_S, "teclado", Emojis.of(Emojis.GEAR, "💻")); }
+
+    public String runPlant(Guild g, Member m) { return runTool(g, m, Slot.FARM, "plantar",
+            EconomyDefaults.PLANT_COOLDOWN_S, "equipamento de fazenda", Emojis.of(Emojis.SPROUT, "🌱")); }
+
+    public String runFish(Guild g, Member m) { return runTool(g, m, Slot.FISHING, "pescar",
+            EconomyDefaults.FISH_COOLDOWN_S, "vara de pesca", Emojis.of(Emojis.PRODUCT, "🎣")); }
+
+    public String runExplore(Guild g, Member m) { return runTool(g, m, Slot.EXPEDITION, "explorar",
+            EconomyDefaults.EXPLORE_COOLDOWN_S, "equipamento de expedição", Emojis.of(Emojis.COMPASS, "🧭")); }
+
+    public String runInvoice(Guild g, Member m) { return runTool(g, m, Slot.BUSINESS, "faturar",
+            EconomyDefaults.INVOICE_COOLDOWN_S, "contrato/licença", Emojis.of(Emojis.MONEY, "💼")); }
+
     private String runTool(Guild g, Member m, Slot slot, String action, long cd, String noun, String emoji) {
         GuildConfig cfg = cfg(g);
         String u = m.getId();
