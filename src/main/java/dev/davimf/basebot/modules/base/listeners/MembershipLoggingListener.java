@@ -35,6 +35,15 @@ public final class MembershipLoggingListener extends ListenerAdapter {
         this.invites = invites;
     }
 
+    /** O CDN serve o banner em baixa resolução sem {@code size}, e a MediaGallery
+     *  o renderiza no tamanho natural — pequeno. Pede a versão larga. */
+    private static String largeBanner(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        return url.contains("?") ? url : url + "?size=2048";
+    }
+
     // --- join / leave ----------------------------------------------------------
 
     @Override
@@ -53,7 +62,7 @@ public final class MembershipLoggingListener extends ListenerAdapter {
                 inviteLine = Emojis.of(Emojis.LINK, "🔗") + " **Convite** · `" + invite.getCode() + "`" + creator;
             }
             u.retrieveProfile().queue(
-                    p -> postJoin(g, u, count, inviteLine, p.getBannerUrl()),
+                    p -> postJoin(g, u, count, inviteLine, largeBanner(p.getBannerUrl())),
                     err -> postJoin(g, u, count, inviteLine, null));
         });
     }
@@ -88,7 +97,7 @@ public final class MembershipLoggingListener extends ListenerAdapter {
         }
         String extraStr = extra.toString();
         u.retrieveProfile().queue(
-                p -> postLeave(g, u, count, extraStr, p.getBannerUrl()),
+                p -> postLeave(g, u, count, extraStr, largeBanner(p.getBannerUrl())),
                 err -> postLeave(g, u, count, extraStr, null));
 
         // Distinguish a kick from a voluntary leave via the audit log (best-effort).

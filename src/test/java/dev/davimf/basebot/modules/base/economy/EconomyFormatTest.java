@@ -23,4 +23,17 @@ class EconomyFormatTest {
         GuildConfig c = cfg(Map.of(EconomyConfig.KEY_CURRENCY_EMOJI, "$", EconomyConfig.KEY_CURRENCY_NAME, "dols"));
         assertEquals("$ 1.234 dols", EconomyFormat.formatNamed(1234, c));
     }
+
+    @Test
+    void plainUsesUnicodeFallbackWhenNoCustomEmojiConfigured() {
+        // Sem emoji configurado: format() usaria o custom da aplicação; formatPlain() usa o fallback Unicode.
+        GuildConfig c = cfg(Map.of());
+        assertEquals("🪙 1.234", EconomyFormat.formatPlain(1234, c));
+    }
+
+    @Test
+    void plainRespectsConfiguredEmoji() {
+        GuildConfig c = cfg(Map.of(EconomyConfig.KEY_CURRENCY_EMOJI, "$"));
+        assertEquals("$ 1.234", EconomyFormat.formatPlain(1234, c));
+    }
 }

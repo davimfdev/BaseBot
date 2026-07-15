@@ -3,6 +3,7 @@ package dev.davimf.basebot.modules.base.utility;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 
@@ -33,7 +34,7 @@ public final class ReminderService {
 
     private void deliver(Reminder r) {
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(r.guildId()));
-        String text = "⏰ **Lembrete:** " + r.message();
+        String text = Emojis.of(Emojis.CLOCK, "⏰") + " **Lembrete:** " + r.message();
         ctx.jda().openPrivateChannelById(r.userId()).queue(
                 pc -> pc.sendMessageComponents(Panels.container(accent, Panels.text(text))).useComponentsV2()
                         .queue(ok -> { }, err -> fallback(r, accent, text)),

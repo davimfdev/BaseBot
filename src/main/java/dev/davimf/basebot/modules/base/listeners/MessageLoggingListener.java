@@ -2,6 +2,7 @@ package dev.davimf.basebot.modules.base.listeners;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.sqlite.MessageArchiveRepository;
+import dev.davimf.basebot.modules.base.moderation.PurgeLogSuppressor;
 import dev.davimf.basebot.util.AuditLookup;
 import dev.davimf.basebot.util.ChannelLog;
 import dev.davimf.basebot.util.Emojis;
@@ -22,10 +23,12 @@ public final class MessageLoggingListener extends ListenerAdapter {
 
     private final BotContext ctx;
     private final AttachmentVault vault;
+    private final PurgeLogSuppressor purgeSuppressor;
 
-    public MessageLoggingListener(BotContext ctx, AttachmentVault vault) {
+    public MessageLoggingListener(BotContext ctx, AttachmentVault vault, PurgeLogSuppressor purgeSuppressor) {
         this.ctx = ctx;
         this.vault = vault;
+        this.purgeSuppressor = purgeSuppressor;
     }
 
     @Override
@@ -88,22 +91,31 @@ public final class MessageLoggingListener extends ListenerAdapter {
         if (!event.isFromGuild()) {
             return;
         }
+        // Deleção feita por /purge, /clear ou /cl — não loga (evita floodar o log).
+        if (purgeSuppressor.claim(event.getMessageIdLong())) {
+            return;
+        }
         MessageArchiveRepository.Archived old = ctx.database().messageArchive().find(event.getMessageId());
-        String autor = old == null ? "*desconhecido*" : "<@" + old.authorId() + ">";
-        boolean hasContent = !(old == null || old.content() == null || old.content().isBlank());
-        String conteudo = hasContent ? codeBlock(old.content()) : " · *sem texto / não arquivado*";
+        // Só arquivamos mensagens de humanos; sem registro = mensagem de bot (inclusive as do
+        // próprio bot) ou não capturada. Nesses casos não há o que logar de útil, então ignoramos.
+        if (old == null) {
+            return;
+        }
+        String autor = "<@" + old.authorId() + ">";
+        boolean hasContent = !(old.content() == null || old.content().isBlank());
+        String conteudo = hasContent ? codeBlock(old.content()) : " · *sem texto*";
         String baseBody = "## " + Emojis.of(Emojis.TRASH, "🗑️") + " Mensagem apagada\n---\n"
                 + Emojis.of(Emojis.MEMBER, "👤") + " **Autor** · " + autor
                 + "\n" + Emojis.of(Emojis.LOCATION, "📍") + " **Canal** · " + event.getChannel().getAsMention()
                 + "\n---\n" + Emojis.of(Emojis.MESSAGE, "💬") + " **Conteúdo**" + conteudo;
         String gid = event.getGuild().getId();
 
-        if (old != null && old.vaultMessageId() != null) {
+        if (old.vaultMessageId() != null) {
             // Preserved attachments from the vault (fresh URLs), shown as images.
             vault.retrieveUrls(old.vaultChannelId(), old.vaultMessageId(),
                     urls -> ChannelLog.post(ctx, gid, "log-mensagens", baseBody, null, urls));
         } else {
-            String anexos = old == null || old.attachments() == null || old.attachments().isBlank()
+            String anexos = old.attachments() == null || old.attachments().isBlank()
                     ? "" : "\n" + Emojis.of(Emojis.ATTACHMENT, "📎") + " **Anexos** · " + old.attachments();
             ChannelLog.post(ctx, gid, "log-mensagens", baseBody + anexos);
         }
@@ -111,6 +123,10 @@ public final class MessageLoggingListener extends ListenerAdapter {
 
     @Override
     public void onMessageBulkDelete(MessageBulkDeleteEvent event) {
+        // Deleção em massa disparada por /purge, /clear ou /cl — não loga (evita floodar o log).
+        if (purgeSuppressor.claimAny(event.getMessageIds().stream().map(Long::parseLong).toList())) {
+            return;
+        }
         ChannelLog.post(ctx, event.getGuild().getId(), "log-mensagens",
                 "## " + Emojis.of(Emojis.BROOM, "🧹") + " Deleção em massa\n---\n"
                         + Emojis.of(Emojis.LOCATION, "📍") + " **Canal** · " + event.getChannel().getAsMention()

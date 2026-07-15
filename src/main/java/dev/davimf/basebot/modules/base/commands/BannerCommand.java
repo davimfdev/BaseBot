@@ -36,7 +36,7 @@ public final class BannerCommand implements SlashCommand {
             } else {
                 event.getHook().editOriginalComponents(
                                 InfoView.imageWithButton(accent, "## Banner de " + u.getName(),
-                                        url + "?size=1024", url + "?size=1024"))
+                                        url + "?size=2048", url + "?size=2048"))
                         .useComponentsV2().queue();
             }
         }, err -> event.getHook().editOriginalComponents(Panels.container(accent,

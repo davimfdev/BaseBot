@@ -15,6 +15,12 @@ public final class EconomyFormat {
         return format(amount, cfg) + " " + EconomyConfig.currencyName(cfg);
     }
 
+    /** Como {@link #format}, mas seguro para textos que não renderizam emoji custom
+     *  (ex.: descrições de opções de select menu): usa o fallback Unicode da moeda. */
+    public static String formatPlain(long amount, GuildConfig cfg) {
+        return EconomyConfig.currencyEmojiPlain(cfg) + " " + grouped(amount);
+    }
+
     private static String grouped(long amount) {
         boolean neg = amount < 0;
         String digits = String.format("%,d", Math.abs(amount)).replace(',', '.');

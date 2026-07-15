@@ -8,7 +8,9 @@ import dev.davimf.basebot.modules.base.economy.EquipmentCatalog.Slot;
 import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 
 import java.util.List;
 
@@ -26,17 +28,25 @@ public final class MercadoView {
         };
     }
 
+    /** Nome do emoji custom que melhor representa o slot (usado via {@code withEmoji}). */
+    static String slotEmoji(Slot slot) {
+        return switch (slot) {
+            case MINING -> Emojis.GEM;
+            case WEAPON -> Emojis.WEAPON;
+            case COOKING, DELIVERY -> Emojis.PRODUCT;
+        };
+    }
+
     /** Vitrine inicial: um seletor de categoria (slot). */
     public static Container vitrine(int accent, GuildConfig cfg) {
         String body = "## " + Emojis.of(Emojis.SALES, "🛒") + " Mercado\n"
                 + "Escolha uma categoria de equipamento para ver os itens à venda.";
-        StringSelectMenu select = StringSelectMenu.create(ComponentId.of(NS, "mslot"))
-                .setPlaceholder("Escolha uma categoria…")
-                .addOption(slotLabel(Slot.MINING), Slot.MINING.name())
-                .addOption(slotLabel(Slot.COOKING), Slot.COOKING.name())
-                .addOption(slotLabel(Slot.DELIVERY), Slot.DELIVERY.name())
-                .addOption(slotLabel(Slot.WEAPON), Slot.WEAPON.name())
-                .build();
+        StringSelectMenu.Builder builder = StringSelectMenu.create(ComponentId.of(NS, "mslot"))
+                .setPlaceholder("Escolha uma categoria…");
+        for (Slot slot : Slot.values()) {
+            builder.addOptions(option(slotLabel(slot), slot.name(), null, slotEmoji(slot)));
+        }
+        StringSelectMenu select = builder.build();
         return Panels.container(accent,
                 Panels.text(body),
                 Panels.divider(),
@@ -59,8 +69,9 @@ public final class MercadoView {
             body.append("\n**").append(e.name()).append("** · ")
                     .append(EconomyFormat.format(e.price(), cfg))
                     .append("\n-# ").append(EquipmentService.label(e));
-            select.addOption(trim(e.name(), 100), e.key(),
-                    trim(EconomyFormat.format(e.price(), cfg) + " · " + e.maxUsos() + " usos", 100));
+            select.addOptions(option(trim(e.name(), 100), e.key(),
+                    trim(EconomyFormat.formatPlain(e.price(), cfg) + " · " + e.maxUsos() + " usos", 100),
+                    slotEmoji(slot)));
         }
         return Panels.container(accent,
                 Panels.text(body.toString()),
@@ -74,6 +85,17 @@ public final class MercadoView {
                 Panels.text("## " + Emojis.of(Emojis.SALES, "🛒") + " Mercado"),
                 Panels.divider(),
                 Panels.text(message));
+    }
+
+    /** Opção de select com emoji custom via {@code withEmoji} (renderiza, ao contrário do texto);
+     *  sem ícone se o emoji ainda não subiu. {@code description} pode ser {@code null}. */
+    private static SelectOption option(String label, String value, String description, String emojiName) {
+        SelectOption o = SelectOption.of(label, value);
+        if (description != null) {
+            o = o.withDescription(description);
+        }
+        Emoji e = Emojis.button(emojiName);
+        return e != null ? o.withEmoji(e) : o;
     }
 
     private static String trim(String s, int max) {

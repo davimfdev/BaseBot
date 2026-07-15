@@ -8,7 +8,9 @@ import dev.davimf.basebot.modules.base.economy.EquipmentCatalog.Slot;
 import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -53,7 +55,7 @@ public final class InventarioView {
                         .append(equipped ? " (equipado)" : "").append("\n");
                 if (options < 25) {
                     String label = trim("Equipar #" + row.id() + " — " + name + " — " + row.usosLeft() + " usos", 100);
-                    select.addOption(label, String.valueOf(row.id()));
+                    select.addOptions(option(label, String.valueOf(row.id()), MercadoView.slotEmoji(slot)));
                     options++;
                 }
             }
@@ -73,6 +75,13 @@ public final class InventarioView {
                 Panels.text("## " + Emojis.of(Emojis.EDIT, "🎒") + " Inventário"),
                 Panels.divider(),
                 Panels.text(message));
+    }
+
+    /** Opção de select com emoji custom via {@code withEmoji}; sem ícone se ainda não subiu. */
+    private static SelectOption option(String label, String value, String emojiName) {
+        SelectOption o = SelectOption.of(label, value);
+        Emoji e = Emojis.button(emojiName);
+        return e != null ? o.withEmoji(e) : o;
     }
 
     private static String trim(String s, int max) {

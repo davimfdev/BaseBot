@@ -8,7 +8,9 @@ import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 
 import java.util.List;
 
@@ -52,9 +54,9 @@ public final class ShopView {
                 body.append("\n-# ").append(it.description());
             }
             if (!it.soldOut()) {
-                select.addOption(trim(it.name(), 100),
-                        String.valueOf(it.id()),
-                        trim(EconomyFormat.format(it.price(), cfg) + " · " + typeLabel(it), 100));
+                String emoji = it.type() == ShopItem.Type.CUSTOM ? Emojis.PRODUCT : Emojis.ROLES;
+                select.addOptions(option(trim(it.name(), 100), String.valueOf(it.id()),
+                        trim(EconomyFormat.formatPlain(it.price(), cfg) + " · " + typeLabel(it), 100), emoji));
                 buyable++;
             }
         }
@@ -88,6 +90,14 @@ public final class ShopView {
                 Panels.text("## " + Emojis.of(Emojis.SALES, "🛒") + " Loja"),
                 Panels.divider(),
                 Panels.text(message));
+    }
+
+    /** Opção de select com emoji custom via {@code withEmoji} (o campo próprio, que renderiza);
+     *  se o emoji ainda não subiu, a opção fica sem ícone em vez de mostrar markup cru. */
+    private static SelectOption option(String label, String value, String description, String emojiName) {
+        SelectOption o = SelectOption.of(label, value).withDescription(description);
+        Emoji e = Emojis.button(emojiName);
+        return e != null ? o.withEmoji(e) : o;
     }
 
     private static String trim(String s, int max) {

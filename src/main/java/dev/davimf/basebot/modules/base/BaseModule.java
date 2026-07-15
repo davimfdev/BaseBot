@@ -34,6 +34,7 @@ import dev.davimf.basebot.modules.base.commands.TimeoutCommand;
 import dev.davimf.basebot.modules.base.commands.UntimeoutCommand;
 import dev.davimf.basebot.modules.base.moderation.InfractionComponentHandler;
 import dev.davimf.basebot.modules.base.moderation.ModerationService;
+import dev.davimf.basebot.modules.base.moderation.PurgeLogSuppressor;
 import dev.davimf.basebot.modules.base.commands.BotIconCommand;
 import dev.davimf.basebot.modules.base.commands.BotNameCommand;
 import dev.davimf.basebot.modules.base.commands.BotNickCommand;
@@ -207,13 +208,15 @@ public final class BaseModule implements BotModule {
         registry.command(new InfracoesCommand(moderation));
         registry.command(new CasoCommand(moderation));
         registry.command(new RevogarCommand(moderation));
-        registry.command(new PurgeCommand());
+        // Deleções feitas por /purge, /clear e /cl não vão pro log de mensagens (evita flood).
+        PurgeLogSuppressor purgeSuppressor = new PurgeLogSuppressor();
+        registry.command(new PurgeCommand(purgeSuppressor));
         registry.command(new NukeCommand());
 
         // Message purging (BOTSPECS Module 1): /clear deletes anyone's messages,
         // /cl deletes only the executor's own messages.
-        registry.command(new ClearCommand("clear", false));
-        registry.command(new ClearCommand("cl", true));
+        registry.command(new ClearCommand("clear", false, purgeSuppressor));
+        registry.command(new ClearCommand("cl", true, purgeSuppressor));
 
         // Role management (BOTSPECS Module 1) — hierarchy-validated.
         registry.command(new AddCargoCommand());
@@ -317,7 +320,7 @@ public final class BaseModule implements BotModule {
         registry.listener(new MembershipLoggingListener(ctx, inviteTracker));
         registry.listener(new BanLoggingListener(ctx));
         AttachmentVault attachmentVault = new AttachmentVault(ctx, ctx.config().discord().vaultGuildId());
-        registry.listener(new MessageLoggingListener(ctx, attachmentVault));
+        registry.listener(new MessageLoggingListener(ctx, attachmentVault, purgeSuppressor));
         registry.listener(new VoiceLoggingListener(ctx));
         registry.listener(new ChannelLoggingListener(ctx));
         registry.listener(new RoleLoggingListener(ctx));

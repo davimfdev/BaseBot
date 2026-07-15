@@ -179,7 +179,7 @@ public final class ChatEventService {
             return;
         }
         reward(event.getGuild(), event.getMember(), ev);
-        event.editComponents(ChatEventView.resolved(EmbedColor.resolve(cfg(event.getGuild())),
+        event.editComponents(ChatEventView.resolved(EmbedColor.resolve(cfg(event.getGuild())), ev,
                         event.getMember().getAsMention(), rewardText(event.getGuild(), event.getMember())))
                 .useComponentsV2().queue(ok -> { }, err -> { });
     }
@@ -198,7 +198,7 @@ public final class ChatEventService {
         }
         if ((ev.type() == ChatEventType.TYPING || ev.type() == ChatEventType.MATH) && channel != null) {
             channel.editMessageComponentsById(ev.messageId(),
-                            ChatEventView.resolved(EmbedColor.resolve(cfg), m.getAsMention(), rewardText(g, m)))
+                            ChatEventView.resolved(EmbedColor.resolve(cfg), ev, m.getAsMention(), rewardText(g, m)))
                     .useComponentsV2().queue(ok -> { }, err -> { });
         }
     }

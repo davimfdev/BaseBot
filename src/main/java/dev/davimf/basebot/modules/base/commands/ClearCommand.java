@@ -23,6 +23,7 @@ package dev.davimf.basebot.modules.base.commands;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.moderation.MessagePurge;
+import dev.davimf.basebot.modules.base.moderation.PurgeLogSuppressor;
 import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
@@ -51,10 +52,12 @@ public final class ClearCommand implements SlashCommand {
 
     private final String name;
     private final boolean onlyOwn;
+    private final PurgeLogSuppressor purgeSuppressor;
 
-    public ClearCommand(String name, boolean onlyOwn) {
+    public ClearCommand(String name, boolean onlyOwn, PurgeLogSuppressor purgeSuppressor) {
         this.name = name;
         this.onlyOwn = onlyOwn;
+        this.purgeSuppressor = purgeSuppressor;
     }
 
     @Override
@@ -102,6 +105,7 @@ public final class ClearCommand implements SlashCommand {
                         : "Nada para apagar (todas as mensagens têm 14+ dias).");
                 return;
             }
+            purgeSuppressor.mark(deletable.stream().map(Message::getIdLong).toList());
             channel.purgeMessages(deletable);
             ctx.database().actionLogs().log(event.getGuild().getId(),
                     event.getUser().getId(), channel.getId(),

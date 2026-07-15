@@ -39,11 +39,14 @@ public final class ChatEventView {
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
 
-    public static Container resolved(int accent, String winnerMention, String rewardText) {
+    public static Container resolved(int accent, ChatEvent ev, String winnerMention, String rewardText) {
+        String verb = ev.type() == ChatEventType.GRAB ? "pegou primeiro" : "acertou";
         return Panels.container(accent,
                 Panels.text("## " + Emojis.of(Emojis.TROPHY, "🏆") + " Evento encerrado"),
                 Panels.divider(),
-                Panels.text(winnerMention + " ganhou! " + rewardText));
+                Panels.text(recap(ev)),
+                Panels.divider(),
+                Panels.text(Emojis.of(Emojis.TROPHY, "🏆") + " " + winnerMention + " " + verb + "! Ganhou " + rewardText));
     }
 
     public static Container expired(int accent) {
@@ -51,6 +54,23 @@ public final class ChatEventView {
                 Panels.text("## " + Emojis.of(Emojis.CLOCK, "⏰") + " Evento expirado"),
                 Panels.divider(),
                 Panels.text("Ninguém acertou a tempo."));
+    }
+
+    /** Reexibe o enunciado ao encerrar, sem revelar a alternativa correta. */
+    private static String recap(ChatEvent ev) {
+        return switch (ev.type()) {
+            case QUIZ -> {
+                StringBuilder sb = new StringBuilder("**").append(ev.prompt()).append("**");
+                List<String> opts = ev.options();
+                for (int i = 0; i < opts.size(); i++) {
+                    sb.append("\n> ").append((char) ('A' + i)).append(") ").append(opts.get(i));
+                }
+                yield sb.toString();
+            }
+            case MATH -> "Resolva: **" + ev.prompt() + "**";
+            case TYPING -> "Palavra: **" + ev.answer() + "**";
+            case GRAB -> "Corrida do " + Emojis.of(Emojis.GIFT, "🎁") + "!";
+        };
     }
 
     private static String prompt(ChatEvent ev) {

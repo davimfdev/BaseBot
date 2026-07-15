@@ -5,6 +5,7 @@ import dev.davimf.basebot.util.Emojis;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.moderation.MessagePurge;
+import dev.davimf.basebot.modules.base.moderation.PurgeLogSuppressor;
 import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
@@ -27,6 +28,12 @@ public final class PurgeCommand implements SlashCommand {
 
     private static final Pattern URL = Pattern.compile("https?://", Pattern.CASE_INSENSITIVE);
     private static final int SCAN = 100;
+
+    private final PurgeLogSuppressor purgeSuppressor;
+
+    public PurgeCommand(PurgeLogSuppressor purgeSuppressor) {
+        this.purgeSuppressor = purgeSuppressor;
+    }
 
     @Override
     public String name() {
@@ -88,6 +95,7 @@ public final class PurgeCommand implements SlashCommand {
                 Replies.hook(event, ctx, "Nenhuma mensagem correspondente (até 14 dias) encontrada.");
                 return;
             }
+            purgeSuppressor.mark(deletable.stream().map(Message::getIdLong).toList());
             channel.purgeMessages(deletable);
             ctx.database().actionLogs().log(event.getGuild().getId(), event.getUser().getId(),
                     channel.getId(), "PURGE", "deleted=" + deletable.size());

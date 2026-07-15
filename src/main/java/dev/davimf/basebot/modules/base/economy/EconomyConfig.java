@@ -28,6 +28,14 @@ public final class EconomyConfig {
         return v == null || v.isBlank() ? Emojis.of(Emojis.MONEY, "🪙") : v.trim();
     }
 
+    /** Emoji da moeda para contextos que NÃO renderizam emoji custom (ex.: descrições de
+     *  opções de select menu, onde {@code <:nome:id>} apareceria como texto cru). Usa o
+     *  fallback Unicode em vez do emoji custom da aplicação. */
+    public static String currencyEmojiPlain(GuildConfig cfg) {
+        String v = cfg.setting(KEY_CURRENCY_EMOJI);
+        return v == null || v.isBlank() ? "🪙" : v.trim();
+    }
+
     public static long daily(GuildConfig cfg) { return longOr(cfg.setting(KEY_DAILY), 500); }
     public static long workMin(GuildConfig cfg) { return longOr(cfg.setting(KEY_WORK_MIN), 50); }
     public static long workMax(GuildConfig cfg) { return longOr(cfg.setting(KEY_WORK_MAX), 250); }

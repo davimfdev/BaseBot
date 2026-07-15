@@ -6,6 +6,7 @@ import dev.davimf.basebot.core.command.SlashCommand;
 import dev.davimf.basebot.modules.base.utility.Reminder;
 import dev.davimf.basebot.modules.base.utility.ReminderService;
 import dev.davimf.basebot.util.Durations;
+import dev.davimf.basebot.util.Emojis;
 import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -76,7 +77,8 @@ public final class LembreteCommand implements SlashCommand, AutocompleteCommand 
         long remindAt = System.currentTimeMillis() + dur.getAsLong();
         service.repo().create(event.getGuild().getId(), event.getUser().getId(), event.getChannel().getId(),
                 msg, remindAt);
-        Replies.reply(event, ctx, "⏰ Lembrete criado! Vou te avisar <t:" + (remindAt / 1000) + ":R>.");
+        Replies.reply(event, ctx, Emojis.of(Emojis.CLOCK, "⏰")
+                + " Lembrete criado! Vou te avisar <t:" + (remindAt / 1000) + ":R>.");
     }
 
     private void listar(SlashCommandInteractionEvent event, BotContext ctx) {
@@ -85,7 +87,7 @@ public final class LembreteCommand implements SlashCommand, AutocompleteCommand 
             Replies.ephemeral(event, ctx, "Você não tem lembretes ativos.");
             return;
         }
-        StringBuilder sb = new StringBuilder("## ⏰ Seus lembretes\n");
+        StringBuilder sb = new StringBuilder("## " + Emojis.of(Emojis.CLOCK, "⏰") + " Seus lembretes\n");
         for (Reminder r : mine) {
             String m = r.message().length() > 60 ? r.message().substring(0, 60) + "…" : r.message();
             sb.append("\n`").append(r.id()).append("` · <t:").append(r.remindAt() / 1000).append(":R> · ").append(m);
