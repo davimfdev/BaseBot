@@ -25,6 +25,11 @@ public final class MercadoView {
             case COOKING -> "Culinária";
             case DELIVERY -> "Entrega";
             case WEAPON -> "Arma";
+            case TECH -> "Tecnologia";
+            case FARM -> "Fazenda";
+            case FISHING -> "Pescaria";
+            case EXPEDITION -> "Expedição";
+            case BUSINESS -> "Negócios";
         };
     }
 
@@ -33,7 +38,11 @@ public final class MercadoView {
         return switch (slot) {
             case MINING -> Emojis.GEM;
             case WEAPON -> Emojis.WEAPON;
-            case COOKING, DELIVERY -> Emojis.PRODUCT;
+            case FARM -> Emojis.SPROUT;
+            case EXPEDITION -> Emojis.COMPASS;
+            case BUSINESS -> Emojis.MONEY;
+            case TECH -> Emojis.GEAR;
+            case COOKING, DELIVERY, FISHING -> Emojis.PRODUCT;
         };
     }
 

@@ -27,6 +27,12 @@ public final class EconomyDefaults {
     public static final long COOK_COOLDOWN_S = 1_800;   // 30min
     public static final long DELIVERY_COOLDOWN_S = 900; // 15min
 
+    public static final long PROGRAM_COOLDOWN_S = 18_000;  // 5h
+    public static final long PLANT_COOLDOWN_S   = 18_000;  // 5h
+    public static final long FISH_COOLDOWN_S    = 7_200;   // 2h
+    public static final long EXPLORE_COOLDOWN_S = 7_200;   // 2h
+    public static final long INVOICE_COOLDOWN_S = 86_400;  // 24h
+
     public static final int ORG_BASE_CHANCE = 30;
     public static final long ORG_POT_PER_PLAYER = 4_500;
     public static final int ORG_MIN = 5, ORG_MAX = 10;

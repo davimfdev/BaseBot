@@ -11,4 +11,9 @@ public final class EconomyCooldownKeys {
     public static final String CD_CRIME = "crime";
     public static final String CD_ROB = "rob";
     public static final String CD_ORG = "orgcrime";
+    public static final String CD_PROGRAM = "programar";
+    public static final String CD_PLANT = "plantar";
+    public static final String CD_FISH = "pescar";
+    public static final String CD_EXPLORE = "explorar";
+    public static final String CD_INVOICE = "faturar";
 }
