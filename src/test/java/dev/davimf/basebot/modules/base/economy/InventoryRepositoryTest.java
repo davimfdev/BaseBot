@@ -7,6 +7,7 @@ import dev.davimf.basebot.modules.base.economy.EquipmentCatalog.Slot;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.UseResult;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.UseResultType;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.DestroyResultType;
+import dev.davimf.basebot.modules.base.economy.InventoryRepository.RepairResultType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -112,5 +113,51 @@ class InventoryRepositoryTest {
         assertEquals(UseResultType.NOT_FOUND, repo.useMany("g", "u", 999, 4).type());
         long id = repo.buy("g", "owner", "weapon_knife");
         assertEquals(UseResultType.NOT_OWNER, repo.useMany("g", "intruder", id, 4).type());
+    }
+
+    @Test
+    void newRowStartsWithZeroRepairs() {
+        long id = repo.buy("g", "u", "weapon_knife");
+        assertEquals(0, repo.find("g", "u", id).repairs());
+    }
+
+    @Test
+    void repairAppliesWhenEligibleAndIncrementsCount() {
+        long id = repo.buy("g", "u", "weapon_knife"); // 15 usos, threshold=1
+        for (int i = 0; i < 14; i++) {
+            repo.useOnce("g", "u", id); // sobra 1
+        }
+        // restoredUsos(15)=round(11.25)=11, threshold(15)=ceil(0.75)=1
+        assertEquals(RepairResultType.APPLIED, repo.repair("g", "u", id, 1, 11).type());
+        var row = repo.find("g", "u", id);
+        assertEquals(11, row.usosLeft());
+        assertEquals(1, row.repairs());
+    }
+
+    @Test
+    void repairRejectedAboveThreshold() {
+        long id = repo.buy("g", "u", "weapon_rifle"); // 60 usos, cheio
+        assertEquals(RepairResultType.NOT_ELIGIBLE, repo.repair("g", "u", id, 3, 45).type());
+    }
+
+    @Test
+    void repairRejectedAtRepairCap() {
+        long id = repo.buy("g", "u", "weapon_knife");
+        for (int i = 0; i < 14; i++) {
+            repo.useOnce("g", "u", id); // sobra 1
+        }
+        assertEquals(RepairResultType.APPLIED, repo.repair("g", "u", id, 1, 1).type());
+        // agora usos=1 de novo, repairs=1; repara mais 2x
+        assertEquals(RepairResultType.APPLIED, repo.repair("g", "u", id, 1, 1).type());
+        assertEquals(RepairResultType.APPLIED, repo.repair("g", "u", id, 1, 1).type());
+        // 4º reparo: repairs=3 → recusa
+        assertEquals(RepairResultType.NOT_ELIGIBLE, repo.repair("g", "u", id, 1, 1).type());
+    }
+
+    @Test
+    void repairNotFoundAndNotOwner() {
+        assertEquals(RepairResultType.NOT_FOUND, repo.repair("g", "u", 999, 1, 1).type());
+        long id = repo.buy("g", "owner", "weapon_knife");
+        assertEquals(RepairResultType.NOT_OWNER, repo.repair("g", "intruder", id, 1, 1).type());
     }
 }

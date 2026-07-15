@@ -1,0 +1,1 @@
+ALTER TABLE user_inventory ADD COLUMN repairs INTEGER NOT NULL DEFAULT 0;

@@ -91,7 +91,8 @@ public final class SqliteMigrator {
             "/db/sqlite/036_shop_stock.sql",
             "/db/sqlite/037_bot_instance.sql",
             "/db/sqlite/038_verification.sql",
-            "/db/sqlite/039_voice_time.sql"
+            "/db/sqlite/039_voice_time.sql",
+            "/db/sqlite/041_item_repairs.sql"
     );
 
     private final SqliteManager sqlite;

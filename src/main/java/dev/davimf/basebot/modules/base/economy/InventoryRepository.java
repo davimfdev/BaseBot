@@ -16,13 +16,16 @@ import java.util.List;
 /** Inventário do usuário (migração 035). Resultado explícito em useOnce/destroy; slot vem do catálogo. */
 public final class InventoryRepository {
 
-    public record Row(long id, String itemKey, Slot slot, int usosLeft, boolean equipped) {}
+    public record Row(long id, String itemKey, Slot slot, int usosLeft, boolean equipped, int repairs) {}
 
     public enum UseResultType { USED, USED_AND_BROKE, PERMANENT, NOT_FOUND, NOT_OWNER }
     public record UseResult(UseResultType type, int usosLeft) {}
 
     public enum DestroyResultType { DESTROYED, NOT_FOUND, NOT_OWNER }
     public record DestroyResult(DestroyResultType type) {}
+
+    public enum RepairResultType { APPLIED, NOT_ELIGIBLE, NOT_FOUND, NOT_OWNER }
+    public record RepairResult(RepairResultType type) {}
 
     private final SqliteManager sqlite;
 
@@ -292,6 +295,72 @@ public final class InventoryRepository {
         }
     }
 
+    /** Busca uma linha por id (do dono {@code u}); null se não existe, não é do dono ou key inválida. */
+    public Row find(String g, String u, long rowId) {
+        try (Connection c = sqlite.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT * FROM user_inventory WHERE id=? AND guild_id=? AND user_id=?")) {
+            ps.setLong(1, rowId);
+            ps.setString(2, g);
+            ps.setString(3, u);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapValid(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new RepositoryException("inventory find " + g + "/" + u + "/" + rowId, e);
+        }
+    }
+
+    /** Repara numa transação: revalida dono + teto de reparos + limiar de usos. Resultado explícito. */
+    public RepairResult repair(String g, String u, long rowId, int maxThresholdUsos, int newUsos) {
+        try (Connection c = sqlite.getConnection()) {
+            boolean prev = c.getAutoCommit();
+            c.setAutoCommit(false);
+            try {
+                String owner;
+                int usos;
+                int repairs;
+                try (PreparedStatement sel = c.prepareStatement(
+                        "SELECT user_id, usos_left, repairs FROM user_inventory WHERE id=? AND guild_id=?")) {
+                    sel.setLong(1, rowId);
+                    sel.setString(2, g);
+                    try (ResultSet rs = sel.executeQuery()) {
+                        if (!rs.next()) {
+                            c.rollback();
+                            return new RepairResult(RepairResultType.NOT_FOUND);
+                        }
+                        owner = rs.getString("user_id");
+                        usos = rs.getInt("usos_left");
+                        repairs = rs.getInt("repairs");
+                    }
+                }
+                if (!owner.equals(u)) {
+                    c.rollback();
+                    return new RepairResult(RepairResultType.NOT_OWNER);
+                }
+                if (repairs >= RepairPolicy.MAX_REPAIRS || usos <= 0 || usos > maxThresholdUsos) {
+                    c.rollback();
+                    return new RepairResult(RepairResultType.NOT_ELIGIBLE);
+                }
+                try (PreparedStatement up = c.prepareStatement(
+                        "UPDATE user_inventory SET usos_left=?, repairs=repairs+1 WHERE id=?")) {
+                    up.setInt(1, newUsos);
+                    up.setLong(2, rowId);
+                    up.executeUpdate();
+                }
+                c.commit();
+                return new RepairResult(RepairResultType.APPLIED);
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(prev);
+            }
+        } catch (SQLException e) {
+            throw new RepositoryException("inventory repair " + g + "/" + u + "/" + rowId, e);
+        }
+    }
+
     /** Mapeia a linha; devolve null se o item_key sumiu do catálogo ou o slot não bate. */
     private static Row mapValid(ResultSet rs) throws SQLException {
         String key = rs.getString("item_key");
@@ -300,6 +369,7 @@ public final class InventoryRepository {
         if (e == null || !e.slot().name().equals(slotStr)) {
             return null;
         }
-        return new Row(rs.getLong("id"), key, e.slot(), rs.getInt("usos_left"), rs.getInt("equipped") == 1);
+        return new Row(rs.getLong("id"), key, e.slot(), rs.getInt("usos_left"),
+                rs.getInt("equipped") == 1, rs.getInt("repairs"));
     }
 }
