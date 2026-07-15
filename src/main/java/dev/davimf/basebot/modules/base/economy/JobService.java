@@ -66,7 +66,7 @@ public final class JobService {
         }
         Row row = inv.equipped(g.getId(), u, slot);
         if (row == null) {
-            return "Equipe " + (slot == Slot.MINING ? "uma " : "um ") + noun + " no `/inventario` primeiro.";
+            return "Equipe " + (slot == Slot.MINING ? "uma " : "um ") + noun + " no `/economia inventario` primeiro.";
         }
         Equip e = EquipmentCatalog.byKey(row.itemKey());
         UseResult use = inv.useOnce(g.getId(), u, row.id());
@@ -89,7 +89,7 @@ public final class JobService {
         }
         Row row = inv.equipped(g.getId(), u, Slot.DELIVERY);
         if (row == null) {
-            return "Equipe uma moto no `/inventario` primeiro.";
+            return "Equipe uma moto no `/economia inventario` primeiro.";
         }
         Equip e = EquipmentCatalog.byKey(row.itemKey());
         if (!wallets.tryDebitCash(g.getId(), u, e.fuel())) { // debita o combustível atomicamente (anti read-then-act)

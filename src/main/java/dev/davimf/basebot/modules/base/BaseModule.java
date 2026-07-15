@@ -75,6 +75,8 @@ import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
 import dev.davimf.basebot.modules.base.voice.MuteService;
 import dev.davimf.basebot.modules.base.voice.VoiceMutePersistenceListener;
 
+import static dev.davimf.basebot.core.command.GroupCommand.Sub;
+
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -93,6 +95,7 @@ public final class BaseModule implements BotModule {
     private dev.davimf.basebot.modules.base.events.ChatEventService chatEvents;
     private dev.davimf.basebot.modules.base.giveaway.GiveawayService giveaways;
     private dev.davimf.basebot.modules.base.utility.ReminderService reminders;
+    private dev.davimf.basebot.modules.base.economy.JobNotifyService jobNotify;
     private dev.davimf.basebot.modules.base.economy.ShopService shop;
     private dev.davimf.basebot.modules.base.economy.JailService jail;
     private dev.davimf.basebot.modules.base.economy.EquipmentService equipment;
@@ -150,6 +153,10 @@ public final class BaseModule implements BotModule {
         // Lembretes: dispara os vencidos a cada 30s.
         if (reminders != null) {
             ctx.scheduler().repeating(reminders::sweep, 30, 30, TimeUnit.SECONDS);
+        }
+        // Avisos de trabalho: varre prefs e manda DM quando um job fica disponível (à prova de restart).
+        if (jobNotify != null) {
+            ctx.scheduler().repeating(jobNotify::sweep, 60, 60, java.util.concurrent.TimeUnit.SECONDS);
         }
         // Snapshots do dashboard: registra a instância + full-sync no boot; sync periódico (<10min).
         if (guildSnapshot != null) {
@@ -365,20 +372,55 @@ public final class BaseModule implements BotModule {
                 new dev.davimf.basebot.modules.base.economy.EconomyService(ctx);
         // Cadeia/ficha (Base) — instanciado cedo pois /trabalhar já aplica o guard de preso.
         this.jail = new dev.davimf.basebot.modules.base.economy.JailService(ctx);
-        registry.command(new dev.davimf.basebot.modules.base.commands.SaldoCommand(economy));
-        registry.command(new dev.davimf.basebot.modules.base.commands.DailyCommand(economy));
-        registry.command(new dev.davimf.basebot.modules.base.commands.TrabalharCommand(economy, jail));
         dev.davimf.basebot.modules.base.economy.CrimeEconomyService crimeService =
                 new dev.davimf.basebot.modules.base.economy.CrimeEconomyService(ctx, jail);
-        registry.command(new dev.davimf.basebot.modules.base.commands.CrimeCommand(crimeService, jail));
-        registry.command(new dev.davimf.basebot.modules.base.commands.RoubarCommand(crimeService, jail));
         dev.davimf.basebot.modules.base.economy.OrgCrimeService orgCrime =
                 new dev.davimf.basebot.modules.base.economy.OrgCrimeService(ctx, jail);
-        registry.command(new dev.davimf.basebot.modules.base.commands.CrimeOrganizadoCommand(orgCrime));
         registry.component(new dev.davimf.basebot.modules.base.economy.OrgCrimeComponentHandler(orgCrime));
-        registry.command(new dev.davimf.basebot.modules.base.commands.PagarCommand(economy));
-        registry.command(new dev.davimf.basebot.modules.base.commands.DepositarCommand(economy));
-        registry.command(new dev.davimf.basebot.modules.base.commands.SacarCommand(economy));
+        // Loja da economia (Base) — cargos perm/temp + itens custom.
+        this.shop = new dev.davimf.basebot.modules.base.economy.ShopService(ctx);
+        // Equipamentos (Base) — fundação de empregos/crime (jail já instanciado acima).
+        this.equipment = new dev.davimf.basebot.modules.base.economy.EquipmentService(ctx);
+        // Empregos (Base) — exigem ferramenta equipada.
+        dev.davimf.basebot.modules.base.economy.JobService jobs =
+                new dev.davimf.basebot.modules.base.economy.JobService(ctx);
+        // Avisos de trabalho (Base) — prefs + watermark; sweep agendado no onReady.
+        dev.davimf.basebot.modules.base.economy.JobNotifyRepository jobNotifyRepo =
+                new dev.davimf.basebot.modules.base.economy.JobNotifyRepository(ctx.database().sqlite());
+        this.jobNotify = new dev.davimf.basebot.modules.base.economy.JobNotifyService(ctx, jail);
+
+        // Toda a categoria de economia num único /economia (24 subcomandos = 1 slot); acesso livre.
+        registry.command(new dev.davimf.basebot.core.command.GroupCommand("economia",
+                "Ganhos, trabalhos, loja, banco e cadeia — tudo da economia.",
+                net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions.ENABLED,
+                java.util.List.of(
+                        Sub.open("painel", "Seu painel de economia.", new dev.davimf.basebot.modules.base.commands.EconomiaCommand(jail, jobNotifyRepo)),
+                        Sub.open("saldo", "Mostra seu saldo.", new dev.davimf.basebot.modules.base.commands.SaldoCommand(economy)),
+                        Sub.open("daily", "Recompensa diária de moedas.", new dev.davimf.basebot.modules.base.commands.DailyCommand(economy)),
+                        Sub.open("trabalhar", "Trabalhe para ganhar moedas.", new dev.davimf.basebot.modules.base.commands.TrabalharCommand(economy, jail)),
+                        Sub.open("pagar", "Paga moedas a outro membro.", new dev.davimf.basebot.modules.base.commands.PagarCommand(economy)),
+                        Sub.open("depositar", "Deposita moedas no banco.", new dev.davimf.basebot.modules.base.commands.DepositarCommand(economy)),
+                        Sub.open("sacar", "Saca moedas do banco.", new dev.davimf.basebot.modules.base.commands.SacarCommand(economy)),
+                        Sub.open("minerar", "Minera com a picareta equipada.", new dev.davimf.basebot.modules.base.commands.MinerarCommand(jobs, jail)),
+                        Sub.open("cozinhar", "Cozinha com o utensílio equipado.", new dev.davimf.basebot.modules.base.commands.CozinharCommand(jobs, jail)),
+                        Sub.open("entregar", "Faz entregas com a moto equipada.", new dev.davimf.basebot.modules.base.commands.EntregarCommand(jobs, jail)),
+                        Sub.open("programar", "Freela de programação com o teclado equipado.", new dev.davimf.basebot.modules.base.commands.ProgramarCommand(jobs, jail)),
+                        Sub.open("plantar", "Colhe com o equipamento de fazenda equipado.", new dev.davimf.basebot.modules.base.commands.PlantarCommand(jobs, jail)),
+                        Sub.open("pescar", "Pesca com a vara equipada.", new dev.davimf.basebot.modules.base.commands.PescarCommand(jobs, jail)),
+                        Sub.open("explorar", "Explora com o equipamento equipado.", new dev.davimf.basebot.modules.base.commands.ExplorarCommand(jobs, jail)),
+                        Sub.open("faturar", "Fatura os lucros do seu negócio.", new dev.davimf.basebot.modules.base.commands.FaturarCommand(jobs, jail)),
+                        Sub.open("reparar", "Repara um item quase quebrado.", new dev.davimf.basebot.modules.base.commands.RepararCommand(equipment)),
+                        Sub.open("crime", "Comete um crime (exige arma).", new dev.davimf.basebot.modules.base.commands.CrimeCommand(crimeService, jail)),
+                        Sub.open("roubar", "Tenta roubar outro membro (exige arma).", new dev.davimf.basebot.modules.base.commands.RoubarCommand(crimeService, jail)),
+                        Sub.open("crimeorganizado", "Inicia/entra num crime organizado.", new dev.davimf.basebot.modules.base.commands.CrimeOrganizadoCommand(orgCrime)),
+                        Sub.open("mercado", "Compra equipamentos.", new dev.davimf.basebot.modules.base.commands.MercadoCommand(equipment)),
+                        Sub.open("inventario", "Vê e equipa seus itens.", new dev.davimf.basebot.modules.base.commands.InventarioCommand(equipment)),
+                        Sub.open("loja", "Loja de cargos e itens do servidor.", new dev.davimf.basebot.modules.base.commands.LojaCommand(shop)),
+                        Sub.open("fianca", "Paga fiança para sair da cadeia.", new dev.davimf.basebot.modules.base.commands.FiancaCommand(jail)),
+                        Sub.open("limparficha", "Limpa sua ficha criminal.", new dev.davimf.basebot.modules.base.commands.LimparFichaCommand(jail)))));
+        registry.component(new dev.davimf.basebot.modules.base.economy.RepararComponentHandler(equipment));
+        registry.component(new dev.davimf.basebot.modules.base.economy.EconomiaPanelComponentHandler(jail, jobNotifyRepo));
+
         // Rankings agrupados em /top (rico, xp, call) — 3 comandos num slot só; acesso livre.
         registry.command(new dev.davimf.basebot.core.command.GroupCommand("top",
                 "Rankings do servidor: riqueza, nível e tempo em call.",
@@ -395,27 +437,8 @@ public final class BaseModule implements BotModule {
                                 new dev.davimf.basebot.modules.base.commands.TopCallCommand(voiceGate)))));
         registry.command(new dev.davimf.basebot.modules.base.commands.EcoCommand(economy));
         registry.component(new dev.davimf.basebot.modules.base.economy.EconomyComponentHandler(economy));
-
-        // Loja da economia (Base) — cargos perm/temp + itens custom.
-        this.shop = new dev.davimf.basebot.modules.base.economy.ShopService(ctx);
-        registry.command(new dev.davimf.basebot.modules.base.commands.LojaCommand(shop));
         registry.component(new dev.davimf.basebot.modules.base.economy.ShopComponentHandler(shop));
-
-        // Equipamentos (Base) — fundação de empregos/crime (jail já instanciado acima).
-        this.equipment = new dev.davimf.basebot.modules.base.economy.EquipmentService(ctx);
-        registry.command(new dev.davimf.basebot.modules.base.commands.MercadoCommand(equipment));
-        registry.command(new dev.davimf.basebot.modules.base.commands.InventarioCommand(equipment));
-        registry.command(new dev.davimf.basebot.modules.base.commands.FiancaCommand(jail));
-        registry.command(new dev.davimf.basebot.modules.base.commands.LimparFichaCommand(jail));
-        registry.command(new dev.davimf.basebot.modules.base.commands.EconomiaCommand(jail));
         registry.component(new dev.davimf.basebot.modules.base.economy.EquipmentComponentHandler(equipment));
-
-        // Empregos (Base) — exigem ferramenta equipada.
-        dev.davimf.basebot.modules.base.economy.JobService jobs =
-                new dev.davimf.basebot.modules.base.economy.JobService(ctx);
-        registry.command(new dev.davimf.basebot.modules.base.commands.MinerarCommand(jobs, jail));
-        registry.command(new dev.davimf.basebot.modules.base.commands.CozinharCommand(jobs, jail));
-        registry.command(new dev.davimf.basebot.modules.base.commands.EntregarCommand(jobs, jail));
 
         // Eventos de chat (Base) — usa leveling + economia; canal principal + recompensa por nível.
         this.chatEvents = new dev.davimf.basebot.modules.base.events.ChatEventService(ctx, leveling, economy);

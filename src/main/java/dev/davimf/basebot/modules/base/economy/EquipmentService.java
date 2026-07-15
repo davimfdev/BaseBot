@@ -42,7 +42,7 @@ public final class EquipmentService {
         }
         inv.buy(g, u, itemKey);
         return Emojis.of(Emojis.CHECK_YES, "✅") + " Comprou **" + e.name() + "** (−"
-                + EconomyFormat.formatNamed(e.price(), cfg) + "). Equipe no `/inventario`.";
+                + EconomyFormat.formatNamed(e.price(), cfg) + "). Equipe no `/economia inventario`.";
     }
 
     public String equip(String g, String u, long rowId) {

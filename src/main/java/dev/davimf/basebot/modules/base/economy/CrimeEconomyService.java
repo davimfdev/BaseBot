@@ -53,7 +53,7 @@ public final class CrimeEconomyService {
         }
         Row weapon = inv.equipped(g.getId(), u, Slot.WEAPON);
         if (weapon == null) {
-            return "Equipe uma arma no `/inventario` pra cometer crimes.";
+            return "Equipe uma arma no `/economia inventario` pra cometer crimes.";
         }
         Equip w = EquipmentCatalog.byKey(weapon.itemKey());
         int penalty = jail.fichaSuja(g.getId(), u) ? EconomyDefaults.FICHA_PENALTY_PCT : 0;
@@ -97,7 +97,7 @@ public final class CrimeEconomyService {
         }
         Row weapon = inv.equipped(g.getId(), u, Slot.WEAPON);
         if (weapon == null) {
-            return "Equipe uma arma no `/inventario` pra roubar.";
+            return "Equipe uma arma no `/economia inventario` pra roubar.";
         }
         long targetCash = wallets.get(g.getId(), target.getId()).cash();
         if (targetCash - EconomyDefaults.ROB_PROTECTED_FLOOR <= 0) {

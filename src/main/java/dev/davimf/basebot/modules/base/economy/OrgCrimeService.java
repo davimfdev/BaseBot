@@ -209,6 +209,6 @@ public final class OrgCrimeService {
             return "Crime cancelado — ninguém tinha a arma na hora.";
         }
         return Emojis.of(Emojis.KICK, "🚔") + " **A polícia chegou!** Os participantes perderam a arma e "
-                + "foram presos. Paguem `/fianca` ou cumpram a pena.";
+                + "foram presos. Paguem `/economia fianca` ou cumpram a pena.";
     }
 }

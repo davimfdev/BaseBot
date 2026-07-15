@@ -29,7 +29,7 @@ public final class InventarioView {
         String header = "## " + Emojis.of(Emojis.EDIT, "🎒") + " Inventário";
         if (rows.isEmpty()) {
             return Panels.container(accent, Panels.text(header), Panels.divider(),
-                    Panels.text("Você não tem nenhum equipamento. Confira o `/mercado`."));
+                    Panels.text("Você não tem nenhum equipamento. Confira o `/economia mercado`."));
         }
         Map<Slot, List<InventoryRepository.Row>> bySlot = new EnumMap<>(Slot.class);
         for (InventoryRepository.Row row : rows) {

@@ -48,7 +48,7 @@ public final class JailService {
         Status st = resolve(g, u);
         if (st.kind() == Kind.PRESO) {
             dev.davimf.basebot.util.Replies.ephemeral(event, ctx,
-                    "Você está preso — sai <t:" + (st.presoAte() / 1000) + ":R>. Pague `/fianca` pra sair agora.");
+                    "Você está preso — sai <t:" + (st.presoAte() / 1000) + ":R>. Pague `/economia fianca` pra sair agora.");
             return true;
         }
         return false;

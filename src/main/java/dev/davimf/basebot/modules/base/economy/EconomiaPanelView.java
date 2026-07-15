@@ -1,8 +1,11 @@
 package dev.davimf.basebot.modules.base.economy;
 
+import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.util.Emojis;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.entities.Member;
@@ -18,7 +21,7 @@ public final class EconomiaPanelView {
     private EconomiaPanelView() {}
 
     public static Container panel(int accent, Member m, WalletRepository.Wallet w, JailService.Status jail,
-                                  boolean fichaSuja, List<ActionLine> acoes, GuildConfig cfg) {
+                                  boolean fichaSuja, List<ActionLine> acoes, boolean notifyOn, GuildConfig cfg) {
         boolean preso = jail.kind() == JailService.Kind.PRESO;
         StringBuilder body = new StringBuilder();
         body.append("## ").append(Emojis.of(Emojis.MONEY, "🪙")).append(" Economia de ").append(m.getEffectiveName()).append('\n');
@@ -29,10 +32,10 @@ public final class EconomiaPanelView {
 
         if (preso) {
             body.append('\n').append('\n').append(Emojis.of(Emojis.LOCK, "🔒"))
-                    .append(" **Preso** — sai <t:").append(jail.presoAte() / 1000).append(":R>. Pague `/fianca` pra sair já.");
+                    .append(" **Preso** — sai <t:").append(jail.presoAte() / 1000).append(":R>. Pague `/economia fianca` pra sair já.");
         } else if (fichaSuja) {
             body.append('\n').append('\n').append(Emojis.of(Emojis.WARN, "⚠️"))
-                    .append(" **Ficha suja** — −15% de chance em crimes. `/limparficha` limpa.");
+                    .append(" **Ficha suja** — −15% de chance em crimes. `/economia limparficha` limpa.");
         }
 
         StringBuilder acts = new StringBuilder();
@@ -42,15 +45,15 @@ public final class EconomiaPanelView {
 
         StringBuilder tips = new StringBuilder();
         if (preso) {
-            tips.append('\n').append(Emojis.of(Emojis.KEY, "🔓")).append(" `/fianca` — sair da cadeia por ")
+            tips.append('\n').append(Emojis.of(Emojis.KEY, "🔓")).append(" `/economia fianca` — sair da cadeia por ")
                     .append(EconomyFormat.format(EconomyDefaults.BAIL_BASE, cfg));
         } else if (fichaSuja) {
-            tips.append('\n').append(Emojis.of(Emojis.BROOM, "🧼")).append(" `/limparficha` — limpar a ficha por ")
+            tips.append('\n').append(Emojis.of(Emojis.BROOM, "🧼")).append(" `/economia limparficha` — limpar a ficha por ")
                     .append(EconomyFormat.format(EconomyDefaults.EXPUNGE, cfg));
         }
 
         String footer = "-# Roubo pode ter cooldown separado por alvo."
-                + (preso ? " Preso? Só `/daily` e eventos rendem." : "");
+                + (preso ? " Preso? Só `/economia daily` e eventos rendem." : "");
 
         List<ContainerChildComponent> kids = new ArrayList<>();
         kids.add(Panels.text(body.toString()));
@@ -62,6 +65,11 @@ public final class EconomiaPanelView {
         }
         kids.add(Panels.divider());
         kids.add(Panels.text(footer));
+        String toggleLabel = notifyOn ? "Avisos de trabalho: Ligado" : "Avisos de trabalho: Desligado";
+        Button toggle = notifyOn
+                ? Button.success(ComponentId.of("ecopanel", "notify"), toggleLabel)
+                : Button.secondary(ComponentId.of("ecopanel", "notify"), toggleLabel);
+        kids.add(ActionRow.of(toggle));
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
 
