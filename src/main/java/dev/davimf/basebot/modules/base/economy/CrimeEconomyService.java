@@ -126,16 +126,19 @@ public final class CrimeEconomyService {
             return Emojis.of(Emojis.SKULL, "🕵️") + " Você roubou **" + EconomyFormat.formatNamed(o.stolen(), cfg)
                     + "** de " + target.getAsMention() + "!" + broke;
         }
-        // Falha: destrói a arma ANTES da multa (paga ao alvo).
-        if (inv.destroy(g.getId(), u, weapon.id()).type() != DestroyResultType.DESTROYED) {
-            return "Sua arma não está mais disponível — equipe de novo.";
+        // Falha: a arma desgasta (−4 usos) ANTES da multa (paga ao alvo).
+        UseResult wear = inv.useMany(g.getId(), u, weapon.id(), 4);
+        if (wear.type() != UseResultType.USED && wear.type() != UseResultType.USED_AND_BROKE) {
+            return "Sua arma não está mais disponível — equipe de novo."; // NOT_FOUND/NOT_OWNER/PERMANENT
         }
         if (o.fine() > 0) {
             wallets.transfer(g.getId(), u, target.getId(), o.fine());
         }
         cooldowns.stamp(g.getId(), u, "rob", now);
         cooldowns.stamp(g.getId(), u, "rob:" + target.getId(), now);
-        return Emojis.of(Emojis.KICK, "🚔") + " Roubo fracassado! Perdeu a **" + w.name() + "** e pagou **"
-                + EconomyFormat.formatNamed(o.fine(), cfg) + "** a " + target.getAsMention() + ".";
+        String worn = wear.type() == UseResultType.USED_AND_BROKE
+                ? "se desgastou e quebrou" : "se desgastou (−4 usos)";
+        return Emojis.of(Emojis.KICK, "🚔") + " Roubo fracassado! Sua **" + w.name() + "** " + worn
+                + " e você pagou **" + EconomyFormat.formatNamed(o.fine(), cfg) + "** a " + target.getAsMention() + ".";
     }
 }

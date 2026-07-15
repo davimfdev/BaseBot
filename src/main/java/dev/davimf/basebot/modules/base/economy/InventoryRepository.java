@@ -195,6 +195,63 @@ public final class InventoryRepository {
         }
     }
 
+    /** Consome {@code n} usos numa transação (n>=1). Se sobrar <= 0, quebra (deleta). Resultado explícito. */
+    public UseResult useMany(String g, String u, long rowId, int n) {
+        int use = Math.max(1, n);
+        try (Connection c = sqlite.getConnection()) {
+            boolean prev = c.getAutoCommit();
+            c.setAutoCommit(false);
+            try {
+                int usos;
+                String owner;
+                try (PreparedStatement sel = c.prepareStatement(
+                        "SELECT user_id, usos_left FROM user_inventory WHERE id=? AND guild_id=?")) {
+                    sel.setLong(1, rowId);
+                    sel.setString(2, g);
+                    try (ResultSet rs = sel.executeQuery()) {
+                        if (!rs.next()) {
+                            c.rollback();
+                            return new UseResult(UseResultType.NOT_FOUND, 0);
+                        }
+                        owner = rs.getString("user_id");
+                        usos = rs.getInt("usos_left");
+                    }
+                }
+                if (!owner.equals(u)) {
+                    c.rollback();
+                    return new UseResult(UseResultType.NOT_OWNER, 0);
+                }
+                if (usos < 0) { // permanente (reservado; v1 não usa)
+                    c.rollback();
+                    return new UseResult(UseResultType.PERMANENT, usos);
+                }
+                int left = usos - use;
+                if (left <= 0) {
+                    try (PreparedStatement del = c.prepareStatement("DELETE FROM user_inventory WHERE id=?")) {
+                        del.setLong(1, rowId);
+                        del.executeUpdate();
+                    }
+                    c.commit();
+                    return new UseResult(UseResultType.USED_AND_BROKE, 0);
+                }
+                try (PreparedStatement up = c.prepareStatement("UPDATE user_inventory SET usos_left=? WHERE id=?")) {
+                    up.setInt(1, left);
+                    up.setLong(2, rowId);
+                    up.executeUpdate();
+                }
+                c.commit();
+                return new UseResult(UseResultType.USED, left);
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(prev);
+            }
+        } catch (SQLException e) {
+            throw new RepositoryException("inventory useMany " + g + "/" + u + "/" + rowId, e);
+        }
+    }
+
     /** Destrói (remove) a linha. Resultado explícito. */
     public DestroyResult destroy(String g, String u, long rowId) {
         try (Connection c = sqlite.getConnection()) {

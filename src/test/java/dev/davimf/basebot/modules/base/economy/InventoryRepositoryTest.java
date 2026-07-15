@@ -87,4 +87,30 @@ class InventoryRepositoryTest {
         assertEquals(DestroyResultType.DESTROYED, repo.destroy("g", "u", id).type());
         assertEquals(DestroyResultType.NOT_FOUND, repo.destroy("g", "u", id).type());
     }
+
+    @Test
+    void useManyConsumesNAndReportsRemaining() {
+        long id = repo.buy("g", "u", "weapon_rifle"); // 60 usos
+        UseResult r = repo.useMany("g", "u", id, 4);
+        assertEquals(UseResultType.USED, r.type());
+        assertEquals(56, r.usosLeft());
+    }
+
+    @Test
+    void useManyBreaksWhenNMeetsOrExceedsRemaining() {
+        long id = repo.buy("g", "u", "weapon_knife"); // 15 usos
+        for (int i = 0; i < 12; i++) {
+            repo.useOnce("g", "u", id); // sobra 3
+        }
+        UseResult r = repo.useMany("g", "u", id, 4); // 3 - 4 <= 0 → quebra
+        assertEquals(UseResultType.USED_AND_BROKE, r.type());
+        assertTrue(repo.list("g", "u").isEmpty());
+    }
+
+    @Test
+    void useManyNotFoundAndNotOwner() {
+        assertEquals(UseResultType.NOT_FOUND, repo.useMany("g", "u", 999, 4).type());
+        long id = repo.buy("g", "owner", "weapon_knife");
+        assertEquals(UseResultType.NOT_OWNER, repo.useMany("g", "intruder", id, 4).type());
+    }
 }
