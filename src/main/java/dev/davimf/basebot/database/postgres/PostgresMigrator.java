@@ -51,7 +51,8 @@ public final class PostgresMigrator {
             "/db/postgres/007_updated_by.sql",
             "/db/postgres/008_dashboard_audit.sql",
             "/db/postgres/009_verification_questions.sql",
-            "/db/postgres/010_voice_weekly_time.sql"
+            "/db/postgres/010_voice_weekly_time.sql",
+            "/db/postgres/011_vip.sql"
     );
 
     private PostgresMigrator() {}
