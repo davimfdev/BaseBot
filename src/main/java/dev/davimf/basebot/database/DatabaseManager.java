@@ -45,6 +45,10 @@ import dev.davimf.basebot.database.sqlite.SqliteManager;
 import dev.davimf.basebot.database.sqlite.SqliteMigrator;
 import dev.davimf.basebot.database.sqlite.TicketRepository;
 import dev.davimf.basebot.database.postgres.VerificationQuestionRepository;
+import dev.davimf.basebot.database.postgres.VipPlanRepository;
+import dev.davimf.basebot.database.postgres.JdbcVipPlanRepository;
+import dev.davimf.basebot.database.postgres.VipGrantRepository;
+import dev.davimf.basebot.database.postgres.JdbcVipGrantRepository;
 import dev.davimf.basebot.modules.base.security.VerificationRepository;
 import dev.davimf.basebot.modules.base.voice.MuteRepository;
 import dev.davimf.basebot.modules.tickets.TicketCategoryRepository;
@@ -76,6 +80,8 @@ public final class DatabaseManager implements AutoCloseable {
     private final MessageArchiveRepository messageArchive;
     private final VerificationRepository verification;
     private final VerificationQuestionRepository verificationQuestions;
+    private final VipPlanRepository vipPlans;
+    private final VipGrantRepository vipGrants;
 
     public DatabaseManager(BotConfig config) {
         log.info("Initializing databases...");
@@ -99,6 +105,8 @@ public final class DatabaseManager implements AutoCloseable {
         this.messageArchive = new MessageArchiveRepository(sqlite);
         this.verification = new VerificationRepository(sqlite);
         this.verificationQuestions = new VerificationQuestionRepository(postgres);
+        this.vipPlans = new JdbcVipPlanRepository(postgres);
+        this.vipGrants = new JdbcVipGrantRepository(postgres);
         log.info("Databases ready.");
     }
 
@@ -136,6 +144,14 @@ public final class DatabaseManager implements AutoCloseable {
 
     public VerificationQuestionRepository verificationQuestions() {
         return verificationQuestions;
+    }
+
+    public VipPlanRepository vipPlans() {
+        return vipPlans;
+    }
+
+    public VipGrantRepository vipGrants() {
+        return vipGrants;
     }
 
     public PostgresPool postgres() {
