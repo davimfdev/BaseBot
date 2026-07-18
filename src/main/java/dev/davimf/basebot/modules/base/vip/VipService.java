@@ -120,7 +120,6 @@ public final class VipService implements VipBonusSource {
         }
 
         Long minutes = durationMinutes != null ? durationMinutes : plan.defaultDurationMinutes();
-        Instant expiresAt = minutes == null ? null : Instant.now().plus(java.time.Duration.ofMinutes(minutes));
 
         boolean resuming = existingOpt.isPresent()
                 && existingOpt.get().provisionStatus() == VipProvisionStatus.PROVISION_FAILED;
@@ -129,18 +128,21 @@ public final class VipService implements VipBonusSource {
         Instant now;
         String savedCallId;
         String savedControlRoleId;
+        Instant expiresAt;
         if (resuming) {
             VipGrant existing = existingOpt.get();
             id = existing.id();
             now = existing.grantedAt();
             savedCallId = existing.callChannelId();
             savedControlRoleId = existing.controlRoleId();
+            expiresAt = existing.expiresAt();
             // não insere linha nova: a PROVISION_FAILED existente já está persistida (active=true).
         } else {
             id = UUID.randomUUID().toString();
             now = Instant.now();
             savedCallId = null;
             savedControlRoleId = null;
+            expiresAt = minutes == null ? null : Instant.now().plus(java.time.Duration.ofMinutes(minutes));
             VipGrant grant = new VipGrant(id, guild.getId(), plan.id(), target.getId(),
                     null, null, plan.revealDefault(), now, expiresAt, true,
                     VipProvisionStatus.PENDING, null, grantedBy, null, null, now);
@@ -162,7 +164,7 @@ public final class VipService implements VipBonusSource {
             } else if (roleAction == VipProvision.ResourceAction.REUSE) {
                 controlRoleId = savedControlRoleId;
                 Role controlRole = guild.getRoleById(controlRoleId);
-                if (controlRole != null && !target.getRoles().contains(controlRole)) {
+                if (controlRole != null) {
                     guild.addRoleToMember(target, controlRole).complete();
                 }
             }
