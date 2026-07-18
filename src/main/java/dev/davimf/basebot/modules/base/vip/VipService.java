@@ -89,9 +89,13 @@ public final class VipService implements VipBonusSource {
     VipGrantRepository grants() { return grants; }
     BotContext ctx() { return ctx; }
 
-    /** Puro: mensagem de rejeição da regra "1 VIP ativo por usuário", ou {@code null} se ok. */
+    /** Puro: mensagem de rejeição da regra "1 VIP ativo por usuário", ou {@code null} se ok/retomável.
+     *  Um grant existente com {@code provisionStatus == PROVISION_FAILED} não é duplicata: é um
+     *  provisionamento parcial que {@link #grant} deve retomar em vez de rejeitar. */
     static String rejectIfDuplicate(Optional<VipGrant> existing) {
-        return existing.isPresent() ? "Este membro já tem um VIP ativo. Revogue antes de conceder outro." : null;
+        if (existing.isEmpty()) return null;
+        if (existing.get().provisionStatus() == VipProvisionStatus.PROVISION_FAILED) return null;
+        return "Este membro já tem um VIP ativo. Revogue antes de conceder outro.";
     }
 
     /** Grant ativo (não vencido, active=true) do usuário no guild, se houver. */
@@ -103,10 +107,14 @@ public final class VipService implements VipBonusSource {
 
     /** Concede o VIP: cria/reusa recursos Discord (cargo-controle, call, cargo-VIP) e grava o
      *  grant. BLOQUEANTE — usa {@code .complete()} em toda a chamada; o chamador deve rodar isto
-     *  em {@code ctx.scheduler().executor()}, nunca na thread de eventos do JDA. Idempotente: em
-     *  retry após falha parcial, os ids já salvos no grant são reusados (não recriados). */
+     *  em {@code ctx.scheduler().executor()}, nunca na thread de eventos do JDA. Idempotente: se já
+     *  existe um grant ativo do usuário com {@code provisionStatus == PROVISION_FAILED} (falha
+     *  parcial anterior), este método RETOMA esse mesmo grant — reusa seu id de linha e os ids de
+     *  recurso (cargo-controle/call) já salvos, sem inserir uma linha nova — em vez de rejeitar como
+     *  duplicata. Qualquer outro grant ativo existente (PENDING/ACTIVE) é rejeitado. */
     public GrantResult grant(Guild guild, Member target, VipPlan plan, Long durationMinutes, String grantedBy) {
-        String dup = rejectIfDuplicate(activeGrant(guild.getId(), target.getId()));
+        Optional<VipGrant> existingOpt = activeGrant(guild.getId(), target.getId());
+        String dup = rejectIfDuplicate(existingOpt);
         if (dup != null) {
             return new GrantResult(false, dup, null);
         }
@@ -114,25 +122,54 @@ public final class VipService implements VipBonusSource {
         Long minutes = durationMinutes != null ? durationMinutes : plan.defaultDurationMinutes();
         Instant expiresAt = minutes == null ? null : Instant.now().plus(java.time.Duration.ofMinutes(minutes));
 
-        String id = UUID.randomUUID().toString();
-        Instant now = Instant.now();
-        VipGrant grant = new VipGrant(id, guild.getId(), plan.id(), target.getId(),
-                null, null, plan.revealDefault(), now, expiresAt, true,
-                VipProvisionStatus.PENDING, null, grantedBy, null, null, now);
-        grants().upsertActive(grant);
+        boolean resuming = existingOpt.isPresent()
+                && existingOpt.get().provisionStatus() == VipProvisionStatus.PROVISION_FAILED;
+
+        String id;
+        Instant now;
+        String savedCallId;
+        String savedControlRoleId;
+        if (resuming) {
+            VipGrant existing = existingOpt.get();
+            id = existing.id();
+            now = existing.grantedAt();
+            savedCallId = existing.callChannelId();
+            savedControlRoleId = existing.controlRoleId();
+            // não insere linha nova: a PROVISION_FAILED existente já está persistida (active=true).
+        } else {
+            id = UUID.randomUUID().toString();
+            now = Instant.now();
+            savedCallId = null;
+            savedControlRoleId = null;
+            VipGrant grant = new VipGrant(id, guild.getId(), plan.id(), target.getId(),
+                    null, null, plan.revealDefault(), now, expiresAt, true,
+                    VipProvisionStatus.PENDING, null, grantedBy, null, null, now);
+            grants().upsertActive(grant);
+        }
 
         String callId = null;
         String controlRoleId = null;
         try {
-            if (VipProvision.forResource(plan.useControlRole(), null, false) == VipProvision.ResourceAction.CREATE) {
+            VipProvision.ResourceAction roleAction = VipProvision.forResource(plan.useControlRole(),
+                    savedControlRoleId, savedControlRoleId != null && guild.getRoleById(savedControlRoleId) != null);
+            if (roleAction == VipProvision.ResourceAction.CREATE) {
                 Role controlRole = guild.createRole()
                         .setName("VIP • " + target.getUser().getName())
+                        .setPermissions(0L)
                         .complete();
                 controlRoleId = controlRole.getId();
                 guild.addRoleToMember(target, controlRole).complete();
+            } else if (roleAction == VipProvision.ResourceAction.REUSE) {
+                controlRoleId = savedControlRoleId;
+                Role controlRole = guild.getRoleById(controlRoleId);
+                if (controlRole != null && !target.getRoles().contains(controlRole)) {
+                    guild.addRoleToMember(target, controlRole).complete();
+                }
             }
 
-            if (plan.hasCall()) {
+            VipProvision.ResourceAction callAction = VipProvision.forResource(plan.hasCall(),
+                    savedCallId, savedCallId != null && guild.getVoiceChannelById(savedCallId) != null);
+            if (callAction == VipProvision.ResourceAction.CREATE) {
                 Category category = plan.discordCategoryId() == null
                         ? null : guild.getCategoryById(plan.discordCategoryId());
                 ChannelAction<VoiceChannel> action = guild
@@ -147,6 +184,8 @@ public final class VipService implements VipBonusSource {
                 }
                 VoiceChannel call = action.reason("VIP de " + target.getUser().getName()).complete();
                 callId = call.getId();
+            } else if (callAction == VipProvision.ResourceAction.REUSE) {
+                callId = savedCallId;
             }
 
             if (plan.vipRoleId() != null) {
