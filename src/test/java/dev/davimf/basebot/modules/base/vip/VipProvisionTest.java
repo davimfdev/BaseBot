@@ -15,5 +15,6 @@ class VipProvisionTest {
     @Test void creates_when_missing_or_gone() {
         assertEquals(CREATE, VipProvision.forResource(true, null, false));
         assertEquals(CREATE, VipProvision.forResource(true, "id", false)); // sumiu no Discord
+        assertEquals(CREATE, VipProvision.forResource(true, "", true)); // blank id → CREATE, not REUSE
     }
 }
