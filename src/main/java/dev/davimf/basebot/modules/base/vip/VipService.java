@@ -9,6 +9,7 @@ import dev.davimf.basebot.util.EmbedColor;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.PermissionOverride;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.UserSnowflake;
@@ -36,6 +37,10 @@ public final class VipService implements VipBonusSource {
     private final VipGrantRepository grants;
     // guildId -> (userId -> bônus efetivo). Volátil-por-referência: troca atômica no reload.
     private volatile Map<String, Map<String, VipBonusValue>> cache = Map.of();
+    // guildId -> (callChannelId -> grant). Índice O(1) das calls VIP ativas, para o
+    // VipVoiceListener resolver "este canal de voz é uma call VIP?" sem I/O. Mantido em conjunto
+    // com `cache` (mesmas trocas atômicas em reload/grant/revoke), mas é um mapa separado.
+    private volatile Map<String, Map<String, VipGrant>> callIndex = Map.of();
 
     public VipService(BotContext ctx) {
         this.ctx = ctx;
@@ -58,10 +63,24 @@ public final class VipService implements VipBonusSource {
                 }
             }
             int max = VipConfig.DEFAULT_MAX_BONUS_PCT; // teto global; per-guild aplicado no compute abaixo
-            this.cache = computeCache(active, plansById, Instant.now(), max);
+            Instant now = Instant.now();
+            this.cache = computeCache(active, plansById, now, max);
+            this.callIndex = computeCallIndex(active, now);
         } catch (RuntimeException e) {
             log.error("VIP: reload do cache falhou; mantendo cache anterior", e);
         }
+    }
+
+    /** Puro: monta o índice guildId -> (callChannelId -> grant), ignorando grants vencidos e
+     *  grants sem call provisionada. */
+    public static Map<String, Map<String, VipGrant>> computeCallIndex(List<VipGrant> grants, Instant now) {
+        Map<String, Map<String, VipGrant>> out = new ConcurrentHashMap<>();
+        for (VipGrant g : grants) {
+            if (!VipExpiry.effective(g, now)) continue;
+            if (g.callChannelId() == null) continue;
+            out.computeIfAbsent(g.guildId(), k -> new ConcurrentHashMap<>()).put(g.callChannelId(), g);
+        }
+        return out;
     }
 
     /** Puro: monta o mapa de bônus, ignorando grants vencidos e planos ausentes. */
@@ -87,6 +106,25 @@ public final class VipService implements VipBonusSource {
     }
     void put(String guildId, String userId, VipBonusValue v) {
         cache.computeIfAbsent(guildId, k -> new ConcurrentHashMap<>()).put(userId, v);
+    }
+
+    /** Adiciona/atualiza uma call VIP no índice (chamado por {@link #grant}). Sem-op se o grant
+     *  ainda não tem call provisionada. */
+    private void indexCall(String guildId, String callChannelId, VipGrant grant) {
+        if (callChannelId == null) return;
+        callIndex.computeIfAbsent(guildId, k -> new ConcurrentHashMap<>()).put(callChannelId, grant);
+    }
+    /** Remove uma call VIP do índice (chamado por {@link #revoke}). Sem-op se o grant não tinha call. */
+    private void deindexCall(String guildId, String callChannelId) {
+        if (callChannelId == null) return;
+        Map<String, VipGrant> g = callIndex.get(guildId);
+        if (g != null) g.remove(callChannelId);
+    }
+
+    /** Lookup O(1) sem I/O: o grant cuja call VIP é {@code channelId}, ou {@code null} se esse
+     *  canal não for (ou não for mais) uma call VIP ativa. Usado pelo {@code VipVoiceListener}. */
+    public VipGrant grantByCallId(String guildId, String channelId) {
+        return callIndex.getOrDefault(guildId, Map.of()).get(channelId);
     }
 
     VipPlanRepository plans() { return plans; }
@@ -208,6 +246,7 @@ public final class VipService implements VipBonusSource {
             VipGrant activeGrant = new VipGrant(id, guild.getId(), plan.id(), target.getId(),
                     callId, controlRoleId, plan.revealDefault(), now, expiresAt, true,
                     VipProvisionStatus.ACTIVE, null, grantedBy, null, null, Instant.now());
+            indexCall(guild.getId(), callId, activeGrant);
             return new GrantResult(true, null, activeGrant);
         } catch (RuntimeException e) {
             log.error("VIP: falha ao provisionar grant {} no guild {}", id, guild.getId(), e);
@@ -274,6 +313,7 @@ public final class VipService implements VipBonusSource {
         VipProvisionStatus status = expired ? VipProvisionStatus.EXPIRED : VipProvisionStatus.REVOKED;
         grants().deactivate(grant.id(), status, revokedBy, Instant.now());
         invalidate(guild.getId(), userId);
+        deindexCall(guild.getId(), grant.callChannelId());
 
         String planName = plan != null ? plan.name() : "VIP";
         String reasonText = expired ? "expirou" : "foi revogado";
@@ -388,6 +428,50 @@ public final class VipService implements VipBonusSource {
             if (call != null) {
                 call.getManager().removePermissionOverride(member).complete();
             }
+        }
+    }
+
+    /** O membro tem acesso permitido a esta call VIP? Dono do grant, ou tem o cargo-controle, ou
+     *  tem um override pessoal na call liberando {@code VIEW_CHANNEL}+{@code VOICE_CONNECT}. Só lê
+     *  estado já em cache local do JDA (não chama a API) — usado pelo {@code VipVoiceListener} para
+     *  contar humanos permitidos na call. Bots nunca contam: o chamador deve filtrá-los antes. */
+    boolean isAllowedInCall(Member member, VipGrant grant, VoiceChannel call) {
+        if (member.getId().equals(grant.userId())) {
+            return true;
+        }
+        if (grant.controlRoleId() != null) {
+            Role controlRole = member.getGuild().getRoleById(grant.controlRoleId());
+            if (controlRole != null && member.getRoles().contains(controlRole)) {
+                return true;
+            }
+        }
+        PermissionOverride override = call.getPermissionOverride(member);
+        return override != null
+                && override.getAllowed().contains(Permission.VIEW_CHANNEL)
+                && override.getAllowed().contains(Permission.VOICE_CONNECT);
+    }
+
+    /** A call está atualmente revelada para {@code @everyone} (VIEW_CHANNEL não negado)? Sem
+     *  override explícito de {@code @everyone} conta como revelada (nada nega a visão). Só lê
+     *  estado já em cache local do JDA. */
+    boolean isRevealedToEveryone(VoiceChannel call) {
+        PermissionOverride everyoneOverride = call.getPermissionOverride(call.getGuild().getPublicRole());
+        return everyoneOverride == null || !everyoneOverride.getDenied().contains(Permission.VIEW_CHANNEL);
+    }
+
+    /** Revela ou oculta a call para {@code @everyone}. Revelar libera {@code VIEW_CHANNEL} mas
+     *  mantém {@code VOICE_CONNECT} negado (só quem tem acesso via cargo-controle/override entra);
+     *  ocultar nega os dois, igual ao estado inicial pós-{@link #grant}. BLOQUEANTE — usa
+     *  {@code .complete()}; o chamador deve rodar isto em {@code ctx.scheduler().executor()}, nunca
+     *  na thread de eventos do JDA. */
+    void setEveryoneView(VoiceChannel call, boolean reveal) {
+        Role everyone = call.getGuild().getPublicRole();
+        if (reveal) {
+            call.getManager().putPermissionOverride(everyone,
+                    EnumSet.of(Permission.VIEW_CHANNEL), EnumSet.of(Permission.VOICE_CONNECT)).complete();
+        } else {
+            call.getManager().putPermissionOverride(everyone,
+                    null, EnumSet.of(Permission.VIEW_CHANNEL, Permission.VOICE_CONNECT)).complete();
         }
     }
 }
