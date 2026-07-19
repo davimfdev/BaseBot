@@ -482,4 +482,23 @@ public final class VipService implements VipBonusSource {
                     null, EnumSet.of(Permission.VIEW_CHANNEL, Permission.VOICE_CONNECT)).complete();
         }
     }
+
+    /** Varredura agendável de grants vencidos. Lê {@code grants().dueForExpiry(Instant.now())},
+     *  e para cada grant vencido: se o bot não está no guild, só desativa no banco; senão chama
+     *  {@link #revoke(Guild, String, String, boolean)} com {@code expired=true}, capturando falhas
+     *  individuais para não interromper a varredura. BLOQUEANTE — o chamador deve rodar isto em
+     *  {@code ctx.scheduler().executor()}. */
+    public void sweepExpired() {
+        Instant now = Instant.now();
+        for (VipGrant g : grants().dueForExpiry(now)) {
+            Guild guild = ctx.jda().getGuildById(g.guildId());
+            if (guild == null) { // bot fora da guild: só desativa no banco
+                grants().deactivate(g.id(), VipProvisionStatus.EXPIRED, "system", now);
+                invalidate(g.guildId(), g.userId());
+                continue;
+            }
+            try { revoke(guild, g.userId(), "system", true); }
+            catch (RuntimeException e) { log.error("VIP: falha ao expirar grant {}", g.id(), e); }
+        }
+    }
 }
