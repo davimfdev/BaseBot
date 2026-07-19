@@ -36,6 +36,7 @@
 
 package dev.davimf.basebot.modules.base.setup;
 
+import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
@@ -121,6 +122,7 @@ public final class SetupView {
                 .addOption("Nível", "nivel", "XP por mensagem/voz, níveis e cargos por nível")
                 .addOption("Economia", "economia", "Carteira, banco, ganhos, roubo e ranking")
                 .addOption("Loja", "loja", "Itens de cargo/custom à venda por moedas")
+                .addOption("VIP", "vip", "Configuração do sistema VIP")
                 .addOption("Eventos", "eventos", "Eventos aleatórios no chat principal (quiz, coleta…)")
                 .addOption("Fun", "fun", "Quiz personalizado do servidor")
                 .addOption("Bot", "bot", "Perfil e cor das embeds do bot")
@@ -1182,6 +1184,41 @@ public final class SetupView {
                 .build();
     }
 
+    // --- VIP --------------------------------------------------------------------
+
+    public static Container vipScreen(BotContext ctx, String guildId) {
+        GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(guildId);
+        int accent = EmbedColor.resolve(cfg);
+        List<dev.davimf.basebot.modules.base.vip.VipPlan> plans = ctx.database().vipPlans().listByGuild(guildId);
+
+        StringBuilder body = new StringBuilder("## " + Emojis.of(Emojis.GEM, "💎") + " VIP");
+        if (plans.isEmpty()) {
+            body.append("\n\n*Nenhum plano ainda. Use **Novo plano** para criar.*");
+        }
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text(body.toString()));
+        if (!plans.isEmpty()) {
+            kids.add(Panels.divider());
+            for (var plan : plans) {
+                String duration = plan.defaultDurationMinutes() == null
+                        ? "permanente"
+                        : dev.davimf.basebot.util.Durations.format(plan.defaultDurationMinutes() * 60_000L);
+                String line = "" + (plan.enabled() ? Emojis.of(Emojis.GEM, "💎") : "-# •") + " **" + plan.name() + "** · +"
+                        + plan.xpBonusPct() + "% XP / +" + plan.ecoBonusPct() + "% eco · " + duration;
+                kids.add(Panels.text(line));
+                kids.add(ActionRow.of(
+                        Button.primary(ComponentId.of(NS, "vipedit", plan.id()), "Editar").withEmoji(Emojis.button(Emojis.EDIT)),
+                        Button.danger(ComponentId.of(NS, "vipdel", plan.id()), "Remover").withEmoji(Emojis.button(Emojis.TRASH))));
+            }
+        }
+        kids.add(Panels.divider());
+        kids.add(ActionRow.of(
+                Button.success(ComponentId.of(NS, "vipnew"), "Novo plano").withEmoji(Emojis.button(Emojis.PLUS)),
+                Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
+        kids.add(moduleNav("vip"));
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
     /** The persistent module picker added to every setup screen. */
     public static ActionRow moduleNav(String current) {
         StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "section"))
@@ -1199,6 +1236,7 @@ public final class SetupView {
         addNav(menu, current, "Nível", "nivel");
         addNav(menu, current, "Economia", "economia");
         addNav(menu, current, "Loja", "loja");
+        addNav(menu, current, "VIP", "vip");
         addNav(menu, current, "Eventos", "eventos");
         addNav(menu, current, "Fun", "fun");
         addNav(menu, current, "Bot", "bot");

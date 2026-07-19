@@ -92,6 +92,7 @@ public final class SetupComponentHandler implements ComponentHandler {
                 case "autocargos" -> selfRolesScreen(ctx, guildId);
                 case "nivel" -> SetupView.levelingScreen(config(ctx, guildId), levelRewards(ctx).all(guildId));
                 case "economia" -> SetupView.economyScreen(config(ctx, guildId));
+                case "vip" -> SetupView.vipScreen(ctx, guildId);
                 case "eventos" -> SetupView.eventsScreen(config(ctx, guildId));
                 case "fun" -> SetupView.funScreen(config(ctx, guildId), quizRepo(ctx).list(guildId));
                 default -> hubScreen(ctx, guildId);
@@ -340,6 +341,7 @@ public final class SetupComponentHandler implements ComponentHandler {
                     case "loja" -> SetupView.shopScreen(EmbedColor.resolve(cfg),
                             shopCatalog(ctx, guildId),
                             cfg);
+                    case "vip" -> SetupView.vipScreen(ctx, guildId);
                     case "eventos" -> SetupView.eventsScreen(cfg);
                     case "fun" -> SetupView.funScreen(cfg, quizRepo(ctx).list(guildId));
                     default -> hubScreen(ctx, guildId);
