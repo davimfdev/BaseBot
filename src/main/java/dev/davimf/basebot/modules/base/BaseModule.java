@@ -74,6 +74,13 @@ import dev.davimf.basebot.modules.base.listeners.VoiceLoggingListener;
 import dev.davimf.basebot.modules.base.setup.SetupComponentHandler;
 import dev.davimf.basebot.modules.base.voice.MuteService;
 import dev.davimf.basebot.modules.base.voice.VoiceMutePersistenceListener;
+import dev.davimf.basebot.modules.base.vip.VipConcederCommand;
+import dev.davimf.basebot.modules.base.vip.VipListaCommand;
+import dev.davimf.basebot.modules.base.vip.VipPainelCommand;
+import dev.davimf.basebot.modules.base.vip.VipPanelComponentHandler;
+import dev.davimf.basebot.modules.base.vip.VipRevogarCommand;
+import dev.davimf.basebot.modules.base.vip.VipService;
+import dev.davimf.basebot.modules.base.vip.VipVoiceListener;
 
 import static dev.davimf.basebot.core.command.GroupCommand.Sub;
 
@@ -100,6 +107,7 @@ public final class BaseModule implements BotModule {
     private dev.davimf.basebot.modules.base.economy.JailService jail;
     private dev.davimf.basebot.modules.base.economy.EquipmentService equipment;
     private dev.davimf.basebot.modules.base.snapshot.GuildSnapshotSync guildSnapshot;
+    private VipService vip;
     // Trava de reconciliação de voz: criada aqui (não em register/onReady) para existir nos dois.
     private final dev.davimf.basebot.modules.base.leveling.VoiceGate voiceGate =
             new dev.davimf.basebot.modules.base.leveling.VoiceGate();
@@ -170,6 +178,12 @@ public final class BaseModule implements BotModule {
         // Loja: remove cargos temporários expirados a cada 5 min (à prova de restart).
         if (shop != null) {
             ctx.scheduler().repeating(shop::sweep, 20, 300, TimeUnit.SECONDS);
+        }
+        // VIPs: recarrega o cache de bônus no boot + a cada 5 min; expira grants vencidos a cada 60s.
+        if (vip != null) {
+            ctx.scheduler().once(vip::reload, 15, TimeUnit.SECONDS);
+            ctx.scheduler().repeating(vip::reload, 300, 300, TimeUnit.SECONDS);
+            ctx.scheduler().repeating(vip::sweepExpired, 60, 60, TimeUnit.SECONDS);
         }
         // Sincroniza as regras de AutoMod nativo de cada guilda com a config (off-thread).
         ctx.scheduler().executor().execute(() -> {
@@ -494,5 +508,21 @@ public final class BaseModule implements BotModule {
         // Lembretes (Base) — persistidos, DM à prova de restart.
         this.reminders = new dev.davimf.basebot.modules.base.utility.ReminderService(ctx);
         registry.command(new dev.davimf.basebot.modules.base.commands.LembreteCommand(reminders));
+
+        // Sistema de VIPs (Base) — planos, grants, painel do membro e reveal-on-occupancy de call.
+        this.vip = new VipService(ctx);
+        registry.command(new dev.davimf.basebot.core.command.GroupCommand("vip",
+                "Sistema de VIPs — painel do membro e gestão.",
+                net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions.ENABLED,
+                java.util.List.of(
+                        Sub.open("painel", "Seu painel de VIP.", new VipPainelCommand(vip)),
+                        Sub.gated("conceder", "Concede um VIP a um membro.", new VipConcederCommand(vip),
+                                net.dv8tion.jda.api.Permission.ADMINISTRATOR),
+                        Sub.gated("revogar", "Revoga o VIP de um membro.", new VipRevogarCommand(vip),
+                                net.dv8tion.jda.api.Permission.ADMINISTRATOR),
+                        Sub.gated("lista", "Lista os VIPs ativos.", new VipListaCommand(vip),
+                                net.dv8tion.jda.api.Permission.ADMINISTRATOR))));
+        registry.component(new VipPanelComponentHandler(vip));
+        registry.listener(new VipVoiceListener(ctx, vip));
     }
 }

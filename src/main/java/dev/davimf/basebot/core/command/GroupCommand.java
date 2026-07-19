@@ -4,6 +4,7 @@ import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.util.Replies;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -28,7 +29,7 @@ import java.util.List;
  * que o gate visual do Discord, que um admin pode reconfigurar. O {@code defaultPermissions} do topo
  * fica sendo só a visibilidade padrão do comando.
  */
-public final class GroupCommand implements SlashCommand {
+public final class GroupCommand implements SlashCommand, AutocompleteCommand {
 
     /** Um subcomando: nome/descrição próprios, a permissão exigida e o comando que executa. */
     public record Sub(String name, String description, EnumSet<Permission> required, SlashCommand delegate) {
@@ -88,6 +89,18 @@ public final class GroupCommand implements SlashCommand {
             }
         }
         sub.delegate().execute(event, ctx);
+    }
+
+    /** Forwards autocomplete to the delegate of the focused subcommand, if it implements
+     *  {@link AutocompleteCommand}. {@link CommandManager} only checks the top-level command for
+     *  this capability, so the group itself must relay — otherwise a delegate's autocomplete
+     *  (e.g. an option using {@code true} for autocomplete) never fires. */
+    @Override
+    public void onAutocomplete(CommandAutoCompleteInteractionEvent event, BotContext ctx) {
+        Sub sub = find(event.getSubcommandName());
+        if (sub != null && sub.delegate() instanceof AutocompleteCommand ac) {
+            ac.onAutocomplete(event, ctx);
+        }
     }
 
     private Sub find(String subName) {
