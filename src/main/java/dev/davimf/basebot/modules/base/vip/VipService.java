@@ -1,13 +1,17 @@
 package dev.davimf.basebot.modules.base.vip;
 
 import dev.davimf.basebot.core.BotContext;
+import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.postgres.VipGrantRepository;
 import dev.davimf.basebot.database.postgres.VipPlanRepository;
+import dev.davimf.basebot.util.EmbedColor;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.requests.restaction.ChannelAction;
@@ -213,5 +217,72 @@ public final class VipService implements VipBonusSource {
                     VipProvisionStatus.PROVISION_FAILED, e.getMessage(), grantedBy, null, null, Instant.now());
             return new GrantResult(false, "falha ao provisionar: " + e.getMessage(), failedGrant);
         }
+    }
+
+    /** Revoga o VIP: remove o cargo-VIP do dono, remove o cargo-controle de TODOS os membros que o
+     *  têm (não só o dono — pode ter sido concedido a convidados), oculta a call (nega
+     *  {@code VIEW_CHANNEL}/{@code VOICE_CONNECT} de {@code @everyone}), desativa o grant
+     *  ({@link VipProvisionStatus#EXPIRED} ou {@link VipProvisionStatus#REVOKED}) e invalida o
+     *  cache de bônus. <b>Não deleta</b> a call nem o cargo-controle — ambos são reutilizados no
+     *  próximo grant do mesmo usuário. Sem-op seguro se não houver grant ativo. BLOQUEANTE — usa
+     *  {@code .complete()} nas operações do Discord; o chamador deve rodar isto em
+     *  {@code ctx.scheduler().executor()}, nunca na thread de eventos do JDA. */
+    public void revoke(Guild guild, String userId, String revokedBy, boolean expired) {
+        Optional<VipGrant> existingOpt = activeGrant(guild.getId(), userId);
+        if (existingOpt.isEmpty()) {
+            return; // nada ativo para revogar.
+        }
+        VipGrant grant = existingOpt.get();
+        VipPlan plan = plans().findById(grant.planId()).orElse(null);
+
+        if (plan != null && plan.vipRoleId() != null) {
+            Role vipRole = guild.getRoleById(plan.vipRoleId());
+            if (vipRole != null) {
+                try {
+                    guild.removeRoleFromMember(UserSnowflake.fromId(userId), vipRole).complete();
+                } catch (RuntimeException e) {
+                    log.warn("VIP: falha ao remover cargo-VIP de {} no guild {}", userId, guild.getId(), e);
+                }
+            }
+        }
+
+        if (grant.controlRoleId() != null) {
+            Role controlRole = guild.getRoleById(grant.controlRoleId());
+            if (controlRole != null) {
+                for (Member m : guild.getMembersWithRoles(controlRole)) {
+                    try {
+                        guild.removeRoleFromMember(m, controlRole).complete();
+                    } catch (RuntimeException e) {
+                        log.warn("VIP: falha ao remover cargo-controle de {} no guild {}", m.getId(), guild.getId(), e);
+                    }
+                }
+            }
+        }
+
+        if (grant.callChannelId() != null) {
+            VoiceChannel call = guild.getVoiceChannelById(grant.callChannelId());
+            if (call != null) {
+                try {
+                    call.getManager().putPermissionOverride(guild.getPublicRole(), null,
+                            java.util.EnumSet.of(Permission.VIEW_CHANNEL, Permission.VOICE_CONNECT)).complete();
+                } catch (RuntimeException e) {
+                    log.warn("VIP: falha ao ocultar a call {} no guild {}", grant.callChannelId(), guild.getId(), e);
+                }
+            }
+        }
+
+        VipProvisionStatus status = expired ? VipProvisionStatus.EXPIRED : VipProvisionStatus.REVOKED;
+        grants().deactivate(grant.id(), status, revokedBy, Instant.now());
+        invalidate(guild.getId(), userId);
+
+        String planName = plan != null ? plan.name() : "VIP";
+        String reasonText = expired ? "expirou" : "foi revogado";
+        int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(guild.getId()));
+        guild.getJDA().retrieveUserById(userId)
+                .flatMap(User::openPrivateChannel)
+                .flatMap(pc -> pc.sendMessageComponents(Panels.container(accent,
+                                Panels.text("Seu VIP **" + planName + "** em **" + guild.getName() + "** " + reasonText + ".")))
+                        .useComponentsV2())
+                .queue(ok -> { }, err -> { });
     }
 }
