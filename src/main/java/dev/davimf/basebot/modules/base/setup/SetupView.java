@@ -24,6 +24,8 @@
 //   - `Method` : `public static Container permissionsDetail(GuildConfig cfg, String principal, String label)`
 //   - `Method` : `private static EntitySelectMenu channelSelect(String action, String key, String placeholder, String currentId)`
 //   - `Method` : `private static EntitySelectMenu roleSelect(String action, String key, String placeholder, String currentId)`
+//   - `Method` : `public static Container vipScreen(BotContext ctx, String guildId)`
+//   - `Method` : `public static Modal vipModal(String planId, VipPlan existing)`
 // 
 // Fields:
 //   - `Field` : `public static final String NS`
@@ -1204,11 +1206,36 @@ public final class SetupView {
                         ? "permanente"
                         : dev.davimf.basebot.util.Durations.format(plan.defaultDurationMinutes() * 60_000L);
                 String line = "" + (plan.enabled() ? Emojis.of(Emojis.GEM, "💎") : "-# •") + " **" + plan.name() + "** · +"
-                        + plan.xpBonusPct() + "% XP / +" + plan.ecoBonusPct() + "% eco · " + duration;
+                        + plan.xpBonusPct() + "% XP / +" + plan.ecoBonusPct() + "% eco · " + duration
+                        + "\n-# Categoria: " + (plan.discordCategoryId() == null ? "*não definida*" : "<#" + plan.discordCategoryId() + ">")
+                        + " · Cargo VIP: " + (plan.vipRoleId() == null ? "*não definido*" : "<@&" + plan.vipRoleId() + ">");
                 kids.add(Panels.text(line));
                 kids.add(ActionRow.of(
                         Button.primary(ComponentId.of(NS, "vipedit", plan.id()), "Editar").withEmoji(Emojis.button(Emojis.EDIT)),
+                        Button.secondary(ComponentId.of(NS, "viptoggle", plan.id(), "call"),
+                                "Call: " + (plan.hasCall() ? "on" : "off")),
+                        Button.secondary(ComponentId.of(NS, "viptoggle", plan.id(), "role"),
+                                "Cargo controle: " + (plan.useControlRole() ? "on" : "off")),
                         Button.danger(ComponentId.of(NS, "vipdel", plan.id()), "Remover").withEmoji(Emojis.button(Emojis.TRASH))));
+
+                EntitySelectMenu.Builder catSel = EntitySelectMenu
+                        .create(ComponentId.of(NS, "vipcat", plan.id()), SelectTarget.CHANNEL)
+                        .setChannelTypes(ChannelType.CATEGORY)
+                        .setPlaceholder("Categoria Discord do VIP — " + plan.name())
+                        .setRequiredRange(1, 1);
+                if (plan.discordCategoryId() != null) {
+                    catSel.setDefaultValues(DefaultValue.channel(plan.discordCategoryId()));
+                }
+                kids.add(ActionRow.of(catSel.build()));
+
+                EntitySelectMenu.Builder roleSel = EntitySelectMenu
+                        .create(ComponentId.of(NS, "viprole", plan.id()), SelectTarget.ROLE)
+                        .setPlaceholder("Cargo VIP — " + plan.name())
+                        .setRequiredRange(1, 1);
+                if (plan.vipRoleId() != null) {
+                    roleSel.setDefaultValues(DefaultValue.role(plan.vipRoleId()));
+                }
+                kids.add(ActionRow.of(roleSel.build()));
             }
         }
         kids.add(Panels.divider());
@@ -1217,6 +1244,32 @@ public final class SetupView {
                 Button.secondary(ComponentId.of(NS, "nav", "hub"), "◀ Voltar")));
         kids.add(moduleNav("vip"));
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    /** The create/edit form. {@code existing} is null for a new plan; {@code planId} is "new" or the plan's id. */
+    public static Modal vipModal(String planId, dev.davimf.basebot.modules.base.vip.VipPlan existing) {
+        TextInput nome = TextInput.create("nome", TextInputStyle.SHORT)
+                .setPlaceholder("Ex: VIP Ouro").setRequired(true).setMaxLength(80)
+                .setValue(existing == null ? null : existing.name()).build();
+        TextInput xpPct = TextInput.create("xp_pct", TextInputStyle.SHORT)
+                .setPlaceholder("Bônus de XP em % (ex.: 10)").setRequired(false).setMaxLength(4)
+                .setValue(existing == null ? null : String.valueOf(existing.xpBonusPct())).build();
+        TextInput ecoPct = TextInput.create("eco_pct", TextInputStyle.SHORT)
+                .setPlaceholder("Bônus de economia em % (ex.: 10)").setRequired(false).setMaxLength(4)
+                .setValue(existing == null ? null : String.valueOf(existing.ecoBonusPct())).build();
+        TextInput.Builder duracaoB = TextInput.create("duracao_dias", TextInputStyle.SHORT)
+                .setPlaceholder("Duração em dias (vazio = permanente)").setRequired(false).setMaxLength(5);
+        if (existing != null && existing.defaultDurationMinutes() != null) {
+            duracaoB.setValue(String.valueOf(existing.defaultDurationMinutes() / 1440));
+        }
+        return Modal.create(ComponentId.of(NS, "vipform", planId),
+                        existing == null ? "Novo plano VIP" : "Editar plano VIP")
+                .addComponents(
+                        Label.of("Nome", nome),
+                        Label.of("Bônus de XP (%)", xpPct),
+                        Label.of("Bônus de economia (%)", ecoPct),
+                        Label.of("Duração (dias, vazio = permanente)", duracaoB.build()))
+                .build();
     }
 
     /** The persistent module picker added to every setup screen. */

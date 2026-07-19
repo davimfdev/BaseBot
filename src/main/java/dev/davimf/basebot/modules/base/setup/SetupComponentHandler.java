@@ -36,6 +36,7 @@ import dev.davimf.basebot.modules.base.listeners.AttachmentVault;
 import dev.davimf.basebot.modules.base.moderation.ModerationConfig;
 import dev.davimf.basebot.modules.base.selfroles.SelfRolePanel;
 import dev.davimf.basebot.modules.base.selfroles.SelfRolePanelRepository;
+import dev.davimf.basebot.modules.base.vip.VipPlan;
 import dev.davimf.basebot.modules.base.welcome.WelcomeConfig;
 import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
 import dev.davimf.basebot.modules.facs.perms.ManagerPermissions.Capability;
@@ -252,6 +253,32 @@ public final class SetupComponentHandler implements ComponentHandler {
                     config(ctx, guildId)));
             case "shopadd" -> edit(event, SetupView.shopTypePrompt(EmbedColor.resolve(config(ctx, guildId))));
             case "shopform" -> event.replyModal(SetupView.shopItemModal(id.arg(0), id.arg(1))).queue();
+            case "vipnew" -> event.replyModal(SetupView.vipModal("new", null)).queue();
+            case "vipedit" -> {
+                VipPlan p = ctx.database().vipPlans().findById(id.arg(0)).orElse(null);
+                if (p == null) {
+                    Replies.ephemeral(event, ctx, "Plano não encontrado.");
+                } else {
+                    event.replyModal(SetupView.vipModal(p.id(), p)).queue();
+                }
+            }
+            case "vipdel" -> {
+                ctx.database().vipPlans().delete(id.arg(0));
+                ctx.database().actionLogs().log(guildId, event.getUser().getId(), id.arg(0), "VIP_PLAN_DELETE", null);
+                edit(event, SetupView.vipScreen(ctx, guildId));
+            }
+            case "viptoggle" -> {
+                VipPlan p = ctx.database().vipPlans().findById(id.arg(0)).orElse(null);
+                if (p == null) {
+                    Replies.ephemeral(event, ctx, "Plano não encontrado.");
+                } else {
+                    VipPlan updated = "role".equals(id.arg(1))
+                            ? withUseControlRole(p, !p.useControlRole())
+                            : withHasCall(p, !p.hasCall());
+                    ctx.database().vipPlans().upsert(updated);
+                    edit(event, SetupView.vipScreen(ctx, guildId));
+                }
+            }
             case "evttoggle" -> {
                 GuildConfig cfg = config(ctx, guildId);
                 GuildConfig updated = GuildConfigEdits.withToggle(cfg,
@@ -458,6 +485,24 @@ public final class SetupComponentHandler implements ComponentHandler {
                 edit(event, SetupView.permissionsDetail(config(ctx, event.getGuild().getId()), principal,
                         principalLabel(principal, event.getGuild())));
             }
+            case "vipcat" -> {
+                String guildId = event.getGuild().getId();
+                VipPlan p = ctx.database().vipPlans().findById(id.arg(0)).orElse(null);
+                String catId = firstChannelId(event);
+                if (p != null && catId != null) {
+                    ctx.database().vipPlans().upsert(withDiscordCategoryId(p, catId));
+                }
+                edit(event, SetupView.vipScreen(ctx, guildId));
+            }
+            case "viprole" -> {
+                String guildId = event.getGuild().getId();
+                VipPlan p = ctx.database().vipPlans().findById(id.arg(0)).orElse(null);
+                String roleId = firstRoleId(event);
+                if (p != null && roleId != null) {
+                    ctx.database().vipPlans().upsert(withVipRoleId(p, roleId));
+                }
+                edit(event, SetupView.vipScreen(ctx, guildId));
+            }
             case "srroles" -> {
                 List<net.dv8tion.jda.api.entities.Role> picked = event.getMentions().getRoles();
                 List<SelfRolePanel.Option> opts = new java.util.ArrayList<>();
@@ -526,6 +571,10 @@ public final class SetupComponentHandler implements ComponentHandler {
         }
         if ("shopitemform".equals(id.action())) {
             saveShopItem(event, ctx, id);
+            return;
+        }
+        if ("vipform".equals(id.action())) {
+            saveVipPlan(event, ctx, id);
             return;
         }
         if ("quizaddform".equals(id.action())) {
@@ -968,6 +1017,71 @@ public final class SetupComponentHandler implements ComponentHandler {
                 price, durationS, limits.stock(), limits.perUser(), 0, System.currentTimeMillis());
         repo.insert(item);
         edit(event, SetupView.shopScreen(EmbedColor.resolve(config(ctx, guildId)), repo.list(guildId), config(ctx, guildId)));
+    }
+
+    private void saveVipPlan(ModalInteractionEvent event, BotContext ctx, ComponentId id) {
+        String guildId = event.getGuild().getId();
+        String nome = value(event, "nome");
+        if (nome == null || nome.isBlank()) {
+            Replies.ephemeral(event, ctx, "Preencha o nome do plano.");
+            return;
+        }
+        int xpPct = parseInt(value(event, "xp_pct"));
+        int ecoPct = parseInt(value(event, "eco_pct"));
+        String duracaoRaw = value(event, "duracao_dias");
+        Long durationMinutes = null;
+        if (duracaoRaw != null && !duracaoRaw.isBlank()) {
+            try {
+                durationMinutes = Long.parseLong(duracaoRaw.trim()) * 1440L;
+            } catch (NumberFormatException e) {
+                Replies.ephemeral(event, ctx, "Duração inválida — use um número de dias, ou deixe vazio para permanente.");
+                return;
+            }
+        }
+
+        boolean isNew = "new".equals(id.arg(0));
+        VipPlan existing = isNew ? null : ctx.database().vipPlans().findById(id.arg(0)).orElse(null);
+        String planId = isNew ? UUID.randomUUID().toString() : id.arg(0);
+        java.time.Instant now = java.time.Instant.now();
+        VipPlan plan = new VipPlan(
+                planId, guildId, nome.trim(),
+                existing == null ? null : existing.discordCategoryId(),
+                existing == null ? true : existing.hasCall(),
+                existing == null ? null : existing.vipRoleId(),
+                existing == null ? true : existing.useControlRole(),
+                xpPct, ecoPct, durationMinutes,
+                existing == null ? true : existing.revealDefault(),
+                existing == null ? true : existing.enabled(),
+                existing == null ? 0 : existing.position(),
+                existing == null ? now : existing.createdAt(),
+                now);
+        ctx.database().vipPlans().upsert(plan);
+        ctx.database().actionLogs().log(guildId, event.getUser().getId(), planId, "VIP_PLAN_SAVE", nome);
+        edit(event, SetupView.vipScreen(ctx, guildId));
+    }
+
+    private static VipPlan withHasCall(VipPlan p, boolean hasCall) {
+        return new VipPlan(p.id(), p.guildId(), p.name(), p.discordCategoryId(), hasCall, p.vipRoleId(),
+                p.useControlRole(), p.xpBonusPct(), p.ecoBonusPct(), p.defaultDurationMinutes(),
+                p.revealDefault(), p.enabled(), p.position(), p.createdAt(), java.time.Instant.now());
+    }
+
+    private static VipPlan withUseControlRole(VipPlan p, boolean useControlRole) {
+        return new VipPlan(p.id(), p.guildId(), p.name(), p.discordCategoryId(), p.hasCall(), p.vipRoleId(),
+                useControlRole, p.xpBonusPct(), p.ecoBonusPct(), p.defaultDurationMinutes(),
+                p.revealDefault(), p.enabled(), p.position(), p.createdAt(), java.time.Instant.now());
+    }
+
+    private static VipPlan withDiscordCategoryId(VipPlan p, String categoryId) {
+        return new VipPlan(p.id(), p.guildId(), p.name(), categoryId, p.hasCall(), p.vipRoleId(),
+                p.useControlRole(), p.xpBonusPct(), p.ecoBonusPct(), p.defaultDurationMinutes(),
+                p.revealDefault(), p.enabled(), p.position(), p.createdAt(), java.time.Instant.now());
+    }
+
+    private static VipPlan withVipRoleId(VipPlan p, String roleId) {
+        return new VipPlan(p.id(), p.guildId(), p.name(), p.discordCategoryId(), p.hasCall(), roleId,
+                p.useControlRole(), p.xpBonusPct(), p.ecoBonusPct(), p.defaultDurationMinutes(),
+                p.revealDefault(), p.enabled(), p.position(), p.createdAt(), java.time.Instant.now());
     }
 
     /** Salva um inteiro válido (≥0); ignora entradas inválidas mantendo o valor anterior. */
