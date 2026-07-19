@@ -8,6 +8,8 @@ import dev.davimf.basebot.modules.base.economy.InventoryRepository.Row;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.UseResult;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.UseResultType;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.DestroyResultType;
+import dev.davimf.basebot.modules.base.vip.VipBonus;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -22,13 +24,15 @@ public final class CrimeEconomyService {
     private final WalletRepository wallets;
     private final CooldownRepository cooldowns;
     private final JailService jail;
+    private final VipBonusSource vip;
 
-    public CrimeEconomyService(BotContext ctx, JailService jail) {
+    public CrimeEconomyService(BotContext ctx, JailService jail, VipBonusSource vip) {
         this.ctx = ctx;
         this.jail = jail;
         this.inv = new InventoryRepository(ctx.database().sqlite());
         this.wallets = new WalletRepository(ctx.database().sqlite());
         this.cooldowns = new CooldownRepository(ctx.database().sqlite());
+        this.vip = vip;
     }
 
     private GuildConfig cfg(Guild g) { return ctx.database().guildConfig().findOrEmpty(g.getId()); }
@@ -66,10 +70,11 @@ public final class CrimeEconomyService {
             if (use.type() != UseResultType.USED && use.type() != UseResultType.USED_AND_BROKE) {
                 return "Sua arma não está mais disponível — equipe de novo."; // NOT_FOUND/NOT_OWNER/PERMANENT
             }
-            wallets.addCash(g.getId(), u, o.gain());
+            long gain = VipBonus.scale(o.gain(), vip.bonusFor(g.getId(), u).ecoPct()); // bônus VIP só no ganho gerado pelo bot
+            wallets.addCash(g.getId(), u, gain);
             cooldowns.stamp(g.getId(), u, "crime", System.currentTimeMillis());
             String broke = use.type() == UseResultType.USED_AND_BROKE ? "\n-# Sua " + w.name() + " quebrou." : "";
-            return Emojis.of(Emojis.SKULL, "🔫") + " Crime bem-sucedido! **+" + EconomyFormat.formatNamed(o.gain(), cfg) + "**." + broke;
+            return Emojis.of(Emojis.SKULL, "🔫") + " Crime bem-sucedido! **+" + EconomyFormat.formatNamed(gain, cfg) + "**." + broke;
         }
         // Falha: destrói a arma ANTES da multa.
         if (inv.destroy(g.getId(), u, weapon.id()).type() != DestroyResultType.DESTROYED) {
@@ -81,6 +86,7 @@ public final class CrimeEconomyService {
                 + EconomyFormat.formatNamed(o.fine(), cfg) + "** de multa.";
     }
 
+    // Sem bônus VIP aqui: /roubar é transferência PvP (rouba de outro jogador), não dinheiro gerado pelo bot.
     public String runRobbery(Guild g, Member actor, Member target) {
         if (target.getUser().isBot() || target.getId().equals(actor.getId())) {
             return "Alvo inválido.";

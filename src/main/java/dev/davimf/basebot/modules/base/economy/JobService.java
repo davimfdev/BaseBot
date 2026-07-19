@@ -7,6 +7,8 @@ import dev.davimf.basebot.modules.base.economy.EquipmentCatalog.Slot;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.Row;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.UseResult;
 import dev.davimf.basebot.modules.base.economy.InventoryRepository.UseResultType;
+import dev.davimf.basebot.modules.base.vip.VipBonus;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -20,12 +22,14 @@ public final class JobService {
     private final InventoryRepository inv;
     private final WalletRepository wallets;
     private final CooldownRepository cooldowns;
+    private final VipBonusSource vip;
 
-    public JobService(BotContext ctx) {
+    public JobService(BotContext ctx, VipBonusSource vip) {
         this.ctx = ctx;
         this.inv = new InventoryRepository(ctx.database().sqlite());
         this.wallets = new WalletRepository(ctx.database().sqlite());
         this.cooldowns = new CooldownRepository(ctx.database().sqlite());
+        this.vip = vip;
     }
 
     private GuildConfig cfg(Guild g) { return ctx.database().guildConfig().findOrEmpty(g.getId()); }
@@ -74,6 +78,7 @@ public final class JobService {
             return "Seu " + noun + " não está mais disponível — equipe de novo.";
         }
         long amount = JobOutcome.reward(e.payoutMin(), e.payoutMax(), ThreadLocalRandom.current().nextLong(Long.MAX_VALUE));
+        amount = VipBonus.scale(amount, vip.bonusFor(g.getId(), u).ecoPct());
         wallets.addCash(g.getId(), u, amount);
         cooldowns.stamp(g.getId(), u, action, System.currentTimeMillis());
         String broke = use.type() == UseResultType.USED_AND_BROKE ? "\n-# Seu " + noun + " quebrou." : "";
@@ -101,6 +106,7 @@ public final class JobService {
             return "Sua moto não está mais disponível — equipe de novo.";
         }
         long gross = JobOutcome.reward(e.payoutMin(), e.payoutMax(), ThreadLocalRandom.current().nextLong(Long.MAX_VALUE));
+        gross = VipBonus.scale(gross, vip.bonusFor(g.getId(), u).ecoPct());
         wallets.addCash(g.getId(), u, gross);
         cooldowns.stamp(g.getId(), u, "entregar", System.currentTimeMillis());
         String broke = use.type() == UseResultType.USED_AND_BROKE ? "\n-# Sua moto quebrou." : "";

@@ -5,6 +5,8 @@ import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.modules.base.leveling.LevelBonus;
 import dev.davimf.basebot.modules.base.leveling.LevelFormula;
 import dev.davimf.basebot.modules.base.leveling.UserLevelRepository;
+import dev.davimf.basebot.modules.base.vip.VipBonus;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 
@@ -23,12 +25,14 @@ public final class EconomyService {
     private final CooldownRepository cooldowns;
 
     private final UserLevelRepository userLevels;
+    private final VipBonusSource vip;
 
-    public EconomyService(BotContext ctx) {
+    public EconomyService(BotContext ctx, VipBonusSource vip) {
         this.ctx = ctx;
         this.wallets = new WalletRepository(ctx.database().sqlite());
         this.cooldowns = new CooldownRepository(ctx.database().sqlite());
         this.userLevels = new UserLevelRepository(ctx.database().sqlite());
+        this.vip = vip;
     }
 
     public WalletRepository wallets() { return wallets; }
@@ -51,7 +55,8 @@ public final class EconomyService {
             return "Você já coletou o `/economia daily` hoje — volta <t:" + (readyAt / 1000) + ":R>.";
         }
         int level = LevelFormula.levelForXp(userLevels.xp(g.getId(), m.getId()));
-        long amount = LevelBonus.scale(EconomyConfig.daily(cfg(g)), level);
+        long amount = VipBonus.scale(LevelBonus.scale(EconomyConfig.daily(cfg(g)), level),
+                vip.bonusFor(g.getId(), m.getId()).ecoPct());
         wallets.addCash(g.getId(), m.getId(), amount);
         cooldowns.stamp(g.getId(), m.getId(), "daily", now);
         return "Recompensa diária: **+" + EconomyFormat.formatNamed(amount, cfg(g)) + "** na carteira.";
@@ -63,7 +68,8 @@ public final class EconomyService {
         if (cd != null) {
             return cd;
         }
-        long amount = rand(EconomyConfig.workMin(cfg), EconomyConfig.workMax(cfg));
+        long amount = VipBonus.scale(rand(EconomyConfig.workMin(cfg), EconomyConfig.workMax(cfg)),
+                vip.bonusFor(g.getId(), m.getId()).ecoPct());
         wallets.addCash(g.getId(), m.getId(), amount);
         cooldowns.stamp(g.getId(), m.getId(), "work", System.currentTimeMillis());
         String flavor = WORK_MSGS[ThreadLocalRandom.current().nextInt(WORK_MSGS.length)];

@@ -381,13 +381,16 @@ public final class BaseModule implements BotModule {
         registry.command(new dev.davimf.basebot.modules.base.commands.TempoCallCommand(voiceGate));
         registry.component(new dev.davimf.basebot.modules.base.leveling.VoiceTimeComponentHandler(voiceGate));
 
+        // Sistema de VIPs (Base) — instanciado cedo pois a economia injeta o bônus nos payouts.
+        this.vip = new VipService(ctx);
+
         // Economia por-usuário (Base) — separada do tesouro de facção.
         dev.davimf.basebot.modules.base.economy.EconomyService economy =
-                new dev.davimf.basebot.modules.base.economy.EconomyService(ctx);
+                new dev.davimf.basebot.modules.base.economy.EconomyService(ctx, vip);
         // Cadeia/ficha (Base) — instanciado cedo pois /trabalhar já aplica o guard de preso.
         this.jail = new dev.davimf.basebot.modules.base.economy.JailService(ctx);
         dev.davimf.basebot.modules.base.economy.CrimeEconomyService crimeService =
-                new dev.davimf.basebot.modules.base.economy.CrimeEconomyService(ctx, jail);
+                new dev.davimf.basebot.modules.base.economy.CrimeEconomyService(ctx, jail, vip);
         dev.davimf.basebot.modules.base.economy.OrgCrimeService orgCrime =
                 new dev.davimf.basebot.modules.base.economy.OrgCrimeService(ctx, jail);
         registry.component(new dev.davimf.basebot.modules.base.economy.OrgCrimeComponentHandler(orgCrime));
@@ -397,7 +400,7 @@ public final class BaseModule implements BotModule {
         this.equipment = new dev.davimf.basebot.modules.base.economy.EquipmentService(ctx);
         // Empregos (Base) — exigem ferramenta equipada.
         dev.davimf.basebot.modules.base.economy.JobService jobs =
-                new dev.davimf.basebot.modules.base.economy.JobService(ctx);
+                new dev.davimf.basebot.modules.base.economy.JobService(ctx, vip);
         // Avisos de trabalho (Base) — prefs + watermark; sweep agendado no onReady.
         dev.davimf.basebot.modules.base.economy.JobNotifyRepository jobNotifyRepo =
                 new dev.davimf.basebot.modules.base.economy.JobNotifyRepository(ctx.database().sqlite());
@@ -509,8 +512,8 @@ public final class BaseModule implements BotModule {
         this.reminders = new dev.davimf.basebot.modules.base.utility.ReminderService(ctx);
         registry.command(new dev.davimf.basebot.modules.base.commands.LembreteCommand(reminders));
 
-        // Sistema de VIPs (Base) — planos, grants, painel do membro e reveal-on-occupancy de call.
-        this.vip = new VipService(ctx);
+        // Sistema de VIPs (Base) — planos, grants, painel do membro e reveal-on-occupancy de call
+        // (instância criada mais acima, antes da economia, para poder injetar o bônus nos payouts).
         registry.command(new dev.davimf.basebot.core.command.GroupCommand("vip",
                 "Sistema de VIPs — painel do membro e gestão.",
                 net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions.ENABLED,
