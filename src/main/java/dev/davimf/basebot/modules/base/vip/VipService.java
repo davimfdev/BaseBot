@@ -5,7 +5,9 @@ import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.postgres.VipGrantRepository;
 import dev.davimf.basebot.database.postgres.VipPlanRepository;
+import dev.davimf.basebot.util.ChannelLog;
 import dev.davimf.basebot.util.EmbedColor;
+import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -247,6 +249,11 @@ public final class VipService implements VipBonusSource {
                     callId, controlRoleId, plan.revealDefault(), now, expiresAt, true,
                     VipProvisionStatus.ACTIVE, null, grantedBy, null, null, Instant.now());
             indexCall(guild.getId(), callId, activeGrant);
+            ChannelLog.post(ctx, guild.getId(), "log-vip", "## " + Emojis.of(Emojis.GEM, "💎") + " VIP concedido\n"
+                    + "Membro · " + target.getAsMention() + " `" + target.getId() + "`\n"
+                    + "Plano · **" + plan.name() + "**\n"
+                    + "Expira · " + (expiresAt != null ? "<t:" + expiresAt.getEpochSecond() + ":R>" : "nunca")
+                    + "\n-# Concedido por <@" + grantedBy + ">");
             return new GrantResult(true, null, activeGrant);
         } catch (RuntimeException e) {
             log.error("VIP: falha ao provisionar grant {} no guild {}", id, guild.getId(), e);
@@ -317,6 +324,18 @@ public final class VipService implements VipBonusSource {
 
         String planName = plan != null ? plan.name() : "VIP";
         String reasonText = expired ? "expirou" : "foi revogado";
+
+        if (expired) {
+            ChannelLog.post(ctx, guild.getId(), "log-vip", "## " + Emojis.of(Emojis.GEM, "💎") + " VIP expirado\n"
+                    + "Membro · <@" + userId + "> `" + userId + "`\n"
+                    + "Plano · **" + planName + "**");
+        } else {
+            ChannelLog.post(ctx, guild.getId(), "log-vip", "## " + Emojis.of(Emojis.WARN, "⚠️") + " VIP revogado\n"
+                    + "Membro · <@" + userId + "> `" + userId + "`\n"
+                    + "Plano · **" + planName + "**\n"
+                    + "Revogado por · <@" + revokedBy + ">");
+        }
+
         int accent = EmbedColor.resolve(ctx.database().guildConfig().findOrEmpty(guild.getId()));
         guild.getJDA().retrieveUserById(userId)
                 .flatMap(User::openPrivateChannel)

@@ -35,7 +35,7 @@ import java.util.Map;
  * "general log". Each entry's {@code key} is stored in {@code guild_config.channels} as
  * the configured channel id for that log. Listeners/commands read the channel by key.
  *
- * <p>Grouped by module for the {@code /setup → Logs} selector (22 types, paginated to
+ * <p>Grouped by module for the {@code /setup → Logs} selector (23 types, paginated to
  * stay within the 25 StringSelect option limit per page).
  */
 public final class SetupLogTypes {
@@ -59,6 +59,7 @@ public final class SetupLogTypes {
             new LogType("log-moderacao", "Moderação (casos)", "Base"),
             new LogType("log-formularios", "Formulários", "Base"),
             new LogType("log-loja", "Loja", "Base"),
+            new LogType("log-vip", "VIP", "Base"),
             // " + Emojis.of(Emojis.TICKET, "🎟️") + " Tickets
             new LogType("log-tickets", "Tickets", "Tickets"),
             // " + Emojis.of(Emojis.SALES, "🛒") + " Vendas
