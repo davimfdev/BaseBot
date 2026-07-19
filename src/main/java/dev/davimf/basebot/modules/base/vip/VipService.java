@@ -285,4 +285,109 @@ public final class VipService implements VipBonusSource {
                         .useComponentsV2())
                 .queue(ok -> { }, err -> { });
     }
+
+    /** Nível de boost mínimo do servidor para permitir emoji custom em cargo (mesmo limite do painel). */
+    private static final int EMOJI_MIN_BOOST_TIER = 2;
+
+    /** Renomeia a call do grant. BLOQUEANTE (usa {@code .complete()}) — o chamador deve rodar isto
+     *  em {@code ctx.scheduler().executor()}, nunca na thread de eventos do JDA. Opera só sobre o
+     *  recurso desse grant ({@code grant.callChannelId()}); sem-op se o guild ou a call já não
+     *  existirem mais (recurso pode ter sido excluído fora do bot). */
+    public void renameCall(VipGrant grant, String newName) {
+        Guild guild = ctx.jda().getGuildById(grant.guildId());
+        if (guild == null || grant.callChannelId() == null) {
+            return;
+        }
+        VoiceChannel call = guild.getVoiceChannelById(grant.callChannelId());
+        if (call == null) {
+            return;
+        }
+        call.getManager().setName(newName).complete();
+    }
+
+    /** Renomeia o cargo-controle do grant. BLOQUEANTE — mesmas regras de {@link #renameCall}. */
+    public void renameControlRole(VipGrant grant, String newName) {
+        Guild guild = ctx.jda().getGuildById(grant.guildId());
+        if (guild == null || grant.controlRoleId() == null) {
+            return;
+        }
+        Role role = guild.getRoleById(grant.controlRoleId());
+        if (role == null) {
+            return;
+        }
+        role.getManager().setName(newName).complete();
+    }
+
+    /** Alterna reveal-on-occupancy e persiste. Puramente uma escrita no Postgres (sem chamada ao
+     *  Discord), retorna o novo valor para o chamador re-renderizar. */
+    public boolean toggleReveal(VipGrant grant) {
+        boolean next = !grant.revealOnOccupancy();
+        grants().updateReveal(grant.id(), next);
+        return next;
+    }
+
+    /** Define o emoji (unicode) do cargo-controle do grant. BLOQUEANTE. Re-checa o tier de boost
+     *  mínimo do servidor mesmo que o botão do painel já venha desabilitado abaixo do tier 2 —
+     *  defesa em profundidade contra customIds manipulados. */
+    public void setRoleIcon(VipGrant grant, String emoji) {
+        Guild guild = ctx.jda().getGuildById(grant.guildId());
+        if (guild == null || grant.controlRoleId() == null) {
+            return;
+        }
+        if (guild.getBoostTier().getKey() < EMOJI_MIN_BOOST_TIER) {
+            return;
+        }
+        Role role = guild.getRoleById(grant.controlRoleId());
+        if (role == null) {
+            return;
+        }
+        role.getManager().setIcon(emoji == null || emoji.isBlank() ? null : emoji.trim()).complete();
+    }
+
+    /** Concede acesso ao membro: adiciona o cargo-controle se o plano usa um (grant.controlRoleId()
+     *  presente), senão libera um override pessoal ({@code VIEW_CHANNEL}+{@code VOICE_CONNECT}) na
+     *  call. BLOQUEANTE. Sem-op se o membro não pertence ao guild do grant, ou se o recurso alvo já
+     *  não existe. */
+    public void grantAccess(VipGrant grant, Member member) {
+        Guild guild = member.getGuild();
+        if (!guild.getId().equals(grant.guildId())) {
+            return;
+        }
+        if (grant.controlRoleId() != null) {
+            Role role = guild.getRoleById(grant.controlRoleId());
+            if (role != null) {
+                guild.addRoleToMember(member, role).complete();
+            }
+            return;
+        }
+        if (grant.callChannelId() != null) {
+            VoiceChannel call = guild.getVoiceChannelById(grant.callChannelId());
+            if (call != null) {
+                call.getManager().putMemberPermissionOverride(member.getIdLong(),
+                        EnumSet.of(Permission.VIEW_CHANNEL, Permission.VOICE_CONNECT), null).complete();
+            }
+        }
+    }
+
+    /** Revoga acesso do membro: remove o cargo-controle se o plano usa um, senão remove o override
+     *  pessoal na call. BLOQUEANTE. Mesmas guardas de {@link #grantAccess}. */
+    public void revokeAccess(VipGrant grant, Member member) {
+        Guild guild = member.getGuild();
+        if (!guild.getId().equals(grant.guildId())) {
+            return;
+        }
+        if (grant.controlRoleId() != null) {
+            Role role = guild.getRoleById(grant.controlRoleId());
+            if (role != null) {
+                guild.removeRoleFromMember(member, role).complete();
+            }
+            return;
+        }
+        if (grant.callChannelId() != null) {
+            VoiceChannel call = guild.getVoiceChannelById(grant.callChannelId());
+            if (call != null) {
+                call.getManager().removePermissionOverride(member).complete();
+            }
+        }
+    }
 }
