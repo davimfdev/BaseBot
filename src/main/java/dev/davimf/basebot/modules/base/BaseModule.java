@@ -133,7 +133,7 @@ public final class BaseModule implements BotModule {
         // Leveling — voz: ticker de XP a cada 60s + reconciliação das sessões no boot.
         if (leveling != null) {
             dev.davimf.basebot.modules.base.leveling.VoiceXpTicker ticker =
-                    new dev.davimf.basebot.modules.base.leveling.VoiceXpTicker(ctx, leveling, voiceGate);
+                    new dev.davimf.basebot.modules.base.leveling.VoiceXpTicker(ctx, leveling, voiceGate, vip);
             ctx.scheduler().repeating(ticker::tick, 60, 60, TimeUnit.SECONDS);
             // Delay de 5s: dá tempo do cache de guild/member da JDA assentar após o READY. A
             // trava (voiceGate), não este timing, é o que garante que nada credita o período
@@ -369,20 +369,20 @@ public final class BaseModule implements BotModule {
         // Self-roles (Base) — painéis de auto-atribuição (runtime dos botões/menu).
         registry.component(new dev.davimf.basebot.modules.base.selfroles.SelfRoleComponentHandler());
 
+        // Sistema de VIPs (Base) — instanciado cedo pois leveling/voz/economia injetam o bônus nos payouts.
+        this.vip = new VipService(ctx);
+
         // Leveling (Base) — XP por mensagem, níveis, cargos por nível e ranking.
-        this.leveling = new dev.davimf.basebot.modules.base.leveling.LevelingService(ctx);
+        this.leveling = new dev.davimf.basebot.modules.base.leveling.LevelingService(ctx, vip);
         registry.listener(new dev.davimf.basebot.modules.base.leveling.MessageXpListener(ctx, leveling));
         registry.command(new dev.davimf.basebot.modules.base.commands.RankCommand(leveling));
         registry.command(new dev.davimf.basebot.modules.base.commands.XpCommand(leveling));
         registry.component(new dev.davimf.basebot.modules.base.leveling.LevelingComponentHandler(leveling));
         // Leveling — voz (Plano 2): sessões persistidas para XP por tempo em call.
-        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling, voiceGate));
-        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling, voiceGate));
+        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceSessionListener(ctx, leveling, voiceGate, vip));
+        registry.listener(new dev.davimf.basebot.modules.base.leveling.VoiceStateListener(ctx, leveling, voiceGate, vip));
         registry.command(new dev.davimf.basebot.modules.base.commands.TempoCallCommand(voiceGate));
         registry.component(new dev.davimf.basebot.modules.base.leveling.VoiceTimeComponentHandler(voiceGate));
-
-        // Sistema de VIPs (Base) — instanciado cedo pois a economia injeta o bônus nos payouts.
-        this.vip = new VipService(ctx);
 
         // Economia por-usuário (Base) — separada do tesouro de facção.
         dev.davimf.basebot.modules.base.economy.EconomyService economy =

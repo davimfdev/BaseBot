@@ -2,6 +2,7 @@ package dev.davimf.basebot.modules.base.leveling;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
@@ -22,12 +23,14 @@ public final class VoiceSessionListener extends ListenerAdapter {
     private final LevelingService leveling;
     private final VoiceSessionRepository sessions;
     private final VoiceGate gate;
+    private final VipBonusSource vip;
 
-    public VoiceSessionListener(BotContext ctx, LevelingService leveling, VoiceGate gate) {
+    public VoiceSessionListener(BotContext ctx, LevelingService leveling, VoiceGate gate, VipBonusSource vip) {
         this.ctx = ctx;
         this.leveling = leveling;
         this.sessions = new VoiceSessionRepository(ctx.database().sqlite());
         this.gate = gate;
+        this.vip = vip;
     }
 
     @Override
@@ -55,6 +58,6 @@ public final class VoiceSessionListener extends ListenerAdapter {
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(member.getGuild().getId());
         // +1: o membro já não está mais em oldChannel.getMembers().
         VoiceStateSnapshot before = VoiceSnapshots.of(member, oldChannel, cfg, 1);
-        VoiceSettler.settle(ctx, leveling, member.getGuild(), member, before, now, gate);
+        VoiceSettler.settle(ctx, leveling, member.getGuild(), member, before, now, gate, vip);
     }
 }

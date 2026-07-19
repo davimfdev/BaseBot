@@ -2,6 +2,8 @@ package dev.davimf.basebot.modules.base.leveling;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.vip.VipBonus;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 
@@ -20,7 +22,7 @@ public final class VoiceSettler {
 
     /** @param before estado de voz ANTERIOR ao evento que disparou o settle */
     public static void settle(BotContext ctx, LevelingService leveling, Guild guild, Member member,
-                              VoiceStateSnapshot before, long now, VoiceGate gate) {
+                              VoiceStateSnapshot before, long now, VoiceGate gate, VipBonusSource vip) {
         if (!gate.isReconciled(guild.getId())) {
             // Boot ainda não reancorou as watermarks: creditar agora lançaria o período offline
             // inteiro no ranking. O caller ainda fecha/abre a sessão normalmente; só o crédito
@@ -37,6 +39,7 @@ public final class VoiceSettler {
         long xpDelta = 0;
         if (LevelingConfig.enabled(cfg) && VoiceEligibility.xpEligible(before)) {
             xpDelta = (Math.max(0, now - s.xpCreditedUntil()) * XP_PER_MIN) / 60_000L;
+            xpDelta = VipBonus.scale(xpDelta, vip.bonusFor(guild.getId(), member.getId()).xpPct());
         }
         long timeTo = VoiceEligibility.timeEligible(before) ? now : s.timeCreditedUntil();
 

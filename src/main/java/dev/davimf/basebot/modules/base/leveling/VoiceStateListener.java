@@ -2,6 +2,7 @@ package dev.davimf.basebot.modules.base.leveling;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceGuildDeafenEvent;
@@ -28,11 +29,13 @@ public final class VoiceStateListener extends ListenerAdapter {
     private final BotContext ctx;
     private final LevelingService leveling;
     private final VoiceGate gate;
+    private final VipBonusSource vip;
 
-    public VoiceStateListener(BotContext ctx, LevelingService leveling, VoiceGate gate) {
+    public VoiceStateListener(BotContext ctx, LevelingService leveling, VoiceGate gate, VipBonusSource vip) {
         this.ctx = ctx;
         this.leveling = leveling;
         this.gate = gate;
+        this.vip = vip;
     }
 
     @Override
@@ -66,6 +69,6 @@ public final class VoiceStateListener extends ListenerAdapter {
         GuildConfig cfg = ctx.database().guildConfig().findOrEmpty(member.getGuild().getId());
         VoiceStateSnapshot current = VoiceSnapshots.of(member, channel, cfg, 0);
         VoiceSettler.settle(ctx, leveling, member.getGuild(), member,
-                toPrevious.apply(current), System.currentTimeMillis(), gate);
+                toPrevious.apply(current), System.currentTimeMillis(), gate, vip);
     }
 }

@@ -3,6 +3,8 @@ package dev.davimf.basebot.modules.base.leveling;
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.vip.VipBonus;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Emojis;
 import net.dv8tion.jda.api.entities.Guild;
@@ -22,19 +24,23 @@ public final class LevelingService {
     private final BotContext ctx;
     private final UserLevelRepository users;
     private final LevelRewardRepository rewards;
+    private final VipBonusSource vip;
 
-    public LevelingService(BotContext ctx) {
+    public LevelingService(BotContext ctx, VipBonusSource vip) {
         this.ctx = ctx;
         this.users = new UserLevelRepository(ctx.database().sqlite());
         this.rewards = new LevelRewardRepository(ctx.database().postgres());
+        this.vip = vip;
     }
 
     public UserLevelRepository users() { return users; }
     public LevelRewardRepository rewards() { return rewards; }
 
-    /** Concede 15–25 XP de mensagem, com o canal atual como contexto de notificação. */
+    /** Concede 15–25 XP de mensagem (+ bônus VIP), com o canal atual como contexto de notificação. */
     public void awardMessage(Guild guild, Member member, MessageChannel current) {
-        award(guild, member, ThreadLocalRandom.current().nextInt(15, 26), current);
+        long base = ThreadLocalRandom.current().nextInt(15, 26);
+        long amount = VipBonus.scale(base, vip.bonusFor(guild.getId(), member.getId()).xpPct());
+        award(guild, member, amount, current);
     }
 
     /** Soma XP e, se houve level-up, aplica cargos (1 chamada) e notifica. */

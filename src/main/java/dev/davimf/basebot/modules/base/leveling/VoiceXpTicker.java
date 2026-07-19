@@ -2,6 +2,8 @@ package dev.davimf.basebot.modules.base.leveling;
 
 import dev.davimf.basebot.core.BotContext;
 import dev.davimf.basebot.database.model.GuildConfig;
+import dev.davimf.basebot.modules.base.vip.VipBonus;
+import dev.davimf.basebot.modules.base.vip.VipBonusSource;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
@@ -24,12 +26,14 @@ public final class VoiceXpTicker {
     private final LevelingService leveling;
     private final VoiceSessionRepository sessions;
     private final VoiceGate gate;
+    private final VipBonusSource vip;
 
-    public VoiceXpTicker(BotContext ctx, LevelingService leveling, VoiceGate gate) {
+    public VoiceXpTicker(BotContext ctx, LevelingService leveling, VoiceGate gate, VipBonusSource vip) {
         this.ctx = ctx;
         this.leveling = leveling;
         this.sessions = new VoiceSessionRepository(ctx.database().sqlite());
         this.gate = gate;
+        this.vip = vip;
     }
 
     public void tick() {
@@ -62,6 +66,7 @@ public final class VoiceXpTicker {
                     VoiceStateSnapshot snap = VoiceSnapshots.of(member, channel, cfg, 0);
                     if (xpOn && VoiceEligibility.xpEligible(snap)) {
                         xpDelta = (Math.max(0, now - s.xpCreditedUntil()) * XP_PER_MIN) / 60_000L;
+                        xpDelta = VipBonus.scale(xpDelta, vip.bonusFor(guild.getId(), s.userId()).xpPct());
                     }
                     if (VoiceEligibility.timeEligible(snap)) {
                         timeTo = now;
