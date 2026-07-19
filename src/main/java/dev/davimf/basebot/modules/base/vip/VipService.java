@@ -359,10 +359,18 @@ public final class VipService implements VipBonusSource {
     }
 
     /** Alterna reveal-on-occupancy e persiste. Puramente uma escrita no Postgres (sem chamada ao
-     *  Discord), retorna o novo valor para o chamador re-renderizar. */
+     *  Discord), retorna o novo valor para o chamador re-renderizar. Também atualiza o índice
+     *  de calls para refletir a mudança imediatamente no listener. */
     public boolean toggleReveal(VipGrant grant) {
         boolean next = !grant.revealOnOccupancy();
         grants().updateReveal(grant.id(), next);
+        if (grant.callChannelId() != null) {
+            VipGrant updated = new VipGrant(grant.id(), grant.guildId(), grant.planId(), grant.userId(),
+                    grant.callChannelId(), grant.controlRoleId(), next, grant.grantedAt(), grant.expiresAt(),
+                    grant.active(), grant.provisionStatus(), grant.provisionError(), grant.grantedBy(),
+                    grant.revokedAt(), grant.revokedBy(), grant.updatedAt());
+            indexCall(grant.guildId(), grant.callChannelId(), updated);
+        }
         return next;
     }
 
