@@ -54,6 +54,7 @@ public final class MessageState {
     public static final String BLOCK_TEXT = "TEXT";
     public static final String BLOCK_BUTTONS = "BUTTONS";
     public static final String BLOCK_SEPARATOR = "SEPARATOR";
+    public static final String BLOCK_IMAGE = "IMAGE";
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -131,6 +132,37 @@ public final class MessageState {
         return b;
     }
 
+    public static ObjectNode newImageBlock(String src) {
+        ObjectNode b = JSON.createObjectNode();
+        b.put("type", BLOCK_IMAGE);
+        b.put("src", src == null ? "" : src);
+        return b;
+    }
+
+    /** Define/limpa a thumbnail (acessório de Section) de um bloco de texto. */
+    public static void setTextThumbnail(ObjectNode textBlock, String src) {
+        if (src == null || src.isBlank()) {
+            textBlock.remove("thumbnail");
+        } else {
+            textBlock.put("thumbnail", src);
+        }
+    }
+
+    /** Uploads da sessão do builder (URLs de anexos do comando). Criado lazy. */
+    public static ArrayNode uploads(ObjectNode state) {
+        if (!state.has("uploads") || !state.get("uploads").isArray()) {
+            state.putArray("uploads");
+        }
+        return (ArrayNode) state.get("uploads");
+    }
+
+    public static void addUpload(ObjectNode state, String label, String url) {
+        ObjectNode u = JSON.createObjectNode();
+        u.put("label", label);
+        u.put("url", url);
+        uploads(state).add(u);
+    }
+
     /** Interaction button styles (colours) a "normal" button can cycle through. */
     public static final String[] STYLES = {"PRIMARY", "SECONDARY", "SUCCESS", "DANGER"};
 
@@ -170,12 +202,21 @@ public final class MessageState {
         return shown + " · link";
     }
 
+    private static String trimForDescribe(String s) {
+        return s.length() > 60 ? s.substring(0, 59) + "…" : s;
+    }
+
     /** Short human label for a block, used in the builder lists. */
     public static String describe(ObjectNode block) {
         return switch (str(block, "type")) {
             case BLOCK_TEXT -> {
                 String t = str(block, "text");
-                yield "Texto: " + (t == null ? "" : t.replace("\n", " "));
+                String base = "Texto: " + (t == null ? "" : t.replace("\n", " "));
+                yield block.hasNonNull("thumbnail") ? base + " · com thumb" : base;
+            }
+            case BLOCK_IMAGE -> {
+                String s = str(block, "src");
+                yield "Imagem: " + (s == null || s.isBlank() ? "(sem fonte)" : trimForDescribe(s));
             }
             case BLOCK_BUTTONS -> "Botões (" + ((ArrayNode) block.get("buttons")).size() + ")";
             case BLOCK_SEPARATOR -> "Separador (" + (block.path("divider").asBoolean() ? "com linha" : "sem linha") + ")";
