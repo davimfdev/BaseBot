@@ -111,6 +111,7 @@ public final class MessageBuilderView {
             kids.add(ActionRow.of(StringSelectMenu.create(ComponentId.of(NS, "addblock"))
                     .setPlaceholder("Adicionar bloco")
                     .addOption("Texto", "text")
+                    .addOption("Imagem", "image")
                     .addOption("Botões de link", "buttons")
                     .addOption("Separador (com linha)", "sep-line")
                     .addOption("Separador (sem linha)", "sep-plain")
@@ -185,6 +186,22 @@ public final class MessageBuilderView {
                 }
                 kids.add(ActionRow.of(pick.build()));
             }
+        }
+        if (MessageState.BLOCK_IMAGE.equals(MessageState.str(block, "type"))) {
+            List<Button> row = new ArrayList<>();
+            row.add(Button.secondary(ComponentId.of(NS, "imgurl", String.valueOf(index)), "Definir por URL")
+                    .withEmoji(Emojis.button(Emojis.LINK)));
+            kids.add(ActionRow.of(row));
+            addUploadPicker(kids, state, "imgpick", index);
+        }
+        if (MessageState.BLOCK_TEXT.equals(MessageState.str(block, "type"))) {
+            List<Button> row = new ArrayList<>();
+            row.add(Button.secondary(ComponentId.of(NS, "thumburl", String.valueOf(index)), "Thumbnail (URL)"));
+            if (block.hasNonNull("thumbnail")) {
+                row.add(Button.danger(ComponentId.of(NS, "thumbdel", String.valueOf(index)), "Remover thumbnail"));
+            }
+            kids.add(ActionRow.of(row));
+            addUploadPicker(kids, state, "thumbpick", index);
         }
         kids.add(ActionRow.of(
                 Button.primary(ComponentId.of(NS, "bedit", String.valueOf(index)), "Botão de link").withEmoji(Emojis.button(Emojis.PLUS)),
@@ -291,5 +308,22 @@ public final class MessageBuilderView {
 
     private static String trim(String s, int max) {
         return s.length() > max ? s.substring(0, max - 1) + "…" : s;
+    }
+
+    /** Um select "usar arquivo enviado" alimentado por state.uploads (só quando há uploads). */
+    private static void addUploadPicker(List<ContainerChildComponent> kids, ObjectNode state,
+                                        String action, int index) {
+        ArrayNode ups = MessageState.uploads(state);
+        if (ups.isEmpty()) {
+            return;
+        }
+        StringSelectMenu.Builder pick = StringSelectMenu
+                .create(ComponentId.of(NS, action, String.valueOf(index)))
+                .setPlaceholder("Usar arquivo enviado");
+        for (int i = 0; i < ups.size(); i++) {
+            ObjectNode u = (ObjectNode) ups.get(i);
+            pick.addOption(trim(MessageState.str(u, "label") + " · anexo", 100), String.valueOf(i));
+        }
+        kids.add(ActionRow.of(pick.build()));
     }
 }
