@@ -74,23 +74,36 @@ public final class MessageBuilderService {
                      net.dv8tion.jda.api.entities.Message.Attachment img,
                      net.dv8tion.jda.api.entities.Message.Attachment thumb) {
         ObjectNode state = MessageState.initial();
-        seedAttachments(state, img, thumb);
+        String warning = seedAttachments(state, img, thumb);
         drafts.save(event.getUser().getId(), event.getGuild().getId(), MessageState.stringify(state));
-        event.replyComponents(MessageBuilderView.panel(state)).useComponentsV2().setEphemeral(true).queue();
+        event.replyComponents(MessageBuilderView.panel(state)).useComponentsV2().setEphemeral(true)
+                .queue(ok -> { if (warning != null) Replies.hookEphemeral(event, ctx, warning); });
     }
 
-    /** Popula classic image/thumbnail + o pool de uploads a partir dos anexos do comando. */
-    private void seedAttachments(ObjectNode state,
+    /** Popula classic image/thumbnail + o pool de uploads a partir dos anexos do comando.
+     *  Retorna um aviso (não-nulo) se algum anexo informado não for uma imagem. */
+    private String seedAttachments(ObjectNode state,
                                  net.dv8tion.jda.api.entities.Message.Attachment img,
                                  net.dv8tion.jda.api.entities.Message.Attachment thumb) {
-        if (img != null && img.isImage()) {
-            MessageState.classic(state).put("image", img.getUrl());
-            MessageState.addUpload(state, "imagem", img.getUrl());
+        StringBuilder warn = null;
+        if (img != null) {
+            if (img.isImage()) {
+                MessageState.classic(state).put("image", img.getUrl());
+                MessageState.addUpload(state, "imagem", img.getUrl());
+            } else {
+                warn = new StringBuilder("O anexo de **imagem** não parece ser uma imagem e foi ignorado.");
+            }
         }
-        if (thumb != null && thumb.isImage()) {
-            MessageState.classic(state).put("thumbnail", thumb.getUrl());
-            MessageState.addUpload(state, "thumbnail", thumb.getUrl());
+        if (thumb != null) {
+            if (thumb.isImage()) {
+                MessageState.classic(state).put("thumbnail", thumb.getUrl());
+                MessageState.addUpload(state, "thumbnail", thumb.getUrl());
+            } else {
+                String msg = "O anexo de **thumbnail** não parece ser uma imagem e foi ignorado.";
+                warn = (warn == null) ? new StringBuilder(msg) : warn.append("\n").append(msg);
+            }
         }
+        return warn == null ? null : warn.toString();
     }
 
     // --- selects ---------------------------------------------------------------
@@ -405,20 +418,25 @@ public final class MessageBuilderService {
         java.util.List<String> sources = MessageRehost.collectSources(state);
         ctx.scheduler().executor().execute(() -> {
             MessageRehost.Prepared prep = MessageRehost.download(sources);
-            if (container) {
-                channel.sendMessageComponents(MessageBuild.jdaContainer(
-                                MessageState.container(state), accent, prep.refBySource()))
-                        .useComponentsV2().setFiles(prep.files())
-                        .queue(m -> { prep.eraseAll(); done(event, channel, false); },
-                                err -> { prep.eraseAll(); fail(event, err); });
-            } else {
-                var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, prep.refBySource());
-                String content = MessageState.str(MessageState.classic(state), "content");
-                var action = (content != null && !content.isBlank())
-                        ? channel.sendMessage(content).setEmbeds(embed).setFiles(prep.files())
-                        : channel.sendMessageEmbeds(embed).setFiles(prep.files());
-                action.queue(m -> { prep.eraseAll(); done(event, channel, false); },
-                        err -> { prep.eraseAll(); fail(event, err); });
+            try {
+                if (container) {
+                    channel.sendMessageComponents(MessageBuild.jdaContainer(
+                                    MessageState.container(state), accent, prep.refBySource()))
+                            .useComponentsV2().setFiles(prep.files())
+                            .queue(m -> { prep.eraseAll(); done(event, channel, false); },
+                                    err -> { prep.eraseAll(); fail(event, err); });
+                } else {
+                    var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, prep.refBySource());
+                    String content = MessageState.str(MessageState.classic(state), "content");
+                    var action = (content != null && !content.isBlank())
+                            ? channel.sendMessage(content).setEmbeds(embed).setFiles(prep.files())
+                            : channel.sendMessageEmbeds(embed).setFiles(prep.files());
+                    action.queue(m -> { prep.eraseAll(); done(event, channel, false); },
+                            err -> { prep.eraseAll(); fail(event, err); });
+                }
+            } catch (Throwable t) {
+                prep.eraseAll();
+                fail(event, t);
             }
         });
     }
@@ -446,7 +464,7 @@ public final class MessageBuilderService {
                 return;
             }
             ObjectNode state = MessageBuilderParse.fromMessage(msg);
-            seedAttachments(state, img, thumb);
+            String warning = seedAttachments(state, img, thumb);
             state.put("channelId", channel.getId());
             state.put("editChannelId", channel.getId());
             state.put("editMessageId", msg.getId());
@@ -456,7 +474,8 @@ public final class MessageBuilderService {
                 state.put("webhook", true);
             }
             drafts.save(event.getUser().getId(), event.getGuild().getId(), MessageState.stringify(state));
-            event.getHook().sendMessageComponents(MessageBuilderView.panel(state)).useComponentsV2().queue();
+            event.getHook().sendMessageComponents(MessageBuilderView.panel(state)).useComponentsV2()
+                    .queue(ok -> { if (warning != null) Replies.hookEphemeral(event, ctx, warning); });
         }, err -> Replies.hook(event, ctx, "Mensagem não encontrada nesse canal."));
     }
 
@@ -487,20 +506,25 @@ public final class MessageBuilderService {
         java.util.List<String> sources = MessageRehost.collectSources(state);
         ctx.scheduler().executor().execute(() -> {
             MessageRehost.Prepared prep = MessageRehost.download(sources);
-            if (container) {
-                channel.editMessageComponentsById(messageId,
-                                MessageBuild.jdaContainer(MessageState.container(state), accent, prep.refBySource()))
-                        .useComponentsV2().setFiles(prep.files())
-                        .queue(m -> { prep.eraseAll(); done(event, channel, true); },
-                                err -> { prep.eraseAll(); fail(event, err); });
-            } else {
-                var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, prep.refBySource());
-                String content = MessageState.str(MessageState.classic(state), "content");
-                var action = (content != null && !content.isBlank())
-                        ? channel.editMessageById(messageId, content).setEmbeds(embed).setFiles(prep.files())
-                        : channel.editMessageEmbedsById(messageId, embed).setFiles(prep.files());
-                action.queue(m -> { prep.eraseAll(); done(event, channel, true); },
-                        err -> { prep.eraseAll(); fail(event, err); });
+            try {
+                if (container) {
+                    channel.editMessageComponentsById(messageId,
+                                    MessageBuild.jdaContainer(MessageState.container(state), accent, prep.refBySource()))
+                            .useComponentsV2().setFiles(prep.files())
+                            .queue(m -> { prep.eraseAll(); done(event, channel, true); },
+                                    err -> { prep.eraseAll(); fail(event, err); });
+                } else {
+                    var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, prep.refBySource());
+                    String content = MessageState.str(MessageState.classic(state), "content");
+                    var action = (content != null && !content.isBlank())
+                            ? channel.editMessageById(messageId, content).setEmbeds(embed).setFiles(prep.files())
+                            : channel.editMessageEmbedsById(messageId, embed).setFiles(prep.files());
+                    action.queue(m -> { prep.eraseAll(); done(event, channel, true); },
+                            err -> { prep.eraseAll(); fail(event, err); });
+                }
+            } catch (Throwable t) {
+                prep.eraseAll();
+                fail(event, t);
             }
         });
     }

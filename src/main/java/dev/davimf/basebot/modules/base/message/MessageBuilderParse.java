@@ -59,7 +59,10 @@ public final class MessageBuilderParse {
         container.getComponents().forEach(child -> {
             if (child instanceof net.dv8tion.jda.api.components.mediagallery.MediaGallery gal) {
                 if (!gal.getItems().isEmpty()) {
-                    blocks.add(MessageState.newImageBlock(gal.getItems().get(0).getUrl()));
+                    String url = gal.getItems().get(0).getUrl();
+                    if (url != null && !url.startsWith("attachment://")) {
+                        blocks.add(MessageState.newImageBlock(url));
+                    }
                 }
                 return;
             }
