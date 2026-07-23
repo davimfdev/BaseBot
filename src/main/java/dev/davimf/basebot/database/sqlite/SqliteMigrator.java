@@ -93,7 +93,8 @@ public final class SqliteMigrator {
             "/db/sqlite/038_verification.sql",
             "/db/sqlite/039_voice_time.sql",
             "/db/sqlite/040_job_notify.sql",
-            "/db/sqlite/041_item_repairs.sql"
+            "/db/sqlite/041_item_repairs.sql",
+            "/db/sqlite/042_recruit_requests.sql"
     );
 
     private final SqliteManager sqlite;
