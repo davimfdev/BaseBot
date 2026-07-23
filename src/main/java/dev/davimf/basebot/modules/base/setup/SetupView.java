@@ -49,6 +49,9 @@ import dev.davimf.basebot.modules.base.moderation.ModerationConfig.EscalationRul
 import dev.davimf.basebot.modules.base.moderation.ModerationService;
 import dev.davimf.basebot.modules.base.setup.SetupLogTypes.LogType;
 import dev.davimf.basebot.modules.base.welcome.WelcomeConfig;
+import dev.davimf.basebot.modules.facs.actions.ActionCategory;
+import dev.davimf.basebot.modules.facs.actions.ActionTypeGroups;
+import dev.davimf.basebot.modules.facs.actions.ActionTypeGroups.Group;
 import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
 import dev.davimf.basebot.util.EmbedColor;
 import dev.davimf.basebot.util.Emojis;
@@ -315,12 +318,14 @@ public final class SetupView {
         if (types.isEmpty()) {
             kids.add(Panels.text("-# *Nenhuma ação salva ainda.*"));
         } else {
-            StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "actiontype"))
-                    .setPlaceholder("Ações existentes");
-            for (ActionType t : types) {
-                menu.addOption(trim(t.name(), 100), t.id(), trim(actionSummary(t), 100));
+            // Um menu por categoria: o Discord só aceita 25 opções por select, e a cidade
+            // passa disso somando pequenas e grandes.
+            List<Group> groups = ActionTypeGroups.chunked(types);
+            for (int i = 0; i < groups.size(); i++) {
+                Group g = groups.get(i);
+                kids.add(Panels.text("**" + g.label() + "** `" + g.types().size() + "`"));
+                kids.add(ActionRow.of(actionTypeSelect(g, String.valueOf(i))));
             }
-            kids.add(ActionRow.of(menu.build()));
         }
         kids.add(ActionRow.of(
                 Button.success(ComponentId.of(NS, "actionnew"), "Nova ação").withEmoji(Emojis.button(Emojis.PLUS)),
@@ -331,7 +336,9 @@ public final class SetupView {
 
     public static Container actionTypeDetail(int accent, ActionType t) {
         String max = t.maxContingent() == 0 ? "`∞` ilimitado" : "`" + t.maxContingent() + "`";
-        String body = "" + Emojis.of(Emojis.MEMBERS, "👥") + " **Contingente máximo** · " + max + "\n"
+        String categoria = t.category() == null ? "`—` sem categoria" : "`" + t.category().singular() + "`";
+        String body = "" + Emojis.of(Emojis.SWORDS, "⚔️") + " **Categoria** · " + categoria + "\n"
+                + "" + Emojis.of(Emojis.MEMBERS, "👥") + " **Contingente máximo** · " + max + "\n"
                 + "" + Emojis.of(Emojis.ARROW_DOWN, "🔻") + " **Contingente mínimo** · `" + t.minContingent() + "`\n"
                 + "" + Emojis.of(Emojis.CASH, "💵") + " **Dinheiro sujo** · `" + t.dirtyMoney() + "`";
         return Panels.container(accent,
@@ -359,14 +366,41 @@ public final class SetupView {
         TextInput sujo = TextInput.create("sujo", TextInputStyle.SHORT)
                 .setPlaceholder("Dinheiro sujo ganho").setRequired(true).setMaxLength(9)
                 .setValue(existing == null ? null : String.valueOf(existing.dirtyMoney())).build();
+
+        // Obrigatório: é a categoria que mantém cada select abaixo das 25 opções do Discord.
+        StringSelectMenu.Builder categoria = StringSelectMenu.create("categoria")
+                .setPlaceholder("Porte da ação")
+                .setRequiredRange(1, 1);
+        for (ActionCategory c : ActionCategory.values()) {
+            categoria.addOption(c.singular(), c.name());
+        }
+        if (existing != null && existing.category() != null) {
+            categoria.setDefaultValues(existing.category().name());
+        }
+
         return Modal.create(ComponentId.of(NS, "actionform", id),
                         existing == null ? "Nova ação salva" : "Editar ação")
                 .addComponents(
                         Label.of("Nome", nome),
+                        Label.of("Categoria", categoria.build()),
                         Label.of("Contingente máximo", maximo),
                         Label.of("Contingente mínimo", minimo),
                         Label.of("Dinheiro sujo", sujo))
                 .build();
+    }
+
+    /**
+     * Menu de um grupo de ações. O {@code slot} entra no custom-id só para diferenciar
+     * os menus entre si — o Discord exige ids únicos na mesma mensagem — e é ignorado
+     * no handler, que trabalha com o valor selecionado.
+     */
+    private static StringSelectMenu actionTypeSelect(Group group, String slot) {
+        StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "actiontype", slot))
+                .setPlaceholder(group.label());
+        for (ActionType t : group.types()) {
+            menu.addOption(trim(t.name(), 100), t.id(), trim(actionSummary(t), 100));
+        }
+        return menu.build();
     }
 
     private static String actionSummary(ActionType t) {

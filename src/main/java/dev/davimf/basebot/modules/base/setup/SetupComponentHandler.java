@@ -31,6 +31,7 @@ import dev.davimf.basebot.core.component.ComponentId;
 import dev.davimf.basebot.core.component.Panels;
 import dev.davimf.basebot.database.model.GuildConfig;
 import dev.davimf.basebot.database.model.TicketCategory;
+import dev.davimf.basebot.database.postgres.ActionTypeRepository;
 import dev.davimf.basebot.database.postgres.ActionTypeRepository.ActionType;
 import dev.davimf.basebot.modules.base.listeners.AttachmentVault;
 import dev.davimf.basebot.modules.base.moderation.ModerationConfig;
@@ -38,6 +39,7 @@ import dev.davimf.basebot.modules.base.selfroles.SelfRolePanel;
 import dev.davimf.basebot.modules.base.selfroles.SelfRolePanelRepository;
 import dev.davimf.basebot.modules.base.vip.VipPlan;
 import dev.davimf.basebot.modules.base.welcome.WelcomeConfig;
+import dev.davimf.basebot.modules.facs.actions.ActionCategory;
 import dev.davimf.basebot.modules.facs.perms.ManagerPermissions;
 import dev.davimf.basebot.modules.facs.perms.ManagerPermissions.Capability;
 import dev.davimf.basebot.util.EmbedColor;
@@ -651,9 +653,23 @@ public final class SetupComponentHandler implements ComponentHandler {
                     "Preencha o nome e use números (>= 0) em máximo, mínimo e dinheiro sujo.");
             return;
         }
+        ActionCategory categoria = ActionCategory.fromDb(selected(event, "categoria"));
+        if (categoria == null) {
+            Replies.ephemeral(event, ctx, "Escolha a categoria da ação (Pequena ou Grande).");
+            return;
+        }
         String typeId = "new".equals(idArg) ? newId() : idArg;
-        ctx.database().actionTypes().upsert(new ActionType(typeId, guildId, nome.trim(),
-                max.getAsInt(), min.getAsInt(), sujo.getAsInt()));
+        try {
+            ctx.database().actionTypes().upsert(new ActionType(typeId, guildId, nome.trim(),
+                    max.getAsInt(), min.getAsInt(), sujo.getAsInt(), categoria));
+        } catch (ActionTypeRepository.DuplicateNameException e) {
+            // O upsert casa por id, então criar uma ação com nome já usado bate no índice
+            // único (guild_id, name). Sem este catch a exceção subia e a interação morria
+            // sem resposta — o usuário só via "algo deu errado".
+            Replies.ephemeral(event, ctx,
+                    "Já existe uma ação chamada `" + e.actionName() + "`. Use outro nome ou edite a existente.");
+            return;
+        }
         ctx.database().actionLogs().log(guildId, event.getUser().getId(), typeId, "ACTION_TYPE_SAVE", nome);
         edit(event, actionsScreen(ctx, guildId));
     }
@@ -1307,6 +1323,16 @@ public final class SetupComponentHandler implements ComponentHandler {
     private static String value(ModalInteractionEvent event, String key) {
         ModalMapping m = event.getValue(key);
         return m == null ? null : m.getAsString();
+    }
+
+    /** Valor único de um select dentro de um modal; null quando nada foi escolhido. */
+    private static String selected(ModalInteractionEvent event, String key) {
+        ModalMapping m = event.getValue(key);
+        if (m == null) {
+            return null;
+        }
+        List<String> values = m.getAsStringList();
+        return values.isEmpty() ? null : values.get(0);
     }
 
     private static String newId() {

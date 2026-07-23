@@ -80,16 +80,30 @@ public final class ActionView {
 
     // --- Registration flow (ephemeral) -----------------------------------------
 
-    /** Step 1: pick which saved action type to register. {@code types} must be non-empty. */
+    /**
+     * Step 1: pick which saved action type to register. {@code types} must be non-empty.
+     *
+     * <p>Um menu por categoria em vez de um só: o Discord aceita no máximo 25 opções por
+     * select, e antes o excedente era simplesmente cortado — as ações depois da 25ª em
+     * ordem alfabética não apareciam para ninguém, sem erro nem aviso.
+     */
     public static Container registerPickType(int accent, List<ActionType> types) {
-        StringSelectMenu.Builder menu = StringSelectMenu.create(ComponentId.of(NS, "regtype"))
-                .setPlaceholder("Escolha a ação");
-        types.stream().limit(MAX_OPTIONS).forEach(t ->
-                menu.addOption(trim(t.name(), 100), t.id(), trim(typeSummary(t), 100)));
-        return Panels.container(accent,
-                Panels.text("## " + Emojis.of(Emojis.NOTE, "📝") + " Registrar ação\n-# Escolha qual ação registrar."),
-                Panels.divider(),
-                ActionRow.of(menu.build()));
+        List<ContainerChildComponent> kids = new ArrayList<>();
+        kids.add(Panels.text("## " + Emojis.of(Emojis.NOTE, "📝") + " Registrar ação\n-# Escolha qual ação registrar."));
+        kids.add(Panels.divider());
+
+        List<ActionTypeGroups.Group> groups = ActionTypeGroups.chunked(types);
+        for (int i = 0; i < groups.size(); i++) {
+            ActionTypeGroups.Group g = groups.get(i);
+            StringSelectMenu.Builder menu = StringSelectMenu
+                    .create(ComponentId.of(NS, "regtype", String.valueOf(i)))
+                    .setPlaceholder(g.label());
+            for (ActionType t : g.types()) {
+                menu.addOption(trim(t.name(), 100), t.id(), trim(typeSummary(t), 100));
+            }
+            kids.add(ActionRow.of(menu.build()));
+        }
+        return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
     }
 
     /** Step 2: choose whether the action already happened or is scheduled. */
