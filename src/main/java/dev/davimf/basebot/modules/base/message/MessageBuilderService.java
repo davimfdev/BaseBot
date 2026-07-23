@@ -402,17 +402,25 @@ public final class MessageBuilderService {
                     .whenComplete((v, ex) -> finishWebhook(event, channel, ex, false));
             return;
         }
-        if (container) {
-            channel.sendMessageComponents(MessageBuild.jdaContainer(MessageState.container(state), accent, java.util.Map.of()))
-                    .useComponentsV2().queue(m -> done(event, channel, false), err -> fail(event, err));
-        } else {
-            var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, java.util.Map.of());
-            String content = MessageState.str(MessageState.classic(state), "content");
-            var action = (content != null && !content.isBlank())
-                    ? channel.sendMessage(content).setEmbeds(embed)
-                    : channel.sendMessageEmbeds(embed);
-            action.queue(m -> done(event, channel, false), err -> fail(event, err));
-        }
+        java.util.List<String> sources = MessageRehost.collectSources(state);
+        ctx.scheduler().executor().execute(() -> {
+            MessageRehost.Prepared prep = MessageRehost.download(sources);
+            if (container) {
+                channel.sendMessageComponents(MessageBuild.jdaContainer(
+                                MessageState.container(state), accent, prep.refBySource()))
+                        .useComponentsV2().setFiles(prep.files())
+                        .queue(m -> { prep.eraseAll(); done(event, channel, false); },
+                                err -> { prep.eraseAll(); fail(event, err); });
+            } else {
+                var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, prep.refBySource());
+                String content = MessageState.str(MessageState.classic(state), "content");
+                var action = (content != null && !content.isBlank())
+                        ? channel.sendMessage(content).setEmbeds(embed).setFiles(prep.files())
+                        : channel.sendMessageEmbeds(embed).setFiles(prep.files());
+                action.queue(m -> { prep.eraseAll(); done(event, channel, false); },
+                        err -> { prep.eraseAll(); fail(event, err); });
+            }
+        });
     }
 
     // --- edit existing ---------------------------------------------------------
@@ -476,18 +484,25 @@ public final class MessageBuilderService {
                     .whenComplete((v, ex) -> finishWebhook(event, channel, ex, true));
             return;
         }
-        if (container) {
-            channel.editMessageComponentsById(messageId,
-                            MessageBuild.jdaContainer(MessageState.container(state), accent, java.util.Map.of()))
-                    .useComponentsV2().queue(m -> done(event, channel, true), err -> fail(event, err));
-        } else {
-            var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, java.util.Map.of());
-            String content = MessageState.str(MessageState.classic(state), "content");
-            var action = (content != null && !content.isBlank())
-                    ? channel.editMessageById(messageId, content).setEmbeds(embed)
-                    : channel.editMessageEmbedsById(messageId, embed);
-            action.queue(m -> done(event, channel, true), err -> fail(event, err));
-        }
+        java.util.List<String> sources = MessageRehost.collectSources(state);
+        ctx.scheduler().executor().execute(() -> {
+            MessageRehost.Prepared prep = MessageRehost.download(sources);
+            if (container) {
+                channel.editMessageComponentsById(messageId,
+                                MessageBuild.jdaContainer(MessageState.container(state), accent, prep.refBySource()))
+                        .useComponentsV2().setFiles(prep.files())
+                        .queue(m -> { prep.eraseAll(); done(event, channel, true); },
+                                err -> { prep.eraseAll(); fail(event, err); });
+            } else {
+                var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, prep.refBySource());
+                String content = MessageState.str(MessageState.classic(state), "content");
+                var action = (content != null && !content.isBlank())
+                        ? channel.editMessageById(messageId, content).setEmbeds(embed).setFiles(prep.files())
+                        : channel.editMessageEmbedsById(messageId, embed).setFiles(prep.files());
+                action.queue(m -> { prep.eraseAll(); done(event, channel, true); },
+                        err -> { prep.eraseAll(); fail(event, err); });
+            }
+        });
     }
 
     /** Builds the webhook request body (content/embeds or V2 components) for send + edit. */

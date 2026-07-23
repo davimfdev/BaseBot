@@ -57,6 +57,28 @@ public final class MessageBuilderParse {
         }
         ArrayNode blocks = MessageState.blocks(state);
         container.getComponents().forEach(child -> {
+            if (child instanceof net.dv8tion.jda.api.components.mediagallery.MediaGallery gal) {
+                if (!gal.getItems().isEmpty()) {
+                    blocks.add(MessageState.newImageBlock(gal.getItems().get(0).getUrl()));
+                }
+                return;
+            }
+            if (child instanceof net.dv8tion.jda.api.components.section.Section sec) {
+                String text = sec.getContentComponents().stream()
+                        .filter(cc -> cc instanceof net.dv8tion.jda.api.components.textdisplay.TextDisplay)
+                        .map(cc -> ((net.dv8tion.jda.api.components.textdisplay.TextDisplay) cc).getContent())
+                        .findFirst().orElse("");
+                ObjectNode tb = MessageState.newTextBlock(text);
+                var acc = sec.getAccessory();
+                if (acc instanceof net.dv8tion.jda.api.components.thumbnail.Thumbnail th) {
+                    String url = th.getUrl();
+                    if (url != null && !url.startsWith("attachment://")) {
+                        MessageState.setTextThumbnail(tb, url);
+                    }
+                }
+                blocks.add(tb);
+                return;
+            }
             if (child instanceof TextDisplay td) {
                 blocks.add(MessageState.newTextBlock(td.getContent()));
             } else if (child instanceof ActionRow row) {

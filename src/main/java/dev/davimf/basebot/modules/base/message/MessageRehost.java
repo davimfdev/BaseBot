@@ -20,7 +20,13 @@ import java.util.Map;
 public final class MessageRehost {
 
     /** Sources baixadas e prontas para anexar. */
-    public record Prepared(Map<String, String> refBySource, List<FileUpload> files) {}
+    public record Prepared(Map<String, String> refBySource, List<FileUpload> files,
+                           List<ImageMedia.Image> images) {
+        /** Zera os bytes de todas as imagens; chamar após o envio/edição resolver. */
+        public void eraseAll() {
+            images.forEach(ImageMedia.Image::erase);
+        }
+    }
 
     private MessageRehost() {}
 
@@ -49,6 +55,7 @@ public final class MessageRehost {
     public static Prepared download(List<String> sources) {
         Map<String, String> refBySource = new LinkedHashMap<>();
         List<FileUpload> files = new ArrayList<>();
+        List<ImageMedia.Image> images = new ArrayList<>();
         int i = 1;
         for (String src : sources) {
             try {
@@ -56,13 +63,14 @@ public final class MessageRehost {
                 String ext = extensionOf(img.fileName());
                 String name = "image-" + i + ext;
                 files.add(FileUpload.fromData(img.bytes(), name));
+                images.add(img);
                 refBySource.put(src, "attachment://" + name);
                 i++;
             } catch (Exception ignored) {
                 // fallback: sem ref -> render usa a URL crua
             }
         }
-        return new Prepared(refBySource, files);
+        return new Prepared(refBySource, files, images);
     }
 
     private static void addIf(LinkedHashSet<String> out, String s) {
