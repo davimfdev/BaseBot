@@ -53,10 +53,14 @@ public final class MensagemCommand implements SlashCommand {
         return Commands.slash("mensagem", "Construtor de mensagens (embed clássico ou Container V2).")
                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER))
                 .addSubcommands(
-                        new SubcommandData("enviar", "Abre o construtor de mensagem."),
+                        new SubcommandData("enviar", "Abre o construtor de mensagem.")
+                                .addOption(OptionType.ATTACHMENT, "imagem", "Imagem para anexar", false)
+                                .addOption(OptionType.ATTACHMENT, "thumbnail", "Thumbnail para anexar", false),
                         new SubcommandData("editar", "Edita uma mensagem do bot no construtor.")
                                 .addOption(OptionType.STRING, "mensagem",
-                                        "ID ou link da mensagem a editar", true));
+                                        "ID ou link da mensagem a editar", true)
+                                .addOption(OptionType.ATTACHMENT, "imagem", "Imagem para anexar", false)
+                                .addOption(OptionType.ATTACHMENT, "thumbnail", "Thumbnail para anexar", false));
     }
 
     @Override
@@ -65,10 +69,14 @@ public final class MensagemCommand implements SlashCommand {
             Replies.ephemeral(event, ctx, "Use este comando em um servidor.");
             return;
         }
+        net.dv8tion.jda.api.entities.Message.Attachment img =
+                event.getOption("imagem", OptionMapping::getAsAttachment);
+        net.dv8tion.jda.api.entities.Message.Attachment thumb =
+                event.getOption("thumbnail", OptionMapping::getAsAttachment);
         if ("editar".equals(event.getSubcommandName())) {
-            service.openEdit(event, event.getOption("mensagem", OptionMapping::getAsString));
+            service.openEdit(event, event.getOption("mensagem", OptionMapping::getAsString), img, thumb);
         } else {
-            service.open(event);
+            service.open(event, img, thumb);
         }
     }
 }

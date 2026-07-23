@@ -70,10 +70,27 @@ public final class MessageBuilderService {
         this.drafts = drafts;
     }
 
-    public void open(SlashCommandInteractionEvent event) {
+    public void open(SlashCommandInteractionEvent event,
+                     net.dv8tion.jda.api.entities.Message.Attachment img,
+                     net.dv8tion.jda.api.entities.Message.Attachment thumb) {
         ObjectNode state = MessageState.initial();
+        seedAttachments(state, img, thumb);
         drafts.save(event.getUser().getId(), event.getGuild().getId(), MessageState.stringify(state));
         event.replyComponents(MessageBuilderView.panel(state)).useComponentsV2().setEphemeral(true).queue();
+    }
+
+    /** Popula classic image/thumbnail + o pool de uploads a partir dos anexos do comando. */
+    private void seedAttachments(ObjectNode state,
+                                 net.dv8tion.jda.api.entities.Message.Attachment img,
+                                 net.dv8tion.jda.api.entities.Message.Attachment thumb) {
+        if (img != null && img.isImage()) {
+            MessageState.classic(state).put("image", img.getUrl());
+            MessageState.addUpload(state, "imagem", img.getUrl());
+        }
+        if (thumb != null && thumb.isImage()) {
+            MessageState.classic(state).put("thumbnail", thumb.getUrl());
+            MessageState.addUpload(state, "thumbnail", thumb.getUrl());
+        }
     }
 
     // --- selects ---------------------------------------------------------------
@@ -90,6 +107,18 @@ public final class MessageBuilderService {
             case "managebtn" -> render(event, MessageBuilderView.buttonPanel(state,
                     Integer.parseInt(id.arg(0)), Integer.parseInt(event.getValues().get(0))));
             case "addblock" -> addBlock(event, state, event.getValues().get(0));
+            case "imgpick" -> {
+                String url = uploadUrl(state, Integer.parseInt(event.getValues().get(0)));
+                ((ObjectNode) MessageState.blocks(state).get(Integer.parseInt(id.arg(0)))).put("src", url);
+                drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(state));
+                render(event, MessageBuilderView.blockPanel(state, Integer.parseInt(id.arg(0))));
+            }
+            case "thumbpick" -> {
+                String url = uploadUrl(state, Integer.parseInt(event.getValues().get(0)));
+                MessageState.setTextThumbnail((ObjectNode) MessageState.blocks(state).get(Integer.parseInt(id.arg(0))), url);
+                drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(state));
+                render(event, MessageBuilderView.blockPanel(state, Integer.parseInt(id.arg(0))));
+            }
             default -> { /* not ours */ }
         }
     }
@@ -111,6 +140,7 @@ public final class MessageBuilderService {
                     dev.davimf.basebot.core.component.ComponentId.of(MessageBuilderView.NS, "addbtn"))).queue();
             case "sep-line" -> { MessageState.blocks(state).add(MessageState.newSeparatorBlock(true)); saveAndRender(event, state); }
             case "sep-plain" -> { MessageState.blocks(state).add(MessageState.newSeparatorBlock(false)); saveAndRender(event, state); }
+            case "image" -> { MessageState.blocks(state).add(MessageState.newImageBlock("")); saveAndRender(event, state); }
             default -> { /* ignore */ }
         }
     }
@@ -152,6 +182,20 @@ public final class MessageBuilderService {
             case "btup" -> moveButton(event, arg, id.arg(1), -1);
             case "btdown" -> moveButton(event, arg, id.arg(1), 1);
             case "btdel" -> removeButton(event, arg, id.arg(1));
+            case "imgurl" -> event.replyModal(MessageBuilderView.inputModal(
+                    ComponentId.of(MessageBuilderView.NS, "imgurlform", arg),
+                    "Imagem (URL)", "URL da imagem", "https://…",
+                    MessageState.str((ObjectNode) MessageState.blocks(load(event.getUser().getId())).get(Integer.parseInt(arg)), "src"))).queue();
+            case "thumburl" -> event.replyModal(MessageBuilderView.inputModal(
+                    ComponentId.of(MessageBuilderView.NS, "thumburlform", arg),
+                    "Thumbnail (URL)", "URL da thumbnail", "https://…",
+                    MessageState.str((ObjectNode) MessageState.blocks(load(event.getUser().getId())).get(Integer.parseInt(arg)), "thumbnail"))).queue();
+            case "thumbdel" -> {
+                ObjectNode s = load(event.getUser().getId());
+                MessageState.setTextThumbnail((ObjectNode) MessageState.blocks(s).get(Integer.parseInt(arg)), null);
+                drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(s));
+                render(event, MessageBuilderView.blockPanel(s, Integer.parseInt(arg)));
+            }
             case "cancel" -> { drafts.delete(event.getUser().getId()); render(event, Panels.container(EmbedColor.DEFAULT, Panels.text("Construtor cancelado."))); }
             case "send" -> send(event);
             default -> { /* not ours */ }
@@ -291,6 +335,19 @@ public final class MessageBuilderService {
                     Integer.parseInt(id.arg(1))));
             return;
         }
+        // Image/thumbnail URL edits re-render the block panel, not the main builder.
+        if ("imgurlform".equals(action) || "thumburlform".equals(action)) {
+            int bi = Integer.parseInt(arg);
+            ObjectNode block = (ObjectNode) MessageState.blocks(state).get(bi);
+            if ("imgurlform".equals(action)) {
+                block.put("src", value(event, "v") == null ? "" : value(event, "v"));
+            } else {
+                MessageState.setTextThumbnail(block, value(event, "v"));
+            }
+            drafts.save(event.getUser().getId(), guildId(event), MessageState.stringify(state));
+            render(event, MessageBuilderView.blockPanel(state, bi));
+            return;
+        }
         switch (action) {
             case "fldform" -> {
                 Field f = MessageBuilderView.field(arg);
@@ -360,7 +417,9 @@ public final class MessageBuilderService {
 
     // --- edit existing ---------------------------------------------------------
 
-    public void openEdit(SlashCommandInteractionEvent event, String ref) {
+    public void openEdit(SlashCommandInteractionEvent event, String ref,
+                         net.dv8tion.jda.api.entities.Message.Attachment img,
+                         net.dv8tion.jda.api.entities.Message.Attachment thumb) {
         String[] loc = parseRef(event, ref);
         TextChannel channel = event.getGuild().getTextChannelById(loc[0]);
         if (channel == null) {
@@ -379,6 +438,7 @@ public final class MessageBuilderService {
                 return;
             }
             ObjectNode state = MessageBuilderParse.fromMessage(msg);
+            seedAttachments(state, img, thumb);
             state.put("channelId", channel.getId());
             state.put("editChannelId", channel.getId());
             state.put("editMessageId", msg.getId());
@@ -516,6 +576,11 @@ public final class MessageBuilderService {
 
     private static String id(String action, String arg) {
         return dev.davimf.basebot.core.component.ComponentId.of(MessageBuilderView.NS, action, arg);
+    }
+
+    private static String uploadUrl(ObjectNode state, int i) {
+        ArrayNode ups = MessageState.uploads(state);
+        return i >= 0 && i < ups.size() ? MessageState.str((ObjectNode) ups.get(i), "url") : "";
     }
 
     private static String userId(IMessageEditCallback cb) {
