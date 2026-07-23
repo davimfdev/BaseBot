@@ -35,6 +35,7 @@ import dev.davimf.basebot.modules.facs.commands.RecrutamentoCommand;
 import dev.davimf.basebot.modules.facs.commands.RelatorioCommand;
 import dev.davimf.basebot.modules.facs.commands.SolicitarCargoCommand;
 import dev.davimf.basebot.modules.facs.recruit.RecruitComponentHandler;
+import dev.davimf.basebot.modules.facs.recruit.RecruitRequestRepository;
 import dev.davimf.basebot.modules.facs.recruit.RecruitStatsRepository;
 import dev.davimf.basebot.modules.facs.economy.EconomyRepository;
 import dev.davimf.basebot.modules.facs.economy.RecipeRepository;
@@ -112,7 +113,9 @@ public final class FacsModule implements BotModule {
         // Recruitment: /recrutamento painel -> apply modal -> manager Accept grants the
         // entry role and credits the recruiter (+1 in recruiter_stats).
         registry.command(new RecrutamentoCommand());
-        registry.component(new RecruitComponentHandler(new RecruitStatsRepository(ctx.database().sqlite())));
+        registry.component(new RecruitComponentHandler(
+                new RecruitStatsRepository(ctx.database().sqlite()),
+                new RecruitRequestRepository(ctx.database().sqlite())));
 
         // Actions/Reservations: /painel-acoes with the Elite-priority queue, Alinhamento
         // pings, backfill and Vitória/Derrota controls.

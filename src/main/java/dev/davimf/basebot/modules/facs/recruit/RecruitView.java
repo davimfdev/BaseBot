@@ -10,7 +10,8 @@
 //   - `Method` : `public static Container panel(int accent, String description)`
 //   - `Method` : `public static Modal form()`
 //   - `Method` : `public static Container request(int accent, String applicantId, String recruiterId, String idJogo, String nome, String telefone)`
-//   - `Method` : `public static Container resolved(int accent, String applicantId, String recruiterId, String statusLine)`
+//   - `Method` : `public static Container resolved(int accent, String applicantId, String recruiterId, String idJogo, String nome, String telefone, String statusLine)`
+//   - `Method` : `public static Container resolvedLegacy(int accent, String applicantId, String recruiterId, String statusLine)`
 // 
 // Fields:
 //   - `Field` : `public static final String NS`
@@ -92,13 +93,32 @@ public final class RecruitView {
                         Button.danger(ComponentId.of(NS, "reject", applicantId, recruiterId), "Recusar").withEmoji(Emojis.button(Emojis.CHECK_NO))));
     }
 
-    public static Container resolved(int accent, String applicantId, String recruiterId, String statusLine) {
+    /** Tela resolvida com as respostas completas (aceite/recusa quando há dados). */
+    public static Container resolved(int accent, String applicantId, String recruiterId,
+                                     String idJogo, String nome, String telefone, String statusLine) {
+        String body = "" + Emojis.of(Emojis.MEMBER, "👤") + " **Candidato** · <@" + applicantId + ">\n"
+                + "" + Emojis.of(Emojis.GAME, "🎮") + " **ID no jogo** · `" + idJogo + "`\n"
+                + "" + Emojis.of(Emojis.NICKNAME, "📛") + " **Nome** · `" + nome + "`\n"
+                + "" + Emojis.of(Emojis.CALL, "📞") + " **Telefone** · `" + telefone + "`\n"
+                + "" + Emojis.of(Emojis.HANDSHAKE, "🤝") + " **Recrutador** · <@" + recruiterId + ">";
+        return Panels.container(accent,
+                Panels.text("## " + Emojis.of(Emojis.NOTE, "📝") + " Solicitação de entrada"),
+                Panels.divider(),
+                Panels.text(body),
+                Panels.divider(),
+                Panels.text(statusLine));
+    }
+
+    /** Tela resolvida sem respostas (mensagens antigas sem persistência). */
+    public static Container resolvedLegacy(int accent, String applicantId, String recruiterId,
+                                           String statusLine) {
         return Panels.container(accent,
                 Panels.text("## " + Emojis.of(Emojis.NOTE, "📝") + " Solicitação de entrada"),
                 Panels.divider(),
                 Panels.text("" + Emojis.of(Emojis.MEMBER, "👤") + " **Candidato** · <@" + applicantId + ">\n"
                         + "" + Emojis.of(Emojis.HANDSHAKE, "🤝") + " **Recrutador** · <@" + recruiterId + ">"),
                 Panels.divider(),
-                Panels.text(statusLine));
+                Panels.text(statusLine
+                        + "\n-# Solicitação antiga sem dados salvos. Respostas não disponíveis."));
     }
 }
