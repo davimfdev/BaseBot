@@ -36,6 +36,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Renders a {@link MessageState} into the actual message — both the JDA objects for a
@@ -47,19 +48,19 @@ public final class MessageBuild {
 
     // --- JDA (normal send) -----------------------------------------------------
 
-    public static MessageEmbed jdaEmbed(ObjectNode classic, int defaultAccent) {
+    public static MessageEmbed jdaEmbed(ObjectNode classic, int defaultAccent, Map<String, String> rehost) {
         EmbedBuilder eb = new EmbedBuilder();
         eb.setColor(EmbedColor.parse(MessageState.str(classic, "color")).orElse(defaultAccent));
         set(MessageState.str(classic, "title"), eb::setTitle);
         set(MessageState.str(classic, "description"), eb::setDescription);
         set(MessageState.str(classic, "author"), n -> eb.setAuthor(n));
-        set(MessageState.str(classic, "image"), eb::setImage);
-        set(MessageState.str(classic, "thumbnail"), eb::setThumbnail);
+        set(ref(rehost, MessageState.str(classic, "image")), eb::setImage);
+        set(ref(rehost, MessageState.str(classic, "thumbnail")), eb::setThumbnail);
         set(MessageState.str(classic, "footer"), f -> eb.setFooter(f));
         return eb.build();
     }
 
-    public static Container jdaContainer(ObjectNode container, int defaultAccent) {
+    public static Container jdaContainer(ObjectNode container, int defaultAccent, Map<String, String> rehost) {
         int accent = EmbedColor.parse(MessageState.str(container, "color")).orElse(defaultAccent);
         List<ContainerChildComponent> kids = new ArrayList<>();
         for (var node : (ArrayNode) container.get("blocks")) {
@@ -68,7 +69,21 @@ public final class MessageBuild {
                 case MessageState.BLOCK_TEXT -> {
                     String t = MessageState.str(b, "text");
                     if (t != null && !t.isBlank()) {
-                        kids.add(Panels.text(t));
+                        String thumb = ref(rehost, MessageState.str(b, "thumbnail"));
+                        if (thumb != null) {
+                            kids.add(net.dv8tion.jda.api.components.section.Section.of(
+                                    net.dv8tion.jda.api.components.thumbnail.Thumbnail.fromUrl(thumb),
+                                    Panels.text(t)));
+                        } else {
+                            kids.add(Panels.text(t));
+                        }
+                    }
+                }
+                case MessageState.BLOCK_IMAGE -> {
+                    String src = ref(rehost, MessageState.str(b, "src"));
+                    if (src != null) {
+                        kids.add(net.dv8tion.jda.api.components.mediagallery.MediaGallery.of(
+                                net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem.fromUrl(src)));
                     }
                 }
                 case MessageState.BLOCK_BUTTONS -> {
@@ -100,6 +115,14 @@ public final class MessageBuild {
             kids.add(Panels.text("​")); // containers need at least one child
         }
         return Panels.container(accent, kids.toArray(new ContainerChildComponent[0]));
+    }
+
+    /** Resolve uma source para a ref de anexo re-hospedada, ou a própria URL; null se vazia. */
+    private static String ref(Map<String, String> rehost, String src) {
+        if (src == null || src.isBlank()) {
+            return null;
+        }
+        return rehost.getOrDefault(src, src);
     }
 
     // --- Webhook (raw JSON) ----------------------------------------------------
@@ -141,7 +164,24 @@ public final class MessageBuild {
                 case MessageState.BLOCK_TEXT -> {
                     String t = MessageState.str(b, "text");
                     if (t != null && !t.isBlank()) {
-                        children.addObject().put("type", 10).put("content", t);
+                        String thumb = MessageState.str(b, "thumbnail");
+                        if (thumb != null && !thumb.isBlank()) {
+                            ObjectNode section = children.addObject();
+                            section.put("type", 9);
+                            section.putArray("components").addObject().put("type", 10).put("content", t);
+                            section.putObject("accessory").put("type", 11)
+                                    .putObject("media").put("url", thumb);
+                        } else {
+                            children.addObject().put("type", 10).put("content", t);
+                        }
+                    }
+                }
+                case MessageState.BLOCK_IMAGE -> {
+                    String src = MessageState.str(b, "src");
+                    if (src != null && !src.isBlank()) {
+                        ObjectNode gallery = children.addObject();
+                        gallery.put("type", 12);
+                        gallery.putArray("items").addObject().putObject("media").put("url", src);
                     }
                 }
                 case MessageState.BLOCK_BUTTONS -> {

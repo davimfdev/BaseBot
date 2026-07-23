@@ -346,10 +346,10 @@ public final class MessageBuilderService {
             return;
         }
         if (container) {
-            channel.sendMessageComponents(MessageBuild.jdaContainer(MessageState.container(state), accent))
+            channel.sendMessageComponents(MessageBuild.jdaContainer(MessageState.container(state), accent, java.util.Map.of()))
                     .useComponentsV2().queue(m -> done(event, channel, false), err -> fail(event, err));
         } else {
-            var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent);
+            var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, java.util.Map.of());
             String content = MessageState.str(MessageState.classic(state), "content");
             var action = (content != null && !content.isBlank())
                     ? channel.sendMessage(content).setEmbeds(embed)
@@ -418,10 +418,10 @@ public final class MessageBuilderService {
         }
         if (container) {
             channel.editMessageComponentsById(messageId,
-                            MessageBuild.jdaContainer(MessageState.container(state), accent))
+                            MessageBuild.jdaContainer(MessageState.container(state), accent, java.util.Map.of()))
                     .useComponentsV2().queue(m -> done(event, channel, true), err -> fail(event, err));
         } else {
-            var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent);
+            var embed = MessageBuild.jdaEmbed(MessageState.classic(state), accent, java.util.Map.of());
             String content = MessageState.str(MessageState.classic(state), "content");
             var action = (content != null && !content.isBlank())
                     ? channel.editMessageById(messageId, content).setEmbeds(embed)
