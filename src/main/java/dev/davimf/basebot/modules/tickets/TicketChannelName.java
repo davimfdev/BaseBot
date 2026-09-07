@@ -1,28 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.tickets
-// 
-// Class: TicketChannelName
-// 
-// Constructors:
-//   - `Constructor` : `private TicketChannelName()`
-// 
-// Methods:
-//   - `Method` : `public static String opened(String creatorName)`
-//   - `Method` : `public static String assumed(String categoryEmoji, String staffName)`
-//   - `Method` : `public static String renamed(String categoryEmoji, String newName)`
-//   - `Method` : `private static String prefix(String emoji)`
-//   - `Method` : `private static String clamp(String name)`
-//   - `Method` : `package-private static String slug(String s)`
-// 
-// Fields:
-//   - `Field` : `public static final String OPEN_LOCK`
-//   - `Field` : `public static final String CLOSED_LOCK`
-//   - `Field` : `public static final String SEP`
-//   - `Field` : `private static final int MAX`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.tickets;
 
 import dev.davimf.basebot.util.Emojis;

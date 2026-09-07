@@ -1,25 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.database.sqlite
-// 
-// Class: SqliteMigrator
-// 
-// Constructors:
-//   - `Constructor` : `public SqliteMigrator(SqliteManager sqlite)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(SqliteMigrator.class)`
-//   - `Method` : `private static final List<String> MIGRATIONS = List. of(, , , , , , , , , , , , , , , , , , , ,)`
-//   - `Method` : `private boolean alreadyApplied(Connection c, String resource)`
-//   - `Method` : `private static List<String> splitStatements(String script)`
-//   - `Method` : `private static String stripInlineComment(String line)`
-//   - `Method` : `private String readResource(String resource)`
-// 
-// Fields:
-//   - `Field` : `private final SqliteManager sqlite`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.database.sqlite;
 
 import org.slf4j.Logger;

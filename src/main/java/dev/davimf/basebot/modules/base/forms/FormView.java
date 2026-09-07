@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.forms
-// 
-// Class: FormView
-// 
-// Constructors:
-//   - `Constructor` : `private FormView()`
-// 
-// Methods:
-//   - `Method` : `public static Container panel(int accent, Form form)`
-//   - `Method` : `public static Modal modal(Form form)`
-//   - `Method` : `private static String trim(String s, int max)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.forms;
 
 import dev.davimf.basebot.util.Emojis;

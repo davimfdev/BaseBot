@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.moderation
-// 
-// Class: MessagePurgeTest
-// 
-// Fields:
-//   - `Field` : `private static final long NOW`
-//   - `Field` : `private static final long DAY`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.moderation;
 
 import org.junit.jupiter.api.Test;

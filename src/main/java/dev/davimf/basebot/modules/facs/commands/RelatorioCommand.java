@@ -1,24 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.commands
-// 
-// Class: RelatorioCommand
-// 
-// Constructors:
-//   - `Constructor` : `public RelatorioCommand(EconomyRepository economy)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-//   - `Method` : `private static String csv(String value)`
-// 
-// Fields:
-//   - `Field` : `private static final int EMBED_MAX_DAYS`
-//   - `Field` : `private static final int EMBED_ROWS`
-//   - `Field` : `private final EconomyRepository economy`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.util.Emojis;

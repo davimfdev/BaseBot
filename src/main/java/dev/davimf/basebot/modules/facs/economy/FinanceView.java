@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.economy
-// 
-// Class: FinanceView
-// 
-// Constructors:
-//   - `Constructor` : `private FinanceView()`
-// 
-// Methods:
-//   - `Method` : `public static Container panel(int accent, long balanceCents, boolean lavagem, int lavagemPct, boolean desmanche, int desmanchePct)`
-//   - `Method` : `public static Modal amountModal(String action, String title, String label)`
-//   - `Method` : `public static Modal transferModal()`
-//   - `Method` : `public static Modal pctModal(int lavagemPct, int desmanchePct)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.core.component.ComponentId;

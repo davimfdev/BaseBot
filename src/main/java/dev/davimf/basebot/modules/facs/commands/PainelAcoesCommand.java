@@ -1,21 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.commands
-// 
-// Class: PainelAcoesCommand
-// 
-// Constructors:
-//   - `Constructor` : `public PainelAcoesCommand(ActionService service)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private final ActionService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.core.BotContext;

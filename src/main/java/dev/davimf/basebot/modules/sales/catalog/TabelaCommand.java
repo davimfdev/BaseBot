@@ -1,21 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.catalog
-// 
-// Class: TabelaCommand
-// 
-// Constructors:
-//   - `Constructor` : `public TabelaCommand(CatalogRepository catalog)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private final CatalogRepository catalog`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.catalog;
 
 import dev.davimf.basebot.core.BotContext;

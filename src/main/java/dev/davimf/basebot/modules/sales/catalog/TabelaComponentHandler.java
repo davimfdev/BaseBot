@@ -1,24 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.catalog
-// 
-// Class: TabelaComponentHandler
-// 
-// Constructors:
-//   - `Constructor` : `public TabelaComponentHandler(CatalogRepository catalog)`
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-//   - `Method` : `private Container hub(BotContext ctx, String guildId)`
-//   - `Method` : `private int accent(BotContext ctx, String guildId)`
-//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
-//   - `Method` : `private static int parseInt(String s)`
-// 
-// Fields:
-//   - `Field` : `private final CatalogRepository catalog`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.catalog;
 
 import dev.davimf.basebot.core.BotContext;

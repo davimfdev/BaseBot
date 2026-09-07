@@ -1,35 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.actions
-// 
-// Class: ActionView
-// 
-// Constructors:
-//   - `Constructor` : `private ActionView()`
-// 
-// Methods:
-//   - `Method` : `public static Container managementPanel(int accent)`
-//   - `Method` : `public static Container registerPickType(int accent, List<ActionType> types)`
-//   - `Method` : `public static Container registerPastFuture(int accent, String typeId, String typeName)`
-//   - `Method` : `public static Modal futureModal(String typeId)`
-//   - `Method` : `public static Modal pastModal(String typeId)`
-//   - `Method` : `public static Modal timeModal(String actionId, Action existing)`
-//   - `Method` : `public static Container panel(int accent, Action action, List<Participant> confirmed, List<Participant> reserve)`
-//   - `Method` : `public static Container configPanel(int accent, Action action)`
-//   - `Method` : `public static Container manageList(int accent, List<Action> openActions)`
-//   - `Method` : `public static String typeSummary(ActionType t)`
-//   - `Method` : `private static boolean isResolved(String status)`
-//   - `Method` : `private static String memberList(List<Participant> list)`
-//   - `Method` : `private static String whenValue(Action action)`
-//   - `Method` : `private static String statusLabel(Action action)`
-//   - `Method` : `private static String trim(String s, int max)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-//   - `Field` : `private static final int MAX_OPTIONS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.actions;
 
 import dev.davimf.basebot.core.component.ComponentId;

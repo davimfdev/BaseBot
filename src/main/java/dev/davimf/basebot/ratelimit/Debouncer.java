@@ -1,19 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.ratelimit
-// 
-// Class: Debouncer
-// 
-// Constructors:
-//   - `Constructor` : `public Debouncer(ScheduledExecutorService scheduler, long delayMillis)`
-// 
-// Fields:
-//   - `Field` : `private final ScheduledExecutorService scheduler`
-//   - `Field` : `private final long delayMillis`
-//   - `Field` : `private final ConcurrentHashMap<String, ScheduledFuture<?>> pending`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.ratelimit;
 
 import java.util.concurrent.ConcurrentHashMap;

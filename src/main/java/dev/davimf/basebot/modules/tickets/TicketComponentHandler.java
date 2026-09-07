@@ -1,20 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.tickets
-// 
-// Class: TicketComponentHandler
-// 
-// Constructors:
-//   - `Constructor` : `public TicketComponentHandler(TicketService service)`
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-// 
-// Fields:
-//   - `Field` : `private final TicketService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.tickets;
 
 import dev.davimf.basebot.core.BotContext;

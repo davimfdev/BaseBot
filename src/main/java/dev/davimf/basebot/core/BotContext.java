@@ -1,33 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.core
-// 
-// Class: BotContext
-// 
-// Constructors:
-//   - `Constructor` : `public BotContext(BotConfig config, DatabaseManager database, TaskScheduler scheduler)`
-// 
-// Methods:
-//   - `Method` : `public BotConfig config()`
-//   - `Method` : `public DatabaseManager database()`
-//   - `Method` : `public TaskScheduler scheduler()`
-//   - `Method` : `public ProfileRateLimiter profileRateLimiter()`
-//   - `Method` : `public Debouncer embedDebouncer()`
-//   - `Method` : `public TicketCrypto ticketCrypto()`
-//   - `Method` : `public TicketIngestClient ticketIngest()`
-//   - `Method` : `public JDA jda()`
-// 
-// Fields:
-//   - `Field` : `private final BotConfig config`
-//   - `Field` : `private final DatabaseManager database`
-//   - `Field` : `private final TaskScheduler scheduler`
-//   - `Field` : `private final Debouncer embedDebouncer`
-//   - `Field` : `private final TicketCrypto ticketCrypto`
-//   - `Field` : `private final TicketIngestClient ticketIngest`
-//   - `Field` : `private volatile JDA jda`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.core;
 
 import dev.davimf.basebot.config.BotConfig;

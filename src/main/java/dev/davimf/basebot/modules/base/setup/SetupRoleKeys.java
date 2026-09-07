@@ -1,19 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.setup
-// 
-// Class: SetupRoleKeys
-// 
-// Constructors:
-//   - `Constructor` : `private SetupRoleKeys()`
-// 
-// Methods:
-//   - `Method` : `public static final List<Map.Entry<String, String>> OPTIONS = build()`
-//   - `Method` : `private static List<Map.Entry<String, String>> build()`
-//   - `Method` : `public static String labelFor(String key)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.setup;
 
 import dev.davimf.basebot.modules.facs.hierarchy.FacHierarchy;

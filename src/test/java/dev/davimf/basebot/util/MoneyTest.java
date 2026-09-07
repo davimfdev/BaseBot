@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.util
-// 
-// Class: MoneyTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.util;
 
 import org.junit.jupiter.api.Test;

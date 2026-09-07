@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.config
-// 
-// Class: DotEnvTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.config;
 
 import org.junit.jupiter.api.Test;

@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.commands
-// 
-// Class: SolicitarCargoCommand
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.util.Emojis;

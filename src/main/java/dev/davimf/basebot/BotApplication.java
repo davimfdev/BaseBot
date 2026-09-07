@@ -1,27 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot
-// 
-// Class: BotApplication
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(BotApplication.class)`
-//   - `Method` : `private final List<BotModule> modules = List. of(new BaseModule()`
-// 
-// Fields:
-//   - `Field` : `private static final class ReadinessCoordinator extends ListenerAdapter`
-// 
-// Class: ReadinessCoordinator
-// 
-// Constructors:
-//   - `Constructor` : `package-private ReadinessCoordinator(BotContext context, List<BotModule> modules)`
-// 
-// Fields:
-//   - `Field` : `private final BotContext context`
-//   - `Field` : `private final List<BotModule> modules`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot;
 
 import dev.davimf.basebot.config.BotConfig;

@@ -1,18 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.listeners
-// 
-// Class: HierarchyListener
-// 
-// Constructors:
-//   - `Constructor` : `public HierarchyListener(BotContext ctx, HierarchyService service)`
-// 
-// Fields:
-//   - `Field` : `private final BotContext ctx`
-//   - `Field` : `private final HierarchyService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.listeners;
 
 import dev.davimf.basebot.core.BotContext;

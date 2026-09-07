@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.config
-// 
-// Class: DiscordConfigTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.config;
 
 import org.junit.jupiter.api.Test;

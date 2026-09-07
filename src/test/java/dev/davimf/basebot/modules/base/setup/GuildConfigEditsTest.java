@@ -1,14 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.setup
-// 
-// Class: GuildConfigEditsTest
-// 
-// Methods:
-//   - `Method` : `private final GuildConfig base = GuildConfig. empty()`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.setup;
 
 import dev.davimf.basebot.database.model.GuildConfig;

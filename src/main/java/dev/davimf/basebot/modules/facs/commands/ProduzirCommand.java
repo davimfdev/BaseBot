@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.commands
-// 
-// Class: ProduzirCommand
-// 
-// Constructors:
-//   - `Constructor` : `public ProduzirCommand(EconomyRepository economy, RecipeRepository recipes)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private final EconomyRepository economy`
-//   - `Field` : `private final RecipeRepository recipes`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.util.Emojis;

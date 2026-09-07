@@ -1,14 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules
-// 
-// Interface: BotModule
-// 
-// Methods:
-//   - `Method` : `package-private String name()`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules;
 
 import dev.davimf.basebot.core.BotContext;

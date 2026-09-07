@@ -1,28 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.economy
-// 
-// Class: FinanceService
-// 
-// Constructors:
-//   - `Constructor` : `public FinanceService(BotContext ctx, EconomyRepository economy)`
-// 
-// Methods:
-//   - `Method` : `public Container panel(String guildId)`
-//   - `Method` : `private static int pct(GuildConfig cfg, String key)`
-//   - `Method` : `private static int clampPct(String raw)`
-//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
-// 
-// Fields:
-//   - `Field` : `package-private static final String TOGGLE_LAVAGEM`
-//   - `Field` : `package-private static final String TOGGLE_DESMANCHE`
-//   - `Field` : `package-private static final String PCT_LAVAGEM`
-//   - `Field` : `package-private static final String PCT_DESMANCHE`
-//   - `Field` : `private final BotContext ctx`
-//   - `Field` : `private final EconomyRepository economy`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.util.Emojis;

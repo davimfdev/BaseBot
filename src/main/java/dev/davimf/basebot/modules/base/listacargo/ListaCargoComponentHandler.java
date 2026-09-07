@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.listacargo
-// 
-// Class: ListaCargoComponentHandler
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-//   - `Method` : `private int parsePage(String raw)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.listacargo;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.tickets
-// 
-// Class: TicketChannelNameTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.tickets;
 
 import org.junit.jupiter.api.Test;

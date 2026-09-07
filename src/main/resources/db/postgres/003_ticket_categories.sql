@@ -1,12 +1,3 @@
--- [OUTLINE START]
--- Created Tables:
--- - ticket_categories
--- Created Indices:
--- - ticket_categories_guild_idx
--- [OUTLINE END]
-
-
-
 -- Module 2: ticket categories (types). A guild can have many; each one drives a button
 -- on the ticket panel and the channel it opens. Config is source-of-truth in Postgres.
 CREATE TABLE IF NOT EXISTS ticket_categories (

@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.moderation
-// 
-// Class: RoleHierarchyTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.moderation;
 
 import org.junit.jupiter.api.Test;

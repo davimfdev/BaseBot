@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.database.postgres
-// 
-// Class: PostgresPool
-// 
-// Constructors:
-//   - `Constructor` : `public PostgresPool(BotConfig.Postgres cfg)`
-// 
-// Methods:
-//   - `Method` : `public Connection getConnection()`
-//   - `Method` : `public DataSource dataSource()`
-//   - `Method` : `public String schema()`
-// 
-// Fields:
-//   - `Field` : `private final HikariDataSource dataSource`
-//   - `Field` : `private final String schema`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.database.postgres;
 
 import com.zaxxer.hikari.HikariConfig;

@@ -1,21 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.commands
-// 
-// Class: FormularioCommand
-// 
-// Constructors:
-//   - `Constructor` : `public FormularioCommand(FormRepository forms)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private final FormRepository forms`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.util.Emojis;

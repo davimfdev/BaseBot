@@ -1,24 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.recruit
-// 
-// Class: RecruitView
-// 
-// Constructors:
-//   - `Constructor` : `private RecruitView()`
-// 
-// Methods:
-//   - `Method` : `public static Container panel(int accent, String description)`
-//   - `Method` : `public static Modal form()`
-//   - `Method` : `public static Container request(int accent, String applicantId, String recruiterId, String idJogo, String nome, String telefone)`
-//   - `Method` : `public static Container resolved(int accent, String applicantId, String recruiterId, String idJogo, String nome, String telefone, String statusLine)`
-//   - `Method` : `public static Container resolvedLegacy(int accent, String applicantId, String recruiterId, String statusLine)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.recruit;
 
 import dev.davimf.basebot.util.Emojis;

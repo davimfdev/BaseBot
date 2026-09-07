@@ -1,26 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.moderation
-// 
-// Class: MessagePurge
-// 
-// Constructors:
-//   - `Constructor` : `private MessagePurge()`
-// 
-// Methods:
-//   - `Method` : `public static Partition partitionByAge(List<Long> timestampsMillis, long nowMillis)`
-// 
-// Fields:
-//   - `Field` : `public static final long BULK_MAX_AGE_MILLIS`
-// 
-// Record: Partition
-// 
-// Record Components:
-//   - Record Component : public final List<Long> bulkDeletable
-//   - Record Component : public final List<Long> tooOld
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.moderation;
 
 import java.util.ArrayList;

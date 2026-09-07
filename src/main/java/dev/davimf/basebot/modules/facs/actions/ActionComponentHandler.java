@@ -1,20 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.actions
-// 
-// Class: ActionComponentHandler
-// 
-// Constructors:
-//   - `Constructor` : `public ActionComponentHandler(ActionService service)`
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-// 
-// Fields:
-//   - `Field` : `private final ActionService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.actions;
 
 import dev.davimf.basebot.util.Emojis;

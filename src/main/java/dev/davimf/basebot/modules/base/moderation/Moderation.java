@@ -1,20 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.moderation
-// 
-// Class: Moderation
-// 
-// Constructors:
-//   - `Constructor` : `private Moderation()`
-// 
-// Methods:
-//   - `Method` : `public static int topPosition(List<Integer> rolePositions)`
-//   - `Method` : `private static int topPosition(Member member)`
-//   - `Method` : `public static boolean canModerate(Member actor, Member target, Member self)`
-//   - `Method` : `public static boolean canManageRole(Member actor, Role role, Member self)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.moderation;
 
 import net.dv8tion.jda.api.entities.Member;

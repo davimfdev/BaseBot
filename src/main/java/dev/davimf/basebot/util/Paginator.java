@@ -1,18 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.util
-// 
-// Class: Paginator
-// 
-// Constructors:
-//   - `Constructor` : `private Paginator()`
-// 
-// Methods:
-//   - `Method` : `public static int pageCount(int total, int pageSize)`
-//   - `Method` : `public static <T> List<T> page(List<T> items, int pageIndex, int pageSize)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.util;
 
 import java.util.List;

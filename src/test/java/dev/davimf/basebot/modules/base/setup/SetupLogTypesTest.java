@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.setup
-// 
-// Class: SetupLogTypesTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.setup;
 
 import dev.davimf.basebot.modules.base.setup.SetupLogTypes.LogType;

@@ -1,30 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.economy
-// 
-// Class: FarmRepository
-// 
-// Constructors:
-//   - `Constructor` : `public FarmRepository(SqliteManager sqlite)`
-// 
-// Methods:
-//   - `Method` : `public String create(String guildId, String farmerId, String item, long quantity)`
-//   - `Method` : `public Optional<Pending> find(String id)`
-// 
-// Fields:
-//   - `Field` : `private final SqliteManager sqlite`
-// 
-// Record: Pending
-// 
-// Record Components:
-//   - Record Component : public final String id
-//   - Record Component : public final String guildId
-//   - Record Component : public final String farmerId
-//   - Record Component : public final String item
-//   - Record Component : public final long quantity
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;

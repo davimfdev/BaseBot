@@ -1,19 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.crypto
-// 
-// Class: TicketCryptoTest
-// 
-// Methods:
-//   - `Method` : `private static String decrypt(EncryptedBundle b, String password)`
-//   - `Method` : `private static byte[] pbkdf2(String password, byte[] salt, int iterations)`
-//   - `Method` : `private static byte[] b64(String s)`
-// 
-// Fields:
-//   - `Field` : `private static final int ITER`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.crypto;
 
 import org.junit.jupiter.api.Test;

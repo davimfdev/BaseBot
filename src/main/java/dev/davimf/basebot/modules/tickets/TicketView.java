@@ -1,29 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.tickets
-// 
-// Class: TicketView
-// 
-// Constructors:
-//   - `Constructor` : `private TicketView()`
-// 
-// Methods:
-//   - `Method` : `public static Container panel(int accent, List<TicketCategory> categories)`
-//   - `Method` : `public static Container dashboard(int accent, String ticketId, String headerMarkdown)`
-//   - `Method` : `public static Container dashboard(int accent, String ticketId, String headerMarkdown, String assignedStaffId)`
-//   - `Method` : `public static Modal openReasonModal(String categoryId)`
-//   - `Method` : `public static Modal closeReasonModal(String ticketId)`
-//   - `Method` : `public static Container notifyDm(int accent, String guildName, String channelUrl)`
-//   - `Method` : `public static Container addMemberPrompt(int accent, String ticketId)`
-//   - `Method` : `public static Modal renameModal(String ticketId, String currentSuffix)`
-//   - `Method` : `public static Container closure(int accent, String channelName, String creatorId, String closerId, String reason, String url, String password)`
-//   - `Method` : `private static String trim(String s, int max)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.tickets;
 
 import dev.davimf.basebot.core.component.ComponentId;

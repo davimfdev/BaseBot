@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.config
-// 
-// Class: DotEnv
-// 
-// Constructors:
-//   - `Constructor` : `private DotEnv(Map<String, String> values)`
-// 
-// Methods:
-//   - `Method` : `public static DotEnv load(Path file)`
-//   - `Method` : `public String get(String key)`
-//   - `Method` : `public static Map<String, String> parse(String content)`
-//   - `Method` : `private static String stripQuotes(String v)`
-// 
-// Fields:
-//   - `Field` : `private final Map<String, String> values`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.config;
 
 import java.io.IOException;

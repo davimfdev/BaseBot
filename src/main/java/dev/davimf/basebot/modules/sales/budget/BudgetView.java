@@ -1,27 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.budget
-// 
-// Class: BudgetView
-// 
-// Constructors:
-//   - `Constructor` : `private BudgetView()`
-// 
-// Methods:
-//   - `Method` : `public static Container builder(int accent, String budgetId, String clientId, List<BudgetItem> items, List<CatalogCategory> categories)`
-//   - `Method` : `public static Container productPicker(int accent, String budgetId, CatalogCategory category, List<CatalogProduct> products)`
-//   - `Method` : `public static Modal quantityModal(String budgetId, String productId, String productName)`
-//   - `Method` : `public static Container approval(int accent, String budgetId, String sellerId, String clientId, List<BudgetItem> items)`
-//   - `Method` : `public static Container resolved(int accent, String sellerId, String clientId, List<BudgetItem> items, String statusLine)`
-//   - `Method` : `private static String itemsBlock(List<BudgetItem> items)`
-//   - `Method` : `package-private static long total(List<BudgetItem> items)`
-//   - `Method` : `private static String trim(String s, int max)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.budget;
 
 import dev.davimf.basebot.util.Emojis;

@@ -1,20 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.message
-// 
-// Class: MessageBuilderComponentHandler
-// 
-// Constructors:
-//   - `Constructor` : `public MessageBuilderComponentHandler(MessageBuilderService service)`
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-// 
-// Fields:
-//   - `Field` : `private final MessageBuilderService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.message;
 
 import dev.davimf.basebot.core.BotContext;

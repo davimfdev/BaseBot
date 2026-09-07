@@ -1,26 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.setup
-// 
-// Class: SetupComponentHandler
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-//   - `Method` : `private Container hubScreen(BotContext ctx, String guildId)`
-//   - `Method` : `private Container ticketsScreen(BotContext ctx, String guildId)`
-//   - `Method` : `private Container actionsScreen(BotContext ctx, String guildId)`
-//   - `Method` : `private GuildConfig config(BotContext ctx, String guildId)`
-//   - `Method` : `private Container permAddRolePrompt(BotContext ctx, String guildId)`
-//   - `Method` : `private String principalLabel(String principal, Guild guild)`
-//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
-//   - `Method` : `private static String newId()`
-//   - `Method` : `private static int parseInt(String raw)`
-//   - `Method` : `private static OptionalInt parsePositive(String raw)`
-//   - `Method` : `private static String firstChannelId(EntitySelectInteractionEvent event)`
-//   - `Method` : `private static String firstRoleId(EntitySelectInteractionEvent event)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.setup;
 
 import dev.davimf.basebot.util.Emojis;

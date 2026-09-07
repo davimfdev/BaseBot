@@ -1,14 +1,3 @@
--- [OUTLINE START]
--- Created Tables:
--- - catalog_categories
--- - catalog_products
--- Created Indices:
--- - idx_catalog_categories_guild
--- - idx_catalog_products_cat
--- [OUTLINE END]
-
-
-
 -- Product catalog (BOTSPECS Module 3 — /tabela). Categories -> Products, per guild.
 CREATE TABLE IF NOT EXISTS catalog_categories (
     id        TEXT PRIMARY KEY,

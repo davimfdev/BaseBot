@@ -1,14 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.sets
-// 
-// Class: SetRequestComponentHandler
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.sets;
 
 import dev.davimf.basebot.util.Emojis;

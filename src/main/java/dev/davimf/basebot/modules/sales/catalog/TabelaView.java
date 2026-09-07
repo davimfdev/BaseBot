@@ -1,25 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.catalog
-// 
-// Class: TabelaView
-// 
-// Constructors:
-//   - `Constructor` : `private TabelaView()`
-// 
-// Methods:
-//   - `Method` : `public static Container hub(int accent, List<CatalogCategory> categories)`
-//   - `Method` : `public static Container category(int accent, CatalogCategory cat, List<CatalogProduct> products, int pageIndex)`
-//   - `Method` : `public static Modal categoryModal()`
-//   - `Method` : `public static Modal productModal(String categoryId)`
-//   - `Method` : `private static String trim(String s, int max)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-//   - `Field` : `public static final int PAGE_SIZE`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.catalog;
 
 import dev.davimf.basebot.util.Emojis;

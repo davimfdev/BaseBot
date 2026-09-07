@@ -1,24 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.hierarchy
-// 
-// Class: FacHierarchy
-// 
-// Constructors:
-//   - `Constructor` : `private FacHierarchy()`
-// 
-// Methods:
-//   - `Method` : `public static final List<Level> LEVELS = List. of(new Level(,)`
-//   - `Method` : `public static List<String> keys()`
-// 
-// Record: Level
-// 
-// Record Components:
-//   - Record Component : public final String key
-//   - Record Component : public final String label
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.hierarchy;
 
 import java.util.List;

@@ -1,28 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.ratelimit
-// 
-// Class: ProfileRateLimiter
-// 
-// Constructors:
-//   - `Constructor` : `public ProfileRateLimiter(int maxPerWindow, long windowMillis)`
-// 
-// Methods:
-//   - `Method` : `public synchronized Decision check(String key, long nowMillis)`
-// 
-// Fields:
-//   - `Field` : `private final int maxPerWindow`
-//   - `Field` : `private final long windowMillis`
-//   - `Field` : `private final Map<String, Deque<Long>> hits`
-// 
-// Record: Decision
-// 
-// Record Components:
-//   - Record Component : public final boolean allowed
-//   - Record Component : public final long retryAfterMillis
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.ratelimit;
 
 import java.util.ArrayDeque;

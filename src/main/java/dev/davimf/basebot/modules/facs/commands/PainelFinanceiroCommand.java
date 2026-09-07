@@ -1,21 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.commands
-// 
-// Class: PainelFinanceiroCommand
-// 
-// Constructors:
-//   - `Constructor` : `public PainelFinanceiroCommand(FinanceService service)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private final FinanceService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.commands;
 
 import dev.davimf.basebot.util.Emojis;

@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.message
-// 
-// Class: MessageBuild
-// 
-// Constructors:
-//   - `Constructor` : `private MessageBuild()`
-// 
-// Methods:
-//   - `Method` : `public static MessageEmbed jdaEmbed(ObjectNode classic, int defaultAccent)`
-//   - `Method` : `public static Container jdaContainer(ObjectNode container, int defaultAccent)`
-//   - `Method` : `public static ObjectNode webhookEmbed(ObjectNode classic, int defaultAccent)`
-//   - `Method` : `public static ArrayNode webhookContainer(ObjectNode container, int defaultAccent)`
-//   - `Method` : `private static ButtonStyle buttonStyle(String name)`
-//   - `Method` : `private static int styleNumber(String name)`
-//   - `Method` : `private static boolean valid(String label, String url)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.message;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;

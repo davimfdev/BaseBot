@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.commands
-// 
-// Class: CommandDataValidationTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.commands;
 
 import dev.davimf.basebot.core.command.SlashCommand;

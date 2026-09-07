@@ -1,17 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot
-// 
-// Class: BaseBot
-// 
-// Constructors:
-//   - `Constructor` : `private BaseBot()`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(BaseBot.class)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot;
 
 import org.slf4j.Logger;

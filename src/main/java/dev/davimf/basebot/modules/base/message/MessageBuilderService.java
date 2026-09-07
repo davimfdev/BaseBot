@@ -1,33 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.message
-// 
-// Class: MessageBuilderService
-// 
-// Constructors:
-//   - `Constructor` : `public MessageBuilderService(BotContext ctx, MessageDraftRepository drafts)`
-// 
-// Methods:
-//   - `Method` : `private static ArrayNode buttonsOf(ObjectNode state, String bi)`
-//   - `Method` : `private static ObjectNode buttonAt(ObjectNode state, String bi, String ji)`
-//   - `Method` : `private static ObjectNode webhookBody(ObjectNode state, int accent, boolean container)`
-//   - `Method` : `private int accent(net.dv8tion.jda.api.interactions.Interaction event)`
-//   - `Method` : `private static String[] parseRef(SlashCommandInteractionEvent event, String ref)`
-//   - `Method` : `private CompletableFuture<Webhook> webhook(TextChannel channel)`
-//   - `Method` : `private ObjectNode load(String userId)`
-//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
-//   - `Method` : `private static String id(String action, String arg)`
-//   - `Method` : `private static String userId(IMessageEditCallback cb)`
-//   - `Method` : `private static String guildId(IMessageEditCallback cb)`
-//   - `Method` : `private static String root(Throwable err)`
-// 
-// Fields:
-//   - `Field` : `private static final String WEBHOOK_NAME`
-//   - `Field` : `private final BotContext ctx`
-//   - `Field` : `private final MessageDraftRepository drafts`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.message;
 
 import dev.davimf.basebot.util.Emojis;

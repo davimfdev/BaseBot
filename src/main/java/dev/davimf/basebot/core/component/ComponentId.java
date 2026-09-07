@@ -1,25 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.core.component
-// 
-// Record: ComponentId
-// 
-// Record Components:
-//   - Record Component : public final String namespace
-//   - Record Component : public final String action
-//   - Record Component : public final String[] args
-//   - Record Component : public final String raw
-// 
-// Methods:
-//   - `Method` : `public static String of(String namespace, String action, String... args)`
-//   - `Method` : `public static ComponentId parse(String raw)`
-//   - `Method` : `public String arg(int index)`
-// 
-// Fields:
-//   - `Field` : `public static final String SEP`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.core.component;
 
 import java.util.Arrays;

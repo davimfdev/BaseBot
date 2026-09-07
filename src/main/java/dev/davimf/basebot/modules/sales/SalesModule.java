@@ -1,17 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales
-// 
-// Class: SalesModule
-// 
-// Methods:
-//   - `Method` : `public String name()`
-// 
-// Fields:
-//   - `Field` : `private BudgetService budgetService`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales;
 
 import dev.davimf.basebot.core.BotContext;

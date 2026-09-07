@@ -1,14 +1,3 @@
--- [OUTLINE START]
--- Created Tables:
--- - budgets
--- - budget_items
--- Created Indices:
--- - idx_budgets_status
--- - idx_budget_items_budget
--- [OUTLINE END]
-
-
-
 -- Budgets / Orçamentos (BOTSPECS Module 3). A seller builds a budget for a client;
 -- once sent it awaits client approval and auto-cancels after 24h (scheduler sweep).
 CREATE TABLE IF NOT EXISTS budgets (

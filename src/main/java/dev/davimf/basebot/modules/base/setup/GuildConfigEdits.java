@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.setup
-// 
-// Class: GuildConfigEdits
-// 
-// Constructors:
-//   - `Constructor` : `private GuildConfigEdits()`
-// 
-// Methods:
-//   - `Method` : `public static GuildConfig withLogChannel(GuildConfig c, String channelId)`
-//   - `Method` : `public static GuildConfig withTicketLogChannel(GuildConfig c, String channelId)`
-//   - `Method` : `public static GuildConfig withChannel(GuildConfig c, String key, String channelId)`
-//   - `Method` : `public static GuildConfig withRole(GuildConfig c, String key, String roleId)`
-//   - `Method` : `public static GuildConfig withToggle(GuildConfig c, String key, boolean value)`
-//   - `Method` : `public static GuildConfig withStaffRoles(GuildConfig c, List<String> roleIds)`
-//   - `Method` : `public static GuildConfig withSetting(GuildConfig c, String key, String value)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.setup;
 
 import dev.davimf.basebot.database.model.GuildConfig;

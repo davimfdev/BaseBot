@@ -1,24 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.recruit
-//
-// Class: RecruitComponentHandler
-//
-// Constructors:
-//   - `Constructor` : `public RecruitComponentHandler(RecruitStatsRepository stats, RecruitRequestRepository requests)`
-//
-// Methods:
-//   - `Method` : `public String namespace()`
-//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
-//
-// Fields:
-//   - `Field` : `private static final String ENTRY_ROLE_KEY`
-//   - `Field` : `private static final String REVIEW_CHANNEL_KEY`
-//   - `Field` : `private final RecruitStatsRepository stats`
-//   - `Field` : `private final RecruitRequestRepository requests`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.recruit;
 
 import dev.davimf.basebot.util.Emojis;

@@ -1,15 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<!-- [OUTLINE START]
-Appenders:
-- CONSOLE
-- FILE
-Loggers:
-- net.dv8tion
-- com.zaxxer.hikari
-Root Log Level: INFO
-[OUTLINE END] -->
-
 <configuration>
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>

@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.economy
-// 
-// Class: FarmView
-// 
-// Constructors:
-//   - `Constructor` : `private FarmView()`
-// 
-// Methods:
-//   - `Method` : `public static Container request(int accent, String pendingId, String farmerId, String item, long qty)`
-//   - `Method` : `public static Container resolved(int accent, String farmerId, String item, long qty, String statusLine)`
-//   - `Method` : `private static String details(String farmerId, String item, long qty)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.util.Emojis;

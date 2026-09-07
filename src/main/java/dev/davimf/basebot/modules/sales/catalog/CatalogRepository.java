@@ -1,28 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.catalog
-// 
-// Class: CatalogRepository
-// 
-// Constructors:
-//   - `Constructor` : `public CatalogRepository(SqliteManager sqlite)`
-// 
-// Methods:
-//   - `Method` : `public String createCategory(String guildId, String name)`
-//   - `Method` : `public List<CatalogCategory> listCategories(String guildId)`
-//   - `Method` : `public Optional<CatalogCategory> findCategory(String id)`
-//   - `Method` : `public String createProduct(String guildId, String categoryId, String name, String description, long priceCents)`
-//   - `Method` : `public List<CatalogProduct> listProducts(String categoryId)`
-//   - `Method` : `public Optional<CatalogProduct> findProduct(String id)`
-//   - `Method` : `private static CatalogCategory mapCategory(ResultSet rs)`
-//   - `Method` : `private static CatalogProduct mapProduct(ResultSet rs)`
-//   - `Method` : `private static String newId()`
-// 
-// Fields:
-//   - `Field` : `private final SqliteManager sqlite`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.catalog;
 
 import dev.davimf.basebot.database.model.CatalogCategory;

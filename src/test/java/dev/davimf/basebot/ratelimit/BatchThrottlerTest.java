@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.ratelimit
-// 
-// Class: BatchThrottlerTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.ratelimit;
 
 import org.junit.jupiter.api.Test;

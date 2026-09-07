@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.core.scheduler
-// 
-// Class: TaskScheduler
-// 
-// Constructors:
-//   - `Constructor` : `public TaskScheduler(int poolSize)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(TaskScheduler.class)`
-//   - `Method` : `public ScheduledExecutorService executor()`
-//   - `Method` : `private Runnable guarded(String label, Runnable task)`
-// 
-// Fields:
-//   - `Field` : `private final ScheduledExecutorService executor`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.core.scheduler;
 
 import org.slf4j.Logger;

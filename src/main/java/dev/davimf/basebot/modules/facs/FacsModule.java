@@ -1,18 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs
-// 
-// Class: FacsModule
-// 
-// Methods:
-//   - `Method` : `public String name()`
-// 
-// Fields:
-//   - `Field` : `private PunishService punishService`
-//   - `Field` : `private ActionService actionService`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.commands
-// 
-// Class: BotNameCommand
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,17 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.pix
-// 
-// Class: PixOwnership
-// 
-// Constructors:
-//   - `Constructor` : `private PixOwnership()`
-// 
-// Methods:
-//   - `Method` : `public static boolean isOwner(String clickerId, String ownerId)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.pix;
 
 /**

@@ -1,14 +1,3 @@
--- [OUTLINE START]
--- Created Tables:
--- - fac_finance
--- - fac_transactions
--- - fac_stock
--- Created Indices:
--- - idx_fac_tx_guild
--- [OUTLINE END]
-
-
-
 -- Faction economy (BOTSPECS Module 4): treasury balance, an audit log of movements,
 -- and raw-material stock. Balance + stock are guild-scoped.
 CREATE TABLE IF NOT EXISTS fac_finance (

@@ -1,32 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.budget
-// 
-// Class: BudgetService
-// 
-// Constructors:
-//   - `Constructor` : `public BudgetService(BotContext ctx, BudgetRepository budgets, CatalogRepository catalog, PixKeyRepository pixKeys)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(BudgetService.class)`
-//   - `Method` : `private static final Duration TTL = Duration. ofHours(24)`
-//   - `Method` : `public BudgetRepository repository()`
-//   - `Method` : `public Container builderView(Budget budget)`
-//   - `Method` : `private Budget guardClient(ButtonInteractionEvent event, String budgetId)`
-//   - `Method` : `private Container builderViewOrEmpty(Budget b)`
-//   - `Method` : `private int accent(String guildId)`
-//   - `Method` : `private static String guildOf(ButtonInteractionEvent event)`
-//   - `Method` : `private static int parseQuantity(String s)`
-//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
-// 
-// Fields:
-//   - `Field` : `private final BotContext ctx`
-//   - `Field` : `private final BudgetRepository budgets`
-//   - `Field` : `private final CatalogRepository catalog`
-//   - `Field` : `private final PixKeyRepository pixKeys`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.budget;
 
 import dev.davimf.basebot.util.Emojis;

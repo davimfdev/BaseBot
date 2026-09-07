@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.core.component
-// 
-// Class: Panels
-// 
-// Constructors:
-//   - `Constructor` : `private Panels()`
-// 
-// Methods:
-//   - `Method` : `public static Container container(int accentColor, ContainerChildComponent... children)`
-//   - `Method` : `public static TextDisplay text(String markdown)`
-//   - `Method` : `public static Separator divider()`
-// 
-// Fields:
-//   - `Field` : `public static final int BLURPLE`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.core.component;
 
 import net.dv8tion.jda.api.components.container.Container;

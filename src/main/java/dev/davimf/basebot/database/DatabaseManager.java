@@ -1,35 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.database
-// 
-// Class: DatabaseManager
-// 
-// Constructors:
-//   - `Constructor` : `public DatabaseManager(BotConfig config)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(DatabaseManager.class)`
-//   - `Method` : `public GuildConfigRepository guildConfig()`
-//   - `Method` : `public TicketRepository tickets()`
-//   - `Method` : `public ActionLogRepository actionLogs()`
-//   - `Method` : `public MuteRepository mutes()`
-//   - `Method` : `public TicketCategoryRepository ticketCategories()`
-//   - `Method` : `public ActionTypeRepository actionTypes()`
-//   - `Method` : `public PostgresPool postgres()`
-//   - `Method` : `public SqliteManager sqlite()`
-// 
-// Fields:
-//   - `Field` : `private final PostgresPool postgres`
-//   - `Field` : `private final SqliteManager sqlite`
-//   - `Field` : `private final GuildConfigRepository guildConfig`
-//   - `Field` : `private final TicketRepository tickets`
-//   - `Field` : `private final ActionLogRepository actionLogs`
-//   - `Field` : `private final MuteRepository mutes`
-//   - `Field` : `private final TicketCategoryRepository ticketCategories`
-//   - `Field` : `private final ActionTypeRepository actionTypes`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.database;
 
 import dev.davimf.basebot.config.BotConfig;

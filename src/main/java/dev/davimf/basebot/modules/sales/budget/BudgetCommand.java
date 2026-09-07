@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.budget
-// 
-// Class: BudgetCommand
-// 
-// Constructors:
-//   - `Constructor` : `public BudgetCommand(BudgetService service)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private static final String SELLER_ROLE_KEY`
-//   - `Field` : `private final BudgetService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.budget;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,20 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.budget
-// 
-// Class: BudgetComponentHandler
-// 
-// Constructors:
-//   - `Constructor` : `public BudgetComponentHandler(BudgetService service)`
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-// 
-// Fields:
-//   - `Field` : `private final BudgetService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.budget;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,32 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.forms
-// 
-// Class: FormRepository
-// 
-// Constructors:
-//   - `Constructor` : `public FormRepository(SqliteManager sqlite)`
-// 
-// Methods:
-//   - `Method` : `public String create(String guildId, String title, String createdBy, List<String> questions)`
-//   - `Method` : `public Optional<Form> find(String id)`
-//   - `Method` : `public List<Form> list(String guildId)`
-//   - `Method` : `private static List<String> loadQuestions(Connection c, String formId)`
-//   - `Method` : `private static String newId()`
-// 
-// Fields:
-//   - `Field` : `private final SqliteManager sqlite`
-// 
-// Record: Form
-// 
-// Record Components:
-//   - Record Component : public final String id
-//   - Record Component : public final String guildId
-//   - Record Component : public final String title
-//   - Record Component : public final List<String> questions
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.forms;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;

@@ -1,20 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.economy
-// 
-// Class: FinanceComponentHandler
-// 
-// Constructors:
-//   - `Constructor` : `public FinanceComponentHandler(FinanceService service)`
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-// 
-// Fields:
-//   - `Field` : `private final FinanceService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.core.BotContext;

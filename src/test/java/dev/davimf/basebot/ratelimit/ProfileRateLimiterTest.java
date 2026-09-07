@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.ratelimit
-// 
-// Class: ProfileRateLimiterTest
-// 
-// Fields:
-//   - `Field` : `private static final long HOUR`
-//   - `Field` : `private static final long T0`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.ratelimit;
 
 import dev.davimf.basebot.ratelimit.ProfileRateLimiter.Decision;

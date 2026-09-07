@@ -1,13 +1,3 @@
--- [OUTLINE START]
--- Created Tables:
--- - fac_recipes
--- - fac_recipe_inputs
--- Created Indices:
--- - idx_recipe_inputs
--- [OUTLINE END]
-
-
-
 -- Production recipes (BOTSPECS Module 4 — /produzir). A recipe converts input items
 -- (from fac_stock) into an output product (added back to fac_stock).
 CREATE TABLE IF NOT EXISTS fac_recipes (

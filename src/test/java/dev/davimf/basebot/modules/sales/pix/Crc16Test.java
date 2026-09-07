@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.pix
-// 
-// Class: Crc16Test
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.pix;
 
 import org.junit.jupiter.api.Test;

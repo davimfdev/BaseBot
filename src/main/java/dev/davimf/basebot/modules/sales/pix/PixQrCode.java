@@ -1,17 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.pix
-// 
-// Class: PixQrCode
-// 
-// Constructors:
-//   - `Constructor` : `private PixQrCode()`
-// 
-// Methods:
-//   - `Method` : `public static byte[] pngBytes(String content, int size)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.pix;
 
 import com.google.zxing.BarcodeFormat;

@@ -1,9 +1,3 @@
-// [OUTLINE START]
-// Gradle Build Settings
-// [OUTLINE END]
-
-
-
 // settings.gradle — single deployable Gradle project producing one ShadowJar.
 //
 // NOTE ON "MULTI-MODULE": The BOTSPECS.MD modules (Base, Tickets, Sales, Facs) are

@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs
-// 
-// Class: FacsCommandNamesTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs;
 
 import net.dv8tion.jda.api.interactions.commands.build.Commands;

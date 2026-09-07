@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.commands
-// 
-// Class: ClearCommand
-// 
-// Constructors:
-//   - `Constructor` : `public ClearCommand(String name, boolean onlyOwn)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private static final int SCAN_WINDOW`
-//   - `Field` : `private final String name`
-//   - `Field` : `private final boolean onlyOwn`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.voice
-// 
-// Class: MuteRepositoryTest
-// 
-// Fields:
-//   - `Field` : `private SqliteManager sqlite`
-//   - `Field` : `private MuteRepository repo`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.voice;
 
 import dev.davimf.basebot.config.BotConfig;

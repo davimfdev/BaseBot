@@ -1,20 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.forms
-// 
-// Class: FormComponentHandler
-// 
-// Constructors:
-//   - `Constructor` : `public FormComponentHandler(FormRepository forms)`
-// 
-// Methods:
-//   - `Method` : `public String namespace()`
-// 
-// Fields:
-//   - `Field` : `private final FormRepository forms`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.forms;
 
 import dev.davimf.basebot.util.Emojis;

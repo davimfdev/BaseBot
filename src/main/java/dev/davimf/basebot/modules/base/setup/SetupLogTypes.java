@@ -1,26 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.setup
-// 
-// Class: SetupLogTypes
-// 
-// Constructors:
-//   - `Constructor` : `private SetupLogTypes()`
-// 
-// Methods:
-//   - `Method` : `public static final List<LogType> ALL = List. of(new LogType(, ,)`
-//   - `Method` : `public static String labelFor(String key)`
-//   - `Method` : `public static List<List<LogType>> pages(int maxPerPage)`
-// 
-// Record: LogType
-// 
-// Record Components:
-//   - Record Component : public final String key
-//   - Record Component : public final String label
-//   - Record Component : public final String module
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.setup;
 
 import dev.davimf.basebot.util.Emojis;

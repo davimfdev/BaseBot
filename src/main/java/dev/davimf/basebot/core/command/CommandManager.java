@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.core.command
-// 
-// Class: CommandManager
-// 
-// Constructors:
-//   - `Constructor` : `public CommandManager(BotContext context)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(CommandManager.class)`
-//   - `Method` : `public CommandManager register(SlashCommand command)`
-//   - `Method` : `public int size()`
-// 
-// Fields:
-//   - `Field` : `private final Map<String, SlashCommand> commands`
-//   - `Field` : `private final BotContext context`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.core.command;
 
 import dev.davimf.basebot.core.BotContext;

@@ -1,17 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.voice
-// 
-// Class: VoiceMutePersistenceListener
-// 
-// Constructors:
-//   - `Constructor` : `public VoiceMutePersistenceListener(BotContext ctx)`
-// 
-// Fields:
-//   - `Field` : `private final BotContext ctx`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.voice;
 
 import dev.davimf.basebot.core.BotContext;

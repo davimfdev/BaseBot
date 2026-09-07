@@ -1,31 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.util
-// 
-// Class: WebhookSender
-// 
-// Constructors:
-//   - `Constructor` : `private WebhookSender()`
-// 
-// Methods:
-//   - `Method` : `private static final HttpClient HTTP = HttpClient. newBuilder()`
-//   - `Method` : `public static ObjectMapper mapper()`
-//   - `Method` : `public static String post(String webhookUrl, String username, String avatarUrl, ObjectNode body)`
-//   - `Method` : `private static HttpRequest.Builder request(String url)`
-//   - `Method` : `private static HttpRequest.BodyPublisher json(ObjectNode body)`
-// 
-// Fields:
-//   - `Field` : `public static final int IS_COMPONENTS_V2`
-//   - `Field` : `public static final class WebhookException extends RuntimeException`
-// 
-// Class: WebhookException
-// 
-// Constructors:
-//   - `Constructor` : `public WebhookException(String message)`
-//   - `Constructor` : `public WebhookException(String message, Throwable cause)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.util;
 
 import com.fasterxml.jackson.databind.JsonNode;

@@ -1,25 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules
-// 
-// Class: ModuleRegistry
-// 
-// Constructors:
-//   - `Constructor` : `public ModuleRegistry(CommandManager commandManager, ComponentRouter componentRouter)`
-// 
-// Methods:
-//   - `Method` : `public ModuleRegistry command(SlashCommand command)`
-//   - `Method` : `public ModuleRegistry component(ComponentHandler handler)`
-//   - `Method` : `public ModuleRegistry listener(Object jdaListener)`
-//   - `Method` : `public List<Object> eventListeners()`
-// 
-// Fields:
-//   - `Field` : `private final CommandManager commandManager`
-//   - `Field` : `private final ComponentRouter componentRouter`
-//   - `Field` : `private final List<Object> eventListeners`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules;
 
 import dev.davimf.basebot.core.command.CommandManager;

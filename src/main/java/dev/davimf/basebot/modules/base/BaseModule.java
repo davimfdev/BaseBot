@@ -1,17 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base
-// 
-// Class: BaseModule
-// 
-// Methods:
-//   - `Method` : `public String name()`
-// 
-// Fields:
-//   - `Field` : `private MuteService muteService`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base;
 
 import dev.davimf.basebot.core.BotContext;

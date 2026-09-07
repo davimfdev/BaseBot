@@ -1,19 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.crypto
-// 
-// Record: EncryptedBundle
-// 
-// Record Components:
-//   - Record Component : public final String saltKey
-//   - Record Component : public final // base64 — salt for the AES key derivation String saltHash
-//   - Record Component : public final // base64 — salt for the password verifier String iv
-//   - Record Component : public final // base64 — 12-byte AES-GCM nonce String ciphertext
-//   - Record Component : public final // base64 — AES-GCM ciphertext WITH appended 128-bit tag String passwordHash
-//   - Record Component : public final // base64 — PBKDF2(password, saltHash) int iterations
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.crypto;
 
 /**

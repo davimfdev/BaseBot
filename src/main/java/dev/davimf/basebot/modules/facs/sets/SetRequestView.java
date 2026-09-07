@@ -1,21 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.sets
-// 
-// Class: SetRequestView
-// 
-// Constructors:
-//   - `Constructor` : `private SetRequestView()`
-// 
-// Methods:
-//   - `Method` : `public static Container request(int accent, String requesterId, String roleId, String reason)`
-//   - `Method` : `public static Container resolved(int accent, String requesterId, String roleId, String statusLine)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.sets;
 
 import dev.davimf.basebot.util.Emojis;

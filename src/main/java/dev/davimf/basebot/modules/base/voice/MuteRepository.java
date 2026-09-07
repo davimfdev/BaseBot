@@ -1,30 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.voice
-// 
-// Class: MuteRepository
-// 
-// Constructors:
-//   - `Constructor` : `public MuteRepository(SqliteManager sqlite)`
-// 
-// Methods:
-//   - `Method` : `public boolean isActive(String guildId, String userId, String type, long nowMillis)`
-//   - `Method` : `public List<Entry> listExpired(long nowMillis)`
-// 
-// Fields:
-//   - `Field` : `public static final String TEXT`
-//   - `Field` : `public static final String VOICE`
-//   - `Field` : `private final SqliteManager sqlite`
-// 
-// Record: Entry
-// 
-// Record Components:
-//   - Record Component : public final String guildId
-//   - Record Component : public final String userId
-//   - Record Component : public final String type
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.voice;
 
 import dev.davimf.basebot.database.postgres.RepositoryException;

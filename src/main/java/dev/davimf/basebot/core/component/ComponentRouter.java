@@ -1,24 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.core.component
-// 
-// Class: ComponentRouter
-// 
-// Constructors:
-//   - `Constructor` : `public ComponentRouter(BotContext context)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(ComponentRouter.class)`
-//   - `Method` : `public ComponentRouter register(ComponentHandler handler)`
-// 
-// Fields:
-//   - `Field` : `private final Map<String, ComponentHandler> handlers`
-//   - `Field` : `private final BotContext context`
-// 
-// Interface: Invoker
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.core.component;
 
 import dev.davimf.basebot.core.BotContext;

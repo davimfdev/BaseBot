@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.pix
-// 
-// Class: PixDispatch
-// 
-// Constructors:
-//   - `Constructor` : `private PixDispatch()`
-// 
-// Methods:
-//   - `Method` : `public static Rendered render(PixKey key, long amountCents, int accent, String ownerId)`
-// 
-// Record: Rendered
-// 
-// Record Components:
-//   - Record Component : public final Container container
-//   - Record Component : public final FileUpload file
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.pix;
 
 import dev.davimf.basebot.core.component.ComponentId;

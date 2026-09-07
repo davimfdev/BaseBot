@@ -1,11 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.sales.budget
-// 
-// Class: BudgetCommandNameTest
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.sales.budget;
 
 import net.dv8tion.jda.api.interactions.commands.build.Commands;

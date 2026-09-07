@@ -1,39 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.message
-// 
-// Class: MessageState
-// 
-// Constructors:
-//   - `Constructor` : `private MessageState()`
-// 
-// Methods:
-//   - `Method` : `public static ObjectNode initial()`
-//   - `Method` : `public static ObjectNode parse(String json)`
-//   - `Method` : `public static String stringify(ObjectNode state)`
-//   - `Method` : `public static ObjectNode classic(ObjectNode state)`
-//   - `Method` : `public static ObjectNode container(ObjectNode state)`
-//   - `Method` : `public static ArrayNode blocks(ObjectNode state)`
-//   - `Method` : `public static String str(ObjectNode obj, String field)`
-//   - `Method` : `public static boolean isContainer(ObjectNode state)`
-//   - `Method` : `public static ObjectNode newTextBlock(String text)`
-//   - `Method` : `public static ObjectNode newButtonsBlock()`
-//   - `Method` : `public static ObjectNode newSeparatorBlock(boolean divider)`
-//   - `Method` : `public static boolean isInteraction(ObjectNode button)`
-//   - `Method` : `public static ArrayNode buttons(ObjectNode buttonsBlock)`
-//   - `Method` : `public static String describeButton(ObjectNode button)`
-//   - `Method` : `public static String describe(ObjectNode block)`
-// 
-// Fields:
-//   - `Field` : `public static final String CLASSIC`
-//   - `Field` : `public static final String CONTAINER`
-//   - `Field` : `public static final String BLOCK_TEXT`
-//   - `Field` : `public static final String BLOCK_BUTTONS`
-//   - `Field` : `public static final String BLOCK_SEPARATOR`
-//   - `Field` : `public static final String[] STYLES`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.message;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

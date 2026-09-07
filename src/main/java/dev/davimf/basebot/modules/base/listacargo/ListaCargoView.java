@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.listacargo
-// 
-// Class: ListaCargoView
-// 
-// Constructors:
-//   - `Constructor` : `private ListaCargoView()`
-// 
-// Methods:
-//   - `Method` : `public static Container container(int accent, Role role, List<Member> members, int pageIndex)`
-//   - `Method` : `public static ActionRow navRow(String roleId, int pageIndex, int pageCount)`
-// 
-// Fields:
-//   - `Field` : `public static final String NS`
-//   - `Field` : `public static final int PAGE_SIZE`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.listacargo;
 
 import dev.davimf.basebot.util.Emojis;

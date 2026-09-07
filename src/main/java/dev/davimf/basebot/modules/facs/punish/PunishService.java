@@ -1,27 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.punish
-// 
-// Class: PunishService
-// 
-// Constructors:
-//   - `Constructor` : `public PunishService(BotContext ctx, PunishmentRepository repo)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(PunishService.class)`
-//   - `Method` : `private static final Duration ADV_TTL = Duration. ofDays(20)`
-//   - `Method` : `public Container history(String guildId, String userId)`
-//   - `Method` : `private static String labelOf(String type, int level)`
-//   - `Method` : `private int accent(String guildId)`
-//   - `Method` : `private static String trim(String s, int max)`
-// 
-// Fields:
-//   - `Field` : `package-private static final String NS`
-//   - `Field` : `private final BotContext ctx`
-//   - `Field` : `private final PunishmentRepository repo`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.punish;
 
 import dev.davimf.basebot.util.Emojis;

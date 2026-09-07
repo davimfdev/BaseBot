@@ -1,23 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.ratelimit
-// 
-// Class: BatchThrottler
-// 
-// Constructors:
-//   - `Constructor` : `public BatchThrottler(ScheduledExecutorService scheduler, int batchSize, long interval, TimeUnit unit)`
-// 
-// Methods:
-//   - `Method` : `public <T> CompletableFuture<Void> run(List<T> items, Consumer<List<T>> batchConsumer)`
-//   - `Method` : `private <T> List<List<T>> partition(List<T> items)`
-// 
-// Fields:
-//   - `Field` : `private final ScheduledExecutorService scheduler`
-//   - `Field` : `private final int batchSize`
-//   - `Field` : `private final long intervalMillis`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.ratelimit;
 
 import java.util.ArrayList;

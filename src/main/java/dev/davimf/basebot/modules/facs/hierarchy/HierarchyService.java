@@ -1,22 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.hierarchy
-// 
-// Class: HierarchyService
-// 
-// Constructors:
-//   - `Constructor` : `public HierarchyService(BotContext ctx)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(HierarchyService.class)`
-// 
-// Fields:
-//   - `Field` : `package-private static final String CHANNEL_KEY`
-//   - `Field` : `package-private static final String MESSAGE_KEY`
-//   - `Field` : `private final BotContext ctx`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.hierarchy;
 
 import dev.davimf.basebot.util.Emojis;

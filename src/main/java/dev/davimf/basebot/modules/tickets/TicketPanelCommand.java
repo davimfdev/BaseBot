@@ -1,15 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.tickets
-// 
-// Class: TicketPanelCommand
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.tickets;
 
 import dev.davimf.basebot.util.Emojis;

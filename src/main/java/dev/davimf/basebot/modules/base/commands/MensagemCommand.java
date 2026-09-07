@@ -1,21 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.base.commands
-// 
-// Class: MensagemCommand
-// 
-// Constructors:
-//   - `Constructor` : `public MensagemCommand(MessageBuilderService service)`
-// 
-// Methods:
-//   - `Method` : `public String name()`
-//   - `Method` : `public SlashCommandData data()`
-// 
-// Fields:
-//   - `Field` : `private final MessageBuilderService service`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.base.commands;
 
 import dev.davimf.basebot.core.BotContext;

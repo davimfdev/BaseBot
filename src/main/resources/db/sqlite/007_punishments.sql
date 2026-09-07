@@ -1,13 +1,3 @@
--- [OUTLINE START]
--- Created Tables:
--- - punishments
--- Created Indices:
--- - idx_punishments_user
--- - idx_punishments_active
--- [OUTLINE END]
-
-
-
 -- Punishments (BOTSPECS Module 4 — /punir, /punições). Blacklist, Demotion and ADV (warn).
 -- ADV stacks (level N replaces N-1) and auto-expires after 20 days (scheduler + boot check).
 CREATE TABLE IF NOT EXISTS punishments (

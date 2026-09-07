@@ -1,17 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.hierarchy
-// 
-// Class: HierarchyView
-// 
-// Constructors:
-//   - `Constructor` : `private HierarchyView()`
-// 
-// Methods:
-//   - `Method` : `public static Container panel(int accent, Guild guild, GuildConfig cfg)`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.hierarchy;
 
 import dev.davimf.basebot.util.Emojis;

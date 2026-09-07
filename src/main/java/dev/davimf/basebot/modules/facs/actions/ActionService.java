@@ -1,39 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.actions
-// 
-// Class: ActionService
-// 
-// Constructors:
-//   - `Constructor` : `public ActionService(BotContext ctx, ActionRepository repo, EconomyRepository economy)`
-// 
-// Methods:
-//   - `Method` : `private static final Logger log = LoggerFactory. getLogger(ActionService.class)`
-//   - `Method` : `private static final Pattern TIME = Pattern. compile()`
-//   - `Method` : `private static final Pattern DATE = Pattern. compile()`
-//   - `Method` : `private static String skippedNote(List<String> skipped)`
-//   - `Method` : `private static int membroIndex()`
-//   - `Method` : `private static boolean rankRolesConfigured(GuildConfig cfg)`
-//   - `Method` : `private static boolean isSetMember(Member member, GuildConfig cfg)`
-//   - `Method` : `private boolean isPriority(Member member, GuildConfig cfg)`
-//   - `Method` : `private Container panel(String actionId)`
-//   - `Method` : `private TextChannel channelOrFallback(String guildId, String key, IReplyCallback event)`
-//   - `Method` : `private boolean managerGate(IReplyCallback event)`
-//   - `Method` : `private int accent(String guildId)`
-//   - `Method` : `private static String guildId(IReplyCallback event)`
-//   - `Method` : `package-private static LocalDateTime parseWhen(String date, String time)`
-//   - `Method` : `package-private static String formatWhen(LocalDateTime dt)`
-//   - `Method` : `private static String value(ModalInteractionEvent event, String key)`
-// 
-// Fields:
-//   - `Field` : `public static final String CH_ESCALACOES`
-//   - `Field` : `public static final String CH_ALINHAMENTOS`
-//   - `Field` : `private final BotContext ctx`
-//   - `Field` : `private final ActionRepository repo`
-//   - `Field` : `private final EconomyRepository economy`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.actions;
 
 import dev.davimf.basebot.core.BotContext;

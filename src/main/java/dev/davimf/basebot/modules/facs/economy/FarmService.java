@@ -1,24 +1,3 @@
-// [OUTLINE START]
-// Package: dev.davimf.basebot.modules.facs.economy
-// 
-// Class: FarmService
-// 
-// Constructors:
-//   - `Constructor` : `public FarmService(BotContext ctx, EconomyRepository economy, FarmRepository farm)`
-// 
-// Methods:
-//   - `Method` : `private boolean managerGate(ButtonInteractionEvent event)`
-//   - `Method` : `private static long payoutRate(GuildConfig cfg)`
-// 
-// Fields:
-//   - `Field` : `package-private static final String PAYOUT_KEY`
-//   - `Field` : `private final BotContext ctx`
-//   - `Field` : `private final EconomyRepository economy`
-//   - `Field` : `private final FarmRepository farm`
-// [OUTLINE END]
-
-
-
 package dev.davimf.basebot.modules.facs.economy;
 
 import dev.davimf.basebot.util.Emojis;
