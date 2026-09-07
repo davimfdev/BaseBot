@@ -60,12 +60,16 @@ public final class GuildSnapshotSync {
     }
 
     public void syncAll() {
+        syncAll("periodic");
+    }
+
+    public void syncAll(String trigger) {
         if (ctx.jda() == null) {
             return;
         }
         for (Guild g : ctx.jda().getGuilds()) {
             try {
-                syncGuild(g);
+                syncGuild(g, trigger);
             } catch (Exception e) {
                 log.warn("snapshot sync falhou para guild {}", g.getId(), e);
             }
@@ -73,6 +77,16 @@ public final class GuildSnapshotSync {
     }
 
     public void syncGuild(Guild g) {
+        syncGuild(g, "event");
+    }
+
+    /**
+     * Full diff-based reconcile of a guild's channels + roles. Cheap when nothing changed: the
+     * repository upserts only rows whose data differs and deletes only rows that vanished, so a
+     * no-change sync writes zero rows. Logs one structured line with the write/delete counts.
+     */
+    public void syncGuild(Guild g, String trigger) {
+        long started = System.currentTimeMillis();
         // bot_guilds primeiro: estabelece/atualiza o vínculo guild->instância (guard interno no repo).
         repo.upsertGuild(g.getId(), g.getName(), g.getOwnerId());
         Member self = g.getSelfMember();
@@ -80,25 +94,65 @@ public final class GuildSnapshotSync {
 
         List<SnapshotRepository.ChannelRow> channels = new ArrayList<>();
         for (GuildChannel ch : g.getChannels()) {
-            boolean canView = self.hasPermission(ch, Permission.VIEW_CHANNEL);
-            boolean canSend = ch instanceof GuildMessageChannel
-                    && self.hasPermission(ch, Permission.MESSAGE_SEND);
-            String parentId = (ch instanceof ICategorizableChannel cat && cat.getParentCategory() != null)
-                    ? cat.getParentCategory().getId() : null;
-            Integer position = (ch instanceof IPositionableChannel pc) ? pc.getPositionRaw() : null;
-            channels.add(new SnapshotRepository.ChannelRow(
-                    ch.getId(), ch.getName(), ch.getType().name(), parentId,
-                    position, canView, canSend));
+            channels.add(channelRow(self, ch));
         }
-        repo.replaceChannels(g.getId(), channels);
+        SnapshotRepository.SyncCounts chCounts = repo.reconcileChannels(g.getId(), channels);
 
         List<SnapshotRepository.RoleRow> roles = new ArrayList<>();
         for (Role r : g.getRoles()) {
-            boolean canAssign = botCanAssign(manageRoles, self.canInteract(r), r.isManaged());
-            roles.add(new SnapshotRepository.RoleRow(
-                    r.getId(), r.getName(), r.getPositionRaw(), r.isManaged(), canAssign));
+            roles.add(roleRow(self, manageRoles, r));
         }
-        repo.replaceRoles(g.getId(), roles);
+        SnapshotRepository.SyncCounts roleCounts = repo.reconcileRoles(g.getId(), roles);
+
+        if (chCounts.written() + chCounts.deleted() + roleCounts.written() + roleCounts.deleted() > 0) {
+            log.info("snapshot sync guild={} trigger={} channels(total={} written={} deleted={} unchanged={}) "
+                            + "roles(total={} written={} deleted={} unchanged={}) duration_ms={}",
+                    g.getId(), trigger,
+                    chCounts.total(), chCounts.written(), chCounts.deleted(), chCounts.unchanged(),
+                    roleCounts.total(), roleCounts.written(), roleCounts.deleted(), roleCounts.unchanged(),
+                    System.currentTimeMillis() - started);
+        } else {
+            log.debug("snapshot sync guild={} trigger={} no-op (nothing changed) duration_ms={}",
+                    g.getId(), trigger, System.currentTimeMillis() - started);
+        }
+    }
+
+    /** Incremental: upsert just the one channel that changed (rename/move/create/perms). */
+    public void syncChannel(Guild g, GuildChannel ch) {
+        repo.upsertChannel(g.getId(), channelRow(g.getSelfMember(), ch));
+    }
+
+    /** Incremental: drop the one channel that was deleted. */
+    public void removeChannel(String guildId, String channelId) {
+        repo.deleteChannel(guildId, channelId);
+    }
+
+    /** Incremental: upsert just the one role that changed (rename/create). */
+    public void syncRole(Guild g, Role r) {
+        Member self = g.getSelfMember();
+        repo.upsertRole(g.getId(), roleRow(self, self.hasPermission(Permission.MANAGE_ROLES), r));
+    }
+
+    /** Incremental: drop the one role that was deleted. */
+    public void removeRole(String guildId, String roleId) {
+        repo.deleteRole(guildId, roleId);
+    }
+
+    private static SnapshotRepository.ChannelRow channelRow(Member self, GuildChannel ch) {
+        boolean canView = self.hasPermission(ch, Permission.VIEW_CHANNEL);
+        boolean canSend = ch instanceof GuildMessageChannel
+                && self.hasPermission(ch, Permission.MESSAGE_SEND);
+        String parentId = (ch instanceof ICategorizableChannel cat && cat.getParentCategory() != null)
+                ? cat.getParentCategory().getId() : null;
+        Integer position = (ch instanceof IPositionableChannel pc) ? pc.getPositionRaw() : null;
+        return new SnapshotRepository.ChannelRow(
+                ch.getId(), ch.getName(), ch.getType().name(), parentId, position, canView, canSend);
+    }
+
+    private static SnapshotRepository.RoleRow roleRow(Member self, boolean manageRoles, Role r) {
+        boolean canAssign = botCanAssign(manageRoles, self.canInteract(r), r.isManaged());
+        return new SnapshotRepository.RoleRow(
+                r.getId(), r.getName(), r.getPositionRaw(), r.isManaged(), canAssign);
     }
 
     public void markAbsent(String guildId) {

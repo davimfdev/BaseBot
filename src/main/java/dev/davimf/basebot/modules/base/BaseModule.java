@@ -166,23 +166,34 @@ public final class BaseModule implements BotModule {
         if (jobNotify != null) {
             ctx.scheduler().repeating(jobNotify::sweep, 60, 60, java.util.concurrent.TimeUnit.SECONDS);
         }
-        // Snapshots do dashboard: registra a instância + full-sync no boot; sync periódico (<10min).
+        // Snapshots do dashboard: registra a instância + full-sync no boot. Depois disso os snapshots
+        // são mantidos de forma incremental pelo GuildSnapshotListener (1 upsert/delete por evento).
+        // A reconciliação completa periódica é só uma rede de segurança contra eventos perdidos
+        // (bot offline): roda 1x a cada 12h — intervalo longo para não impedir o autosuspend do Neon,
+        // e mesmo assim escreve só as linhas que realmente mudaram (diff-based).
         if (guildSnapshot != null) {
             ctx.scheduler().once(() -> {
                 guildSnapshot.bootstrapInstance();
-                guildSnapshot.syncAll();
+                guildSnapshot.syncAll("boot");
                 dev.davimf.basebot.modules.base.setup.InitialGuildSetup.run(ctx);
             }, 8, TimeUnit.SECONDS);
-            ctx.scheduler().repeating(guildSnapshot::syncAll, 300, 300, TimeUnit.SECONDS);
+            long twelveHours = TimeUnit.HOURS.toSeconds(12);
+            ctx.scheduler().repeating(() -> guildSnapshot.syncAll("periodic-12h"),
+                    twelveHours, twelveHours, TimeUnit.SECONDS);
         }
         // Loja: remove cargos temporários expirados a cada 5 min (à prova de restart).
         if (shop != null) {
             ctx.scheduler().repeating(shop::sweep, 20, 300, TimeUnit.SECONDS);
         }
-        // VIPs: recarrega o cache de bônus no boot + a cada 5 min; expira grants vencidos a cada 60s.
+        // VIPs: recarrega o cache de bônus no boot. O reload periódico é só rede de segurança contra
+        // escritas externas em vip_grants (dashboard/outra instância) — 12h para não manter o Neon
+        // acordado; conceder/revogar já atualizam o cache na hora. A varredura de expiração roda a
+        // cada 60s mas só consulta o Neon quando o próximo vencimento (mantido em memória) chegou —
+        // sem VIP prestes a vencer, é um no-op em memória e não acorda o banco.
         if (vip != null) {
             ctx.scheduler().once(vip::reload, 15, TimeUnit.SECONDS);
-            ctx.scheduler().repeating(vip::reload, 300, 300, TimeUnit.SECONDS);
+            long twelveHours = TimeUnit.HOURS.toSeconds(12);
+            ctx.scheduler().repeating(vip::reload, twelveHours, twelveHours, TimeUnit.SECONDS);
             ctx.scheduler().repeating(vip::sweepExpired, 60, 60, TimeUnit.SECONDS);
         }
         // Sincroniza as regras de AutoMod nativo de cada guilda com a config (off-thread).
@@ -195,8 +206,11 @@ public final class BaseModule implements BotModule {
                         ctx.database().guildConfig().findOrEmpty(g.getId()));
             }
         });
-        // Reconcile dos efeitos ativos: re-sincroniza o AutoMod nativo de cada guild a cada 5 min,
-        // pra refletir mudanças feitas pelo dashboard (config lida via cache curto).
+        // Reconcile dos efeitos ativos: re-sincroniza o AutoMod nativo de cada guild pra refletir
+        // mudanças feitas pelo dashboard. Mudanças feitas pelo /setup já aplicam na hora; este loop
+        // é só pra captar edições externas, então roda a cada 15 min (não 5) — 12x menos leituras de
+        // guild_config e sem manter o Neon acordado. A responsividade a mudanças do dashboard passa a
+        // ser de até ~15 min.
         ctx.scheduler().repeating(() -> {
             if (ctx.jda() == null) {
                 return;
@@ -205,7 +219,7 @@ public final class BaseModule implements BotModule {
                 dev.davimf.basebot.modules.base.security.AutoModManager.sync(g,
                         ctx.database().guildConfig().findOrEmpty(g.getId()));
             }
-        }, 300, 300, TimeUnit.SECONDS);
+        }, 900, 900, TimeUnit.SECONDS);
     }
 
     @Override

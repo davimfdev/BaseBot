@@ -38,11 +38,16 @@ public final class VipService implements VipBonusSource {
     private final VipPlanRepository plans;
     private final VipGrantRepository grants;
     // guildId -> (userId -> bônus efetivo). Volátil-por-referência: troca atômica no reload.
-    private volatile Map<String, Map<String, VipBonusValue>> cache = Map.of();
+    private volatile Map<String, Map<String, VipBonusValue>> cache = new ConcurrentHashMap<>();
     // guildId -> (callChannelId -> grant). Índice O(1) das calls VIP ativas, para o
     // VipVoiceListener resolver "este canal de voz é uma call VIP?" sem I/O. Mantido em conjunto
     // com `cache` (mesmas trocas atômicas em reload/grant/revoke), mas é um mapa separado.
-    private volatile Map<String, Map<String, VipGrant>> callIndex = Map.of();
+    private volatile Map<String, Map<String, VipGrant>> callIndex = new ConcurrentHashMap<>();
+    // Menor expires_at entre os grants ativos. Instant.MAX = nenhum grant tem prazo; Instant.MIN =
+    // ainda não carregado (força uma checagem). sweepExpired() só consulta o Neon quando
+    // now >= este horizonte — sem VIP prestes a vencer, a varredura de 60s é um no-op em memória e
+    // não impede o autosuspend do Neon.
+    private volatile Instant nextExpiryAt = Instant.MIN;
 
     public VipService(BotContext ctx) {
         this.ctx = ctx;
@@ -68,9 +73,33 @@ public final class VipService implements VipBonusSource {
             Instant now = Instant.now();
             this.cache = computeCache(active, plansById, now, max);
             this.callIndex = computeCallIndex(active, now);
+            this.nextExpiryAt = soonestExpiry(active);
         } catch (RuntimeException e) {
             log.error("VIP: reload do cache falhou; mantendo cache anterior", e);
         }
+    }
+
+    /** Puro: menor {@code expiresAt} entre os grants (Instant.MAX se nenhum tem prazo). */
+    public static Instant soonestExpiry(List<VipGrant> grants) {
+        Instant soonest = Instant.MAX;
+        for (VipGrant g : grants) {
+            if (g.expiresAt() != null && g.expiresAt().isBefore(soonest)) {
+                soonest = g.expiresAt();
+            }
+        }
+        return soonest;
+    }
+
+    /** Puro: a varredura de expiração precisa tocar o banco? Só se o horizonte já chegou. */
+    public static boolean expirySweepDue(Instant now, Instant horizon) {
+        return !now.isBefore(horizon);
+    }
+
+    /** Antecipa o horizonte quando um novo grant com prazo é concedido, sem reler o banco. */
+    private void bumpExpiry(Instant expiresAt) {
+        if (expiresAt == null) return;
+        Instant cur = nextExpiryAt;
+        if (expiresAt.isBefore(cur)) nextExpiryAt = expiresAt;
     }
 
     /** Puro: monta o índice guildId -> (callChannelId -> grant), ignorando grants vencidos e
@@ -192,6 +221,9 @@ public final class VipService implements VipBonusSource {
                     VipProvisionStatus.PENDING, null, grantedBy, null, null, now);
             grants().upsertActive(grant);
         }
+        // Antecipa o horizonte de expiração em memória para que a varredura de 60s acorde no
+        // vencimento deste grant sem depender do reload periódico (agora de 12h).
+        bumpExpiry(expiresAt);
 
         String callId = null;
         String controlRoleId = null;
@@ -509,6 +541,10 @@ public final class VipService implements VipBonusSource {
      *  {@code ctx.scheduler().executor()}. */
     public void sweepExpired() {
         Instant now = Instant.now();
+        // Fast path 100% em memória: nada vence antes do horizonte, então não abre conexão ao Neon.
+        if (!expirySweepDue(now, nextExpiryAt)) {
+            return;
+        }
         for (VipGrant g : grants().dueForExpiry(now)) {
             Guild guild = ctx.jda().getGuildById(g.guildId());
             if (guild == null) { // bot fora da guild: só desativa no banco
@@ -518,6 +554,14 @@ public final class VipService implements VipBonusSource {
             }
             try { revoke(guild, g.userId(), "system", true); }
             catch (RuntimeException e) { log.error("VIP: falha ao expirar grant {}", g.id(), e); }
+        }
+        // Recalcula o horizonte a partir do estado atual para voltar a ficar quieto até o próximo
+        // vencimento real. Se o Neon falhar aqui, força uma nova checagem no próximo tick (MIN).
+        try {
+            this.nextExpiryAt = soonestExpiry(grants().activeGrants());
+        } catch (RuntimeException e) {
+            this.nextExpiryAt = Instant.MIN;
+            log.warn("VIP: falha ao recalcular horizonte de expiração; forçando recheck", e);
         }
     }
 }

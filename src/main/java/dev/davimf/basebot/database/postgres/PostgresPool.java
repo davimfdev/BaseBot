@@ -60,10 +60,13 @@ public final class PostgresPool implements AutoCloseable {
         // connection. Letting the pool drain to zero idle connections means there are no
         // stale connections left for the housekeeper to find (and warn about) on suspend;
         // new ones are opened on demand. maxLifetime stays comfortably under Neon's window.
+        // Keepalive is disabled (0): a pool that drains to zero has nothing to keep alive, and a
+        // periodic keepalive probe would defeat the whole point by pinging Neon and blocking the
+        // autosuspend we want. Connections are validated on borrow instead.
         hc.setConnectionTimeout(10_000);
         hc.setMinimumIdle(0);
         hc.setIdleTimeout(60_000);
-        hc.setKeepaliveTime(30_000);
+        hc.setKeepaliveTime(0);
         hc.setMaxLifetime(240_000);
         if (cfg.schema() != null && !cfg.schema().isBlank()) {
             hc.setSchema(cfg.schema());
